@@ -1,0 +1,31 @@
+; Engine configuration file.
+; ASTRO BALL — fase 1: game feel-prototype.
+
+config_version=5
+
+[application]
+
+config/name="Astro Ball"
+config/description="Fase 1: game feel-prototype. Bold, paddle og containment-felt."
+run/main_scene="res://scenes/game.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[display]
+
+window/size/viewport_width=390
+window/size/viewport_height=844
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+window/handheld/orientation=1
+
+[physics]
+
+common/physics_ticks_per_second=60
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.027451, 0.027451, 0.047059, 1)
+2d/snap/snap_2d_transforms_to_pixel=false
+anti_aliasing/quality/msaa_2d=0
