@@ -14,10 +14,15 @@
     "....VVVVV....",
     "......?......"
   ],
-  "ballSpeed": 320,
+  "ballSpeed": 380,
   "powerups": {
-    "multi": 30, "fireball": 20, "zap": 15,
-    "wide": 15, "fast": 10, "narrow": 10
+    "multi": 25,
+    "fireball": 20,
+    "laser": 15,
+    "zap": 15,
+    "wide": 10,
+    "fast": 8,
+    "narrow": 7
   },
   "forcedFirstPowerup": null,
   "parTime": 80

@@ -11,6 +11,9 @@ const BONE := Color("F2EFE6")
 const VOLT := Color("D6FF3D")
 const EMBER := Color("FF4D2E")
 
+const FONT_SCORE := preload("res://assets/fonts/SpaceGrotesk-700.ttf")
+const FONT_COMBO := preload("res://assets/fonts/Unbounded-900.ttf")
+
 const GRAVITY := 620.0
 const SPLINTER_LIFE := 0.35
 const SHARD_LIFE := 0.40
@@ -26,11 +29,7 @@ var _texts: Array[Dictionary] = []
 var _rings: Array[Dictionary] = []
 var _flashes: Array[Dictionary] = []
 var _combo: Dictionary = {}
-var _font: Font
-
-
-func _ready() -> void:
-	_font = ThemeDB.fallback_font
+var _font: Font = FONT_SCORE
 
 
 # --- Klodser -----------------------------------------------------------
@@ -234,9 +233,11 @@ func _draw() -> void:
 			var c := VOLT
 			c.a = 1.0 - maxf(0.0, (f - 0.25) / 0.75)
 			var text := str(_combo["value"])
-			var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x
-			draw_string(_font, Vector2(screen_size.x * 0.5 - width * 0.5, screen_size.y * 0.42),
-				text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size, c)
+			var width := FONT_COMBO.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x
+			var at := Vector2(screen_size.x * 0.5 - width * 0.5, screen_size.y * 0.42)
+			draw_string(FONT_COMBO, at + Vector2(2.0, 3.0), text,
+				HORIZONTAL_ALIGNMENT_LEFT, -1.0, size, VOLT.darkened(0.75))
+			draw_string(FONT_COMBO, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size, c)
 
 
 func _draw_rotated_rect(at: Vector2, size: Vector2, rotation: float, color: Color) -> void:

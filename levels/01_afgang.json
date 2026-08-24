@@ -12,9 +12,12 @@
     ".....III.....",
     "......X......"
   ],
-  "ballSpeed": 320,
+  "ballSpeed": 360,
   "powerups": {
-    "wide": 40, "multi": 30, "slow": 20, "life": 10
+    "multi": 30,
+    "fireball": 30,
+    "laser": 20,
+    "wide": 20
   },
   "forcedFirstPowerup": "wide",
   "parTime": 60

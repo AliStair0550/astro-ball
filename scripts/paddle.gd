@@ -13,10 +13,16 @@ extends Node2D
 signal laser_fired(from: Vector2)
 
 const BONE := Color("F2EFE6")
+## Endestykkernes krop er en tone mørkere end Bone, så bevelen har noget
+## at lyse op fra. Et helt hvidt stykke metal har ingen form.
+const CAP := Color("C4C1B7")
 const VOLT := Color("D6FF3D")
 const EMBER := Color("FF4D2E")
-const MID := Color("9C9A90")
-const SEAM := Color("232330")
+## Midterstykket er koldt metal mod Bone-endestykkerne. Kontrasten er
+## det, der gør skjoldet til et stykke isenkram og ikke en streg.
+const MID := Color("575C6B")
+const SEAM := Color("15151E")
+const ICE := Color("4DD8FF")
 
 const HEIGHT := 10.0
 const CAP_WIDTH := 24.0
@@ -222,69 +228,121 @@ func _draw() -> void:
 	# Bunden står fast, så skjoldet presses ned mod sin egen linje.
 	var top := HEIGHT * 0.5 - h
 	var hw := half_width()
-	var segments := segment_count()
 
-	if segments == 1:
-		# Smal: ét segment, ingen sweet spot.
-		draw_rect(Rect2(-hw, top, width, h), BONE)
-	else:
-		draw_rect(Rect2(-hw + CAP_WIDTH, top, width - CAP_WIDTH * 2.0, h), MID)
-		var left := BONE.lerp(Color.WHITE, _left_light)
-		var right := BONE.lerp(Color.WHITE, _right_light)
-		draw_rect(Rect2(-hw, top, CAP_WIDTH, h), left)
-		draw_rect(Rect2(hw - CAP_WIDTH, top, CAP_WIDTH, h), right)
-		# Samlinger, så segmenterne kan læses.
-		for seam_x in _seam_positions():
-			draw_rect(Rect2(seam_x - 0.5, top, 1.0, h), SEAM)
-		for offset in sweet_offsets():
-			draw_rect(Rect2(offset - SWEET_WIDTH * 0.5, top, SWEET_WIDTH, h), VOLT)
+	_draw_projection(top, h, hw)
+
+	match segment_count():
+		1:
+			_draw_block(-hw, hw, top, h, BONE, true, true)
+		5:
+			var span := (width - CAP_WIDTH * 2.0) / 3.0
+			_draw_block(-hw, -hw + CAP_WIDTH, top, h, _cap_color(_left_light), true, false)
+			_draw_block(-hw + CAP_WIDTH, -hw + CAP_WIDTH + span, top, h, MID, false, false)
+			_draw_block(-hw + CAP_WIDTH + span, hw - CAP_WIDTH - span, top, h, MID, false, false)
+			_draw_block(hw - CAP_WIDTH - span, hw - CAP_WIDTH, top, h, MID, false, false)
+			_draw_block(hw - CAP_WIDTH, hw, top, h, _cap_color(_right_light), false, true)
+		_:
+			_draw_block(-hw, -hw + CAP_WIDTH, top, h, _cap_color(_left_light), true, false)
+			_draw_block(-hw + CAP_WIDTH, hw - CAP_WIDTH, top, h, MID, false, false)
+			_draw_block(hw - CAP_WIDTH, hw, top, h, _cap_color(_right_light), false, true)
+
+	for seam_x in _seam_positions():
+		draw_rect(Rect2(seam_x - 1.0, top + 1.0, 1.0, h - 2.0), SEAM)
+		var chrome := Color.WHITE
+		chrome.a = 0.22
+		draw_rect(Rect2(seam_x, top + 1.0, 1.0, h - 2.0), chrome)
+
+	for offset in sweet_offsets():
+		_draw_sweet_spot(offset, top, h)
 
 	if laser:
 		_draw_laser_tubes(top, h, hw)
 
-	if _left_light > 0.0:
-		var gl := Color.WHITE
-		gl.a = _left_light * 0.35
-		draw_rect(Rect2(-hw - 2.0, top - 2.0, CAP_WIDTH + 4.0, h + 4.0), gl)
-	if _right_light > 0.0:
-		var gr := Color.WHITE
-		gr.a = _right_light * 0.35
-		draw_rect(Rect2(hw - CAP_WIDTH - 2.0, top - 2.0, CAP_WIDTH + 4.0, h + 4.0), gr)
+	_draw_end_glow(top, h, hw)
 
 	if _catch_flash > 0.0:
 		var c := _catch_color
-		c.a = _catch_flash * 0.75
-		draw_rect(Rect2(-hw - 2.0, top - 2.0, width + 4.0, h + 4.0), c)
+		c.a = _catch_flash * 0.7
+		draw_rect(Rect2(-hw - 2.0, top - 3.0, width + 4.0, h + 5.0), c)
 
 
-func _seam_positions() -> Array[float]:
-	var hw := half_width()
-	var seams: Array[float] = [-hw + CAP_WIDTH, hw - CAP_WIDTH]
-	if segment_count() == 5:
-		var span := (width - CAP_WIDTH * 2.0) / 3.0
-		seams.append(-hw + CAP_WIDTH + span)
-		seams.append(hw - CAP_WIDTH - span)
-	return seams
+func _cap_color(light: float) -> Color:
+	return CAP.lerp(Color.WHITE, light)
 
 
-func _draw_laser_tubes(top: float, h: float, hw: float) -> void:
-	# To Ember-rør på endestykkerne.
-	var ready_glow := 1.0 - clampf(_laser_cooldown / LASER_COOLDOWN, 0.0, 1.0)
-	for side: float in [-1.0, 1.0]:
-		var x := side * (hw - CAP_WIDTH * 0.5) - 1.5
-		draw_rect(Rect2(x, top - 3.0, 3.0, h + 3.0), EMBER)
-		var tip := EMBER.lightened(0.5)
-		tip.a = 0.4 + 0.6 * ready_glow
-		draw_rect(Rect2(x, top - 3.0, 3.0, 2.0), tip)
+## Skjoldet er projiceret. Feltet over kanten er det, bolden rammer,
+## og den svage skygge nedenunder er det, der holder den oppe.
+func _draw_projection(top: float, h: float, hw: float) -> void:
+	var field := VOLT
+	for i in 3:
+		field.a = 0.13 - float(i) * 0.04
+		draw_rect(Rect2(-hw + float(i), top - 3.0 + float(i), width - float(i) * 2.0, 3.0 - float(i) * 0.5), field)
+	var shadow := Color("07070C")
+	shadow.a = 0.5
+	draw_rect(Rect2(-hw + 2.0, top + h, width - 4.0, 2.0), shadow)
 
 
-func _draw_bolts() -> void:
-	for bolt in _bolts:
-		var p := to_local(bolt["pos"])
-		var c := EMBER.lightened(0.3)
-		draw_rect(Rect2(p.x - 1.0, p.y, 2.0, 10.0), c)
-		c.a = 0.35
-		draw_rect(Rect2(p.x - 2.0, p.y - 2.0, 4.0, 14.0), c)
+## Ét segment med afrundede yderhjørner, bevel foroven og forneden og
+## et glansbånd i den øverste tredjedel.
+func _draw_block(x0: float, x1: float, top: float, h: float, base: Color, round_l: bool, round_r: bool) -> void:
+	var y1 := top + h
+	var il := 1.0 if round_l else 0.0
+	var ir := 1.0 if round_r else 0.0
+	var inner_w := (x1 - x0) - il - ir
+	if inner_w <= 0.0 or h < 3.0:
+		return
+
+	# Grundform: to rektangler forskudt 1 px giver det afrundede hjørne.
+	draw_rect(Rect2(x0 + il, top, inner_w, h), base)
+	if round_l:
+		draw_rect(Rect2(x0, top + 1.0, 1.0, h - 2.0), base)
+	if round_r:
+		draw_rect(Rect2(x1 - 1.0, top + 1.0, 1.0, h - 2.0), base)
+
+	# Bevel. Lyset kommer oppefra, samme retning som klodsernes kernelys.
+	draw_rect(Rect2(x0 + il, top, inner_w, 1.0), base.lightened(0.6))
+	draw_rect(Rect2(x0 + il, top + 1.0, inner_w, 1.0), base.lightened(0.28))
+	draw_rect(Rect2(x0 + il, y1 - 2.0, inner_w, 1.0), base.darkened(0.32))
+	draw_rect(Rect2(x0 + il, y1 - 1.0, inner_w, 1.0), base.darkened(0.6))
+
+	# Glans.
+	var gloss := Color.WHITE
+	gloss.a = 0.14
+	draw_rect(Rect2(x0 + il, top + 2.0, inner_w, maxf(h * 0.26, 1.0)), gloss)
+
+
+## Sweet spot: Volt-felt med egen bevel, en glød udenom og et lys, der
+## vandrer, så man kan se, at feltet er ladet.
+func _draw_sweet_spot(offset: float, top: float, h: float) -> void:
+	var x0 := offset - SWEET_WIDTH * 0.5
+	var glow := VOLT
+	for i in 3:
+		glow.a = 0.20 - float(i) * 0.055
+		var pad := 2.0 + float(i) * 2.0
+		draw_rect(Rect2(x0 - pad, top - pad * 0.6, SWEET_WIDTH + pad * 2.0, h + pad * 1.2), glow)
+
+	draw_rect(Rect2(x0, top, SWEET_WIDTH, h), VOLT)
+	draw_rect(Rect2(x0, top, SWEET_WIDTH, 1.0), VOLT.lightened(0.65))
+	draw_rect(Rect2(x0, top + h - 1.0, SWEET_WIDTH, 1.0), VOLT.darkened(0.45))
+
+	# Vandrende lys i feltet.
+	var travel := fposmod(_time * 26.0, SWEET_WIDTH + 6.0) - 3.0
+	var spark := Color.WHITE
+	spark.a = 0.55
+	var sx := clampf(x0 + travel, x0, x0 + SWEET_WIDTH - 1.0)
+	draw_rect(Rect2(sx, top + 1.0, 1.0, maxf(h - 2.0, 1.0)), spark)
+
+
+## Endestykkerne lyser op i 100 ms, når bolden rammer dem.
+func _draw_end_glow(top: float, h: float, hw: float) -> void:
+	if _left_light > 0.0:
+		var gl := Color.WHITE
+		gl.a = _left_light * 0.30
+		draw_rect(Rect2(-hw - 3.0, top - 3.0, CAP_WIDTH + 6.0, h + 6.0), gl)
+	if _right_light > 0.0:
+		var gr := Color.WHITE
+		gr.a = _right_light * 0.30
+		draw_rect(Rect2(hw - CAP_WIDTH - 3.0, top - 3.0, CAP_WIDTH + 6.0, h + 6.0), gr)
 
 
 func _draw_motion_trail() -> void:
@@ -298,3 +356,43 @@ func _draw_motion_trail() -> void:
 		if c.a <= 0.0:
 			continue
 		draw_rect(Rect2(-hw + dx, -HEIGHT * 0.5, width, HEIGHT), c)
+
+
+func _seam_positions() -> Array[float]:
+	var hw := half_width()
+	if segment_count() == 1:
+		return []
+	var seams: Array[float] = [-hw + CAP_WIDTH, hw - CAP_WIDTH]
+	if segment_count() == 5:
+		var span := (width - CAP_WIDTH * 2.0) / 3.0
+		seams.append(-hw + CAP_WIDTH + span)
+		seams.append(hw - CAP_WIDTH - span)
+	return seams
+
+
+func _draw_laser_tubes(top: float, h: float, hw: float) -> void:
+	# To Ember-rør på endestykkerne. Mundingen gløder, når de er ladet.
+	var ready_glow := 1.0 - clampf(_laser_cooldown / LASER_COOLDOWN, 0.0, 1.0)
+	for side: float in [-1.0, 1.0]:
+		var x := side * (hw - CAP_WIDTH * 0.5) - 2.0
+		draw_rect(Rect2(x, top - 5.0, 4.0, h + 4.0), EMBER.darkened(0.45))
+		draw_rect(Rect2(x, top - 5.0, 1.0, h + 4.0), EMBER.lightened(0.3))
+		draw_rect(Rect2(x + 1.0, top - 5.0, 2.0, h + 4.0), EMBER)
+		var tip := EMBER.lightened(0.55)
+		tip.a = 0.35 + 0.65 * ready_glow
+		draw_rect(Rect2(x, top - 5.0, 4.0, 2.0), tip)
+		var halo := EMBER
+		halo.a = 0.22 * ready_glow
+		draw_rect(Rect2(x - 3.0, top - 8.0, 10.0, 8.0), halo)
+
+
+func _draw_bolts() -> void:
+	for bolt in _bolts:
+		var p := to_local(bolt["pos"])
+		var core := EMBER.lightened(0.45)
+		draw_rect(Rect2(p.x - 1.0, p.y, 2.0, 11.0), core)
+		var glow := EMBER
+		glow.a = 0.35
+		draw_rect(Rect2(p.x - 2.5, p.y - 2.0, 5.0, 15.0), glow)
+		glow.a = 0.14
+		draw_rect(Rect2(p.x - 4.0, p.y - 4.0, 8.0, 19.0), glow)

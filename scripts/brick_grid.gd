@@ -17,8 +17,10 @@ signal cleared()
 const COLUMNS := 13
 const SPACING := 2.0
 const PITCH := Vector2(Brick.SIZE.x + SPACING, Brick.SIZE.y + SPACING)
-## Gridet er centreret i feltet med lidt luft under rammen.
-const ORIGIN := Vector2(27.0, 74.0)
+## Gridet er centreret vandret. Lodret ligger det så langt nede, som
+## luften over det tillader: der skal stadig være plads til at komme op
+## bag muren, for det er dér DX-Ball-øjeblikket bor.
+const ORIGIN := Vector2(27.0, 230.0)
 
 ## Kæden skal kunne ses, ikke bare høres.
 const CHAIN_DELAY := 0.04

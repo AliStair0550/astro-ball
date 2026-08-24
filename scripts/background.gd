@@ -91,8 +91,11 @@ func _build() -> void:
 		if size == 1:
 			_small_star_indices.append(i)
 
-	_planet_center = Vector2(52.0, screen_size.y - 138.0)
-	_planet_radius = 60.0
+	# Planeten sad før nede i hjørnet, hvor paddlen arbejder. Der læste
+	# den som en cirkel, ikke som en verden. Nu ligger den halvt uden for
+	# feltets venstre kant, over paddlens bane og under klodserne.
+	_planet_center = Vector2(24.0, screen_size.y - 244.0)
+	_planet_radius = 64.0
 
 	_asteroids.clear()
 	for i in randi_range(2, 3):
@@ -314,13 +317,7 @@ func _draw_shooting_star() -> void:
 
 
 func _draw_mid_layer(offset: Vector2) -> void:
-	var c := _planet_center + offset
-	draw_circle(c, _planet_radius, PLANET)
-	# Tynd atmosfærelinje. Den slukker et øjeblik ved tab af liv.
-	if _dim < 0.5:
-		var atmosphere := ATMOSPHERE.lerp(Color("8FA8D8"), _glint)
-		atmosphere.a = 1.0 - _dim * 2.0
-		draw_arc(c, _planet_radius + 1.0, 0.0, TAU, 64, atmosphere, 1.0 + _glint, true)
+	_draw_planet(_planet_center + offset)
 
 	for rock in _asteroids:
 		var pts := PackedVector2Array()
@@ -330,6 +327,71 @@ func _draw_mid_layer(offset: Vector2) -> void:
 		for p in shape:
 			pts.append(pos + p.rotated(rot))
 		draw_colored_polygon(pts, ASTEROID)
+
+
+## En kugle, ikke en cirkel. Solen står oppe til venstre, samme retning
+## som klodsernes kernelys, så terminatoren løber ned mod højre og
+## atmosfærelinjen kun findes på den oplyste rand.
+func _draw_planet(c: Vector2) -> void:
+	var r := _planet_radius
+	var lit_center := c + Vector2(-r * 0.12, -r * 0.12)
+	var lit_radius := r * 0.88
+
+	# Skyggesiden.
+	draw_circle(c, r, PLANET.darkened(0.45))
+	# Den oplyste krop, forskudt mod lyset.
+	draw_circle(lit_center, lit_radius, PLANET)
+	# Kernen, hvor lyset står vinkelret på overfladen.
+	draw_circle(c + Vector2(-r * 0.26, -r * 0.26), r * 0.62, PLANET.lightened(0.12))
+
+	_draw_planet_bands(lit_center, lit_radius)
+
+	# Randen mod lyset og atmosfærelinjen udenom. Begge fader i enderne,
+	# så de ikke ender som to løse streger, hvor kuglen er mørk.
+	if _dim < 0.5:
+		var fade := 1.0 - _dim * 2.0
+		_draw_limb(c, r - 0.5, PLANET.lightened(0.38), fade * 0.9, 1.0)
+		var atmosphere := ATMOSPHERE.lerp(Color("9FB6E4"), _glint)
+		_draw_limb(c, r + 1.5, atmosphere, fade, 1.0 + _glint * 1.5)
+
+
+## Et lysende stykke rand, tegnet punkt for punkt, så den kan fade ud
+## i begge ender i stedet for at blive klippet over.
+func _draw_limb(c: Vector2, radius: float, color: Color, strength: float, thickness: float) -> void:
+	var from := PI * 0.52
+	var to := PI * 1.58
+	var steps := 52
+	for i in steps + 1:
+		var f := float(i) / float(steps)
+		var a := lerpf(from, to, f)
+		var pt := c + Vector2(cos(a), sin(a)) * radius
+		var col := color
+		col.a = strength * sin(f * PI)
+		if col.a <= 0.01:
+			continue
+		draw_rect(Rect2(pt - Vector2(thickness, thickness) * 0.5, Vector2(thickness, thickness)), col)
+
+
+## Vandrette bånd, klippet af kuglens egen kant. Ingen maske, bare
+## Pythagoras: halvbredden af båndet følger cirklen.
+func _draw_planet_bands(center: Vector2, radius: float) -> void:
+	var bands := [
+		{"offset": -0.52, "height": 3.0, "tone": 0.10},
+		{"offset": -0.18, "height": 5.0, "tone": -0.08},
+		{"offset": 0.14, "height": 4.0, "tone": 0.07},
+		{"offset": 0.46, "height": 6.0, "tone": -0.12},
+		{"offset": 0.72, "height": 3.0, "tone": 0.05},
+	]
+	for band in bands:
+		var y := center.y + radius * float(band["offset"])
+		var dy := absf(y - center.y)
+		if dy >= radius:
+			continue
+		var half := sqrt(radius * radius - dy * dy)
+		var tone := float(band["tone"])
+		var c := PLANET.lightened(tone) if tone > 0.0 else PLANET.darkened(-tone)
+		c.a = 0.75
+		draw_rect(Rect2(center.x - half, y, half * 2.0, float(band["height"])), c)
 
 
 func _draw_front_layer(offset: Vector2) -> void:

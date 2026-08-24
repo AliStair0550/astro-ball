@@ -29,6 +29,10 @@ const FLARE := Color("FF9F1C")
 
 const RADIUS := 4.0
 const BASE_SPEED := 320.0
+## Farten stiger 4 procent per 10 klodser og stopper her.
+const MAX_SPEED := 520.0
+const SPEED_STEP := 1.04
+const SPEED_STEP_BRICKS := 10
 
 const MIN_ANGLE_DEG := 20.0
 const EDGE_ANGLE_DEG := 25.0
@@ -56,14 +60,17 @@ var stuck := true
 ## bevæger sig ikke. Så er tilstanden stadig sand, når HUD og debug
 ## kigger på den.
 var frozen := false
-var speed_base := BASE_SPEED
+## Stiger 4 procent per 10 klodser, styret af spillet.
+var speed_base := BASE_SPEED:
+	set(value):
+		speed_base = value
+		_renormalize()
 ## Langsom sætter den til 0.7, Hurtig til 1.4. Farten rettes med det
 ## samme, så bolden aldrig hænger en frame bagud efter en power-up.
 var speed_scale := 1.0:
 	set(value):
 		speed_scale = value
-		if velocity.length() > 0.0001:
-			velocity = velocity.normalized() * current_speed()
+		_renormalize()
 var fireball := false
 var zap := false
 var last_exit_angle := 0.0
@@ -75,6 +82,12 @@ var _spark_drip := 0.0
 
 func _ready() -> void:
 	_fill_trail()
+
+
+## Retter farten uden at røre retningen.
+func _renormalize() -> void:
+	if velocity.length() > 0.0001:
+		velocity = velocity.normalized() * current_speed()
 
 
 func current_speed() -> float:

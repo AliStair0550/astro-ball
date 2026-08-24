@@ -14,10 +14,13 @@
     ".V.IIIIIII.V.",
     ".VVVVVVVVVVV."
   ],
-  "ballSpeed": 320,
+  "ballSpeed": 360,
   "powerups": {
-    "wide": 25, "multi": 25, "fireball": 15,
-    "laser": 15, "slow": 10, "narrow": 10
+    "fireball": 25,
+    "multi": 25,
+    "laser": 20,
+    "wide": 20,
+    "narrow": 10
   },
   "forcedFirstPowerup": null,
   "parTime": 110

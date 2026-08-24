@@ -147,7 +147,7 @@ func _draw() -> void:
 	var ink := Color.WHITE
 	ink.a = body.a
 	draw_set_transform(Vector2.ZERO, _angle, Vector2.ONE * scale_factor)
-	_draw_icon(data["icon"], ink)
+	_icon_shapes(self, str(data["icon"]), ink)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -163,58 +163,66 @@ func _draw_zigzag(half: Vector2, edge: Color) -> void:
 		draw_polyline(points, edge, 1.0)
 
 
-func _draw_icon(icon: String, ink: Color) -> void:
+## Tegner ikonet på et vilkårligt lærred. HUD-docken bruger den samme
+## tegning som kapslen, så et ikon altid betyder det samme.
+static func draw_icon_into(ci: CanvasItem, icon: String, at: Vector2, icon_scale: float, ink: Color) -> void:
+	ci.draw_set_transform(at, 0.0, Vector2.ONE * icon_scale)
+	_icon_shapes(ci, icon, ink)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+static func _icon_shapes(ci: CanvasItem, icon: String, ink: Color) -> void:
 	match icon:
 		"arrows_out":
-			_bar(Vector2(-1.0, -0.5), Vector2(2.0, 1.0), ink)
-			_arrow(Vector2(-4.0, 0.0), Vector2(-1.0, 0.0), ink)
-			_arrow(Vector2(4.0, 0.0), Vector2(1.0, 0.0), ink)
+			_bar(ci, Vector2(-1.0, -0.5), Vector2(2.0, 1.0), ink)
+			_arrow(ci, Vector2(-4.0, 0.0), Vector2(-1.0, 0.0), ink)
+			_arrow(ci, Vector2(4.0, 0.0), Vector2(1.0, 0.0), ink)
 		"arrows_in":
-			_bar(Vector2(-1.0, -0.5), Vector2(2.0, 1.0), ink)
-			_arrow(Vector2(-2.0, 0.0), Vector2(1.0, 0.0), ink)
-			_arrow(Vector2(2.0, 0.0), Vector2(-1.0, 0.0), ink)
+			_bar(ci, Vector2(-1.0, -0.5), Vector2(2.0, 1.0), ink)
+			_arrow(ci, Vector2(-2.0, 0.0), Vector2(1.0, 0.0), ink)
+			_arrow(ci, Vector2(2.0, 0.0), Vector2(-1.0, 0.0), ink)
 		"arrows_up":
-			_arrow(Vector2(-2.5, 1.0), Vector2(0.0, -1.0), ink)
-			_arrow(Vector2(2.5, 1.0), Vector2(0.0, -1.0), ink)
+			_arrow(ci, Vector2(-2.5, 1.0), Vector2(0.0, -1.0), ink)
+			_arrow(ci, Vector2(2.5, 1.0), Vector2(0.0, -1.0), ink)
 		"three_dots":
-			_bar(Vector2(-4.0, -1.0), Vector2(2.0, 2.0), ink)
-			_bar(Vector2(-1.0, -1.0), Vector2(2.0, 2.0), ink)
-			_bar(Vector2(2.0, -1.0), Vector2(2.0, 2.0), ink)
+			_bar(ci, Vector2(-4.0, -1.0), Vector2(2.0, 2.0), ink)
+			_bar(ci, Vector2(-1.0, -1.0), Vector2(2.0, 2.0), ink)
+			_bar(ci, Vector2(2.0, -1.0), Vector2(2.0, 2.0), ink)
 		"flame":
-			_bar(Vector2(-1.0, -4.0), Vector2(2.0, 3.0), ink)
-			_bar(Vector2(-2.0, -1.0), Vector2(4.0, 3.0), ink)
-			_bar(Vector2(-1.0, 2.0), Vector2(2.0, 2.0), ink)
+			_bar(ci, Vector2(-1.0, -4.0), Vector2(2.0, 3.0), ink)
+			_bar(ci, Vector2(-2.0, -1.0), Vector2(4.0, 3.0), ink)
+			_bar(ci, Vector2(-1.0, 2.0), Vector2(2.0, 2.0), ink)
 		"beams":
-			_bar(Vector2(-3.0, -4.0), Vector2(2.0, 8.0), ink)
-			_bar(Vector2(1.0, -4.0), Vector2(2.0, 8.0), ink)
+			_bar(ci, Vector2(-3.0, -4.0), Vector2(2.0, 8.0), ink)
+			_bar(ci, Vector2(1.0, -4.0), Vector2(2.0, 8.0), ink)
 		"turtle":
-			_bar(Vector2(-4.0, -1.0), Vector2(8.0, 3.0), ink)
-			_bar(Vector2(-2.0, -3.0), Vector2(4.0, 2.0), ink)
-			_bar(Vector2(4.0, 0.0), Vector2(2.0, 2.0), ink)
-			_bar(Vector2(-5.0, 2.0), Vector2(2.0, 1.0), ink)
-			_bar(Vector2(3.0, 2.0), Vector2(2.0, 1.0), ink)
+			_bar(ci, Vector2(-4.0, -1.0), Vector2(8.0, 3.0), ink)
+			_bar(ci, Vector2(-2.0, -3.0), Vector2(4.0, 2.0), ink)
+			_bar(ci, Vector2(4.0, 0.0), Vector2(2.0, 2.0), ink)
+			_bar(ci, Vector2(-5.0, 2.0), Vector2(2.0, 1.0), ink)
+			_bar(ci, Vector2(3.0, 2.0), Vector2(2.0, 1.0), ink)
 		"heart":
-			_bar(Vector2(-3.0, -3.0), Vector2(2.0, 2.0), ink)
-			_bar(Vector2(1.0, -3.0), Vector2(2.0, 2.0), ink)
-			_bar(Vector2(-4.0, -1.0), Vector2(8.0, 2.0), ink)
-			_bar(Vector2(-3.0, 1.0), Vector2(6.0, 1.0), ink)
-			_bar(Vector2(-1.0, 2.0), Vector2(2.0, 2.0), ink)
+			_bar(ci, Vector2(-3.0, -3.0), Vector2(2.0, 2.0), ink)
+			_bar(ci, Vector2(1.0, -3.0), Vector2(2.0, 2.0), ink)
+			_bar(ci, Vector2(-4.0, -1.0), Vector2(8.0, 2.0), ink)
+			_bar(ci, Vector2(-3.0, 1.0), Vector2(6.0, 1.0), ink)
+			_bar(ci, Vector2(-1.0, 2.0), Vector2(2.0, 2.0), ink)
 		"bolt":
-			draw_colored_polygon(PackedVector2Array([
+			ci.draw_colored_polygon(PackedVector2Array([
 				Vector2(1.0, -5.0), Vector2(-3.0, 1.0), Vector2(0.0, 1.0),
 				Vector2(-1.0, 5.0), Vector2(3.0, -1.0), Vector2(0.0, -1.0),
 			]), ink)
 		_:
-			_bar(Vector2(-2.0, -2.0), Vector2(4.0, 4.0), ink)
+			_bar(ci, Vector2(-2.0, -2.0), Vector2(4.0, 4.0), ink)
 
 
-func _bar(at: Vector2, size: Vector2, ink: Color) -> void:
-	draw_rect(Rect2(at, size), ink)
+static func _bar(ci: CanvasItem, at: Vector2, size: Vector2, ink: Color) -> void:
+	ci.draw_rect(Rect2(at, size), ink)
 
 
-func _arrow(tip: Vector2, dir: Vector2, ink: Color) -> void:
+static func _arrow(ci: CanvasItem, tip: Vector2, dir: Vector2, ink: Color) -> void:
 	var side := Vector2(-dir.y, dir.x)
-	draw_colored_polygon(PackedVector2Array([
+	ci.draw_colored_polygon(PackedVector2Array([
 		tip,
 		tip - dir * 3.0 + side * 2.5,
 		tip - dir * 3.0 - side * 2.5,

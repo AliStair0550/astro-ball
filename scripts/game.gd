@@ -46,6 +46,8 @@ var level_data: Dictionary = {}
 var level_paths: PackedStringArray
 
 var _balls: Array[Ball] = []
+## Klodser smadret i dette level. Farten stiger med dem.
+var _bricks_this_level := 0
 var _state_timer := 0.0
 var _debug := false
 
@@ -107,6 +109,7 @@ func _load_level(index: int) -> void:
 	_spawn_ball(true)
 
 	combo = 0
+	_bricks_this_level = 0
 	state = State.PLAYING
 	_state_timer = 0.0
 	_refresh_hud()
@@ -127,7 +130,7 @@ func _spawn_ball(stuck: bool, at := Vector2.ZERO, angle_deg := 0.0) -> Ball:
 	ball.grid = grid
 	ball.game_feel = game_feel
 	ball.effects = effects
-	ball.speed_base = float(level_data.get("ballSpeed", Ball.BASE_SPEED))
+	ball.speed_base = level_ball_speed()
 	balls_root.add_child(ball)
 	_balls.append(ball)
 
@@ -190,6 +193,8 @@ func _on_brick_damaged(brick: Brick) -> void:
 
 func _on_brick_destroyed(brick: Brick, by_chain: bool) -> void:
 	combo += 1
+	_bricks_this_level += 1
+	_apply_ball_speed()
 	best_combo = maxi(best_combo, combo)
 
 	var points := brick.score_value() * _combo_multiplier()
@@ -327,6 +332,21 @@ func _split_balls() -> void:
 		_spawn_ball(false, source.global_position, base_angle + offset)
 
 
+## Hastigheden starter på levelets egen og stiger 4 procent per 10
+## klodser, med loft ved 520 px/s. Det er den, der gør, at et level
+## slutter hurtigere end det begynder.
+func level_ball_speed() -> float:
+	var base := float(level_data.get("ballSpeed", Ball.BASE_SPEED))
+	var steps := _bricks_this_level / Ball.SPEED_STEP_BRICKS
+	return minf(base * pow(Ball.SPEED_STEP, float(steps)), Ball.MAX_SPEED)
+
+
+func _apply_ball_speed() -> void:
+	var speed := level_ball_speed()
+	for ball in _balls:
+		ball.speed_base = speed
+
+
 func _combo_multiplier() -> int:
 	if combo >= 20:
 		return 4
@@ -434,7 +454,7 @@ func _update_debug() -> void:
 		"LIV        %d" % lives,
 	]
 	if ball:
-		lines.append("FART       %.0f px/s" % ball.current_speed())
+		lines.append("FART       %.0f px/s (grund %.0f, loft %.0f)" % [ball.current_speed(), level_ball_speed(), Ball.MAX_SPEED])
 		lines.append("UDGANG     %.1f grader" % ball.last_exit_angle)
 		lines.append("VINKEL NU  %.1f grader" % _angle_of(ball))
 	var names := PackedStringArray()

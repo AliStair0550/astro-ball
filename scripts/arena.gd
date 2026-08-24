@@ -18,7 +18,9 @@ const VOLT := Color("D6FF3D")
 const EMBER := Color("FF4D2E")
 
 const SCREEN := Vector2(390.0, 844.0)
-const HUD_HEIGHT := 44.0
+## HUD'en fylder toppen. Rammen starter under den, så klodserne kommer
+## længere ned på en skærm, der er dobbelt så høj som den er bred.
+const HUD_HEIGHT := 140.0
 const WALL := 6.0
 
 const EMITTER_SIZE := 8.0
