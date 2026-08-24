@@ -71,6 +71,12 @@ var level_data: Dictionary = {}
 var level_paths: PackedStringArray
 
 var _balls: Array[Ball] = []
+## Section 16 and 19: a re-entry is free in the paid version and costs a
+## rewarded ad in the free one. Neither a store nor an ad network is in
+## this build, so the gate answers FREE. What matters is that the branch
+## and the wiring exist, so the ad layer plugs in without touching this
+## file. See scripts/continue_gate.gd.
+var continue_gate := ContinueGate.new()
 ## Where the ball last touched a brick. The shards fly away from it.
 var _last_impact := Vector2.INF
 var _state_timer := 0.0
@@ -100,6 +106,8 @@ func _ready() -> void:
 
 	paddle.laser_fired.connect(_on_laser_fired)
 	screens.action.connect(_on_screen_action)
+	continue_gate.granted.connect(_on_continue_granted)
+	continue_gate.denied.connect(_on_continue_denied)
 
 	level_paths = LevelLoader.level_paths()
 	if level_paths.is_empty():
@@ -141,7 +149,8 @@ func _set_state(new_state: State) -> void:
 	screens.bricks_cleared = run.run_bricks
 	screens.best_combo = run.best_combo
 	screens.run_time = run.run_time
-	screens.can_re_enter = not run.re_entry_used
+	screens.can_re_enter = continue_gate.available(_re_entries_used())
+	screens.re_entry_costs_ad = continue_gate.cost_for(_re_entries_used()) == ContinueGate.Cost.WATCH_AD
 	screens.show_screen(overlay)
 
 	# Section 16: SIGNAL LOST is a black screen with the star field at
@@ -178,12 +187,8 @@ func _on_screen_action(name: String) -> void:
 			audio.play("ui_select")
 			_start_new_game()
 		"re_entry":
-			# Section 16: one extra life, continue exactly where it stood.
-			# The bricks, the score and the clock are all untouched.
 			audio.play("ui_select")
-			run.on_re_entry()
-			_spawn_ball(true)
-			_set_state(State.PLAYING)
+			continue_gate.request(_re_entries_used())
 		"restart":
 			# The field from the start, three lives, level score cleared.
 			audio.play("ui_select")
@@ -231,6 +236,22 @@ func _on_screen_action(name: String) -> void:
 			audio.play("ui_select")
 
 
+func _re_entries_used() -> int:
+	return 1 if run.re_entry_used else 0
+
+
+## Section 16: one extra life, continue exactly where it stood. The
+## bricks, the score and the clock are all untouched.
+func _on_continue_granted() -> void:
+	run.on_re_entry()
+	_spawn_ball(true)
+	_set_state(State.PLAYING)
+
+
+func _on_continue_denied() -> void:
+	_set_state(State.SIGNAL_LOST)
+
+
 func _start_new_game() -> void:
 	run.start_run()
 	_load_level(0)
@@ -252,7 +273,7 @@ func _load_level(index: int) -> void:
 		return
 
 	level_data = result["data"]
-	grid.build(level_data.get("grid", []), float(level_data.get("gridAnchor", 0)))
+	grid.build(level_data.get("grid", []), LevelLoader.anchor_of(level_data))
 	grid.blind = false
 	arena.reset()
 	effects.clear_all()

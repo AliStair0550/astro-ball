@@ -97,8 +97,12 @@ func _process(delta: float) -> void:
 			_build_field()
 
 	# A lost ball costs nothing here. It comes straight back.
+	# Zeroing the timer is not enough: the game only advances state while
+	# the timer is above zero, so setting it to exactly zero strands the
+	# lab in BALL_LOST with no ball and no way out.
 	if game.state == Game.State.BALL_LOST:
 		game._state_timer = 0.0
+		game._advance_state()
 
 	_label.text = "\n".join([
 		"FEEL TEST   1 single   2 wall   3 max speed   R reset",

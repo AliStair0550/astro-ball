@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Astro Ball"
-config/description="Fase 1: game feel-prototype. Bold, paddle og containment-felt."
+config/description="Break through the asteroid fields of The Drift."
 run/main_scene="res://scenes/game.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 

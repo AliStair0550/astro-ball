@@ -62,6 +62,10 @@ const MAX_SUBSTEPS := 16
 var radius := BASE_RADIUS:
 	set(value):
 		if is_equal_approx(value, radius):
+			# Retire any growth that was waiting. Otherwise switching
+			# Giant off while it waits leaves the request armed, and the
+			# ball grows after the power-up is gone.
+			_pending_radius = 0.0
 			return
 		var previous := radius
 		radius = value
@@ -206,9 +210,13 @@ func _physics_process(delta: float) -> void:
 	if velocity.length() > 0.0001:
 		velocity = velocity.normalized() * current_speed()
 
-	# Growth that had no room last tick tries again now.
+	# Growth that had no room last tick tries again now, but only while
+	# the power-up that asked for it is still on.
 	if _pending_radius > 0.0:
-		radius = _pending_radius
+		if giant:
+			radius = _pending_radius
+		else:
+			_pending_radius = 0.0
 
 	_advance(delta)
 	_resolve_paddle_overlap()
@@ -294,12 +302,16 @@ func _advance(delta: float) -> void:
 			if fireball and best_brick.is_breakable():
 				pass_through = true
 				damage = best_brick.hits_left
+			elif best_brick.lets_ball_pass():
+				# Glass lets any ball through, giant or not. That is the
+				# brick's own rule, not a power-up's.
+				pass_through = true
+				if giant:
+					damage = best_brick.hits_left
 			elif giant and best_brick.is_breakable():
 				# Section 20: Giant breaks Hardened in one hit, but it
 				# does not go through. It is heavy, not a ghost.
 				damage = best_brick.hits_left
-			elif best_brick.lets_ball_pass():
-				pass_through = true
 
 		global_position += motion * best_t
 		if not pass_through:
@@ -374,12 +386,19 @@ func _enforce_min_angle(v: Vector2) -> Vector2:
 func _resolve_paddle_overlap() -> void:
 	if paddle == null or stuck:
 		return
-	# A real circle against the rectangle. grow() on all four sides turns
-	# the radius into a sideways magnet: a giant ball passing beside the
-	# paddle would be teleported onto its top and bounced.
-	if _rect_push(paddle.world_rect()) == Vector2.ZERO:
+	# A real circle against the rectangle. Detecting the overlap is not
+	# enough: resolving every one of them upward turns a ball passing
+	# beside the paddle into a save, because it gets lifted onto the
+	# deck. Only an overlap that is mostly from above is a save. The rest
+	# get pushed out the way they came in.
+	var rect := paddle.world_rect()
+	var push := _rect_push(rect)
+	if push == Vector2.ZERO:
 		return
-	if global_position.y > paddle.global_position.y:
+	var from_above := push.y < 0.0 and absf(push.y) >= absf(push.x) \
+		and global_position.y <= rect.get_center().y
+	if not from_above:
+		global_position += push
 		return
 	global_position.y = paddle.top_y() - radius - SKIN
 	if velocity.y > 0.0:

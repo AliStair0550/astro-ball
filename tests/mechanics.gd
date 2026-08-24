@@ -167,7 +167,7 @@ func _test_geometry() -> void:
 	for path in LevelLoader.level_paths():
 		var data: Dictionary = LevelLoader.load_level(path)["data"]
 		var rows_data: Array = data["grid"]
-		var anchor := float(data.get("gridAnchor", 0))
+		var anchor := LevelLoader.anchor_of(data)
 		var low := BrickGrid.origin_for(rows_data, anchor) + BrickGrid.wall_height(rows_data)
 		ok(low <= BrickGrid.wall_line_y() + 0.01, "%s stays above the guard" % path)
 		ok(BrickGrid.sky_for(rows_data, anchor) >= BrickGrid.MIN_SKY,

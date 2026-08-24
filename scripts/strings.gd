@@ -52,6 +52,7 @@ const TABLE := {
 	"BTN_SETTINGS": "SETTINGS",
 	"BTN_BACK": "BACK",
 	"BTN_RE_ENTRY": "RE-ENTRY",
+	"BTN_RE_ENTRY_AD": "RE-ENTRY · WATCH AD",
 	"BTN_RESTART_FIELD": "RESTART FIELD",
 
 	# --- Settings, section 17 --------------------------------------------

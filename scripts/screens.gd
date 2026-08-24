@@ -40,6 +40,9 @@ var bricks_cleared := 0
 var best_combo := 0
 var run_time := 0.0
 var can_re_enter := true
+## What a re-entry costs right now, from ContinueGate. Only changes the
+## label; the gate decides whether it is offered at all.
+var re_entry_costs_ad := false
 
 var _reset_armed := false
 
@@ -111,14 +114,17 @@ func _layout() -> void:
 			var order := ["re_entry", "restart"]
 			if _settings() and _settings().left_handed:
 				order.reverse()
-			var labels := {"re_entry": Strings.text("BTN_RE_ENTRY"), "restart": Strings.text("BTN_RESTART_FIELD")}
+			var labels := {
+				"re_entry": Strings.text("BTN_RE_ENTRY_AD" if re_entry_costs_ad else "BTN_RE_ENTRY"),
+				"restart": Strings.text("BTN_RESTART_FIELD"),
+			}
 			var tints := {"re_entry": VOLT, "restart": SLATE}
 			for i in order.size():
 				var id: String = order[i]
 				if id == "re_entry" and not can_re_enter:
 					continue
 				_add_button(id, str(labels[id]), Vector2(cx, 592.0 + float(i) * 62.0),
-					Vector2(240.0, 50.0), tints[id])
+					Vector2(260.0, 50.0), tints[id])
 
 
 static func _on_off(value: bool) -> String:

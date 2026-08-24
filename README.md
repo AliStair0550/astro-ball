@@ -188,6 +188,7 @@ scripts/hud.gd            instrumentpanelet i toppen
 scripts/level_state.gd    liv, score, kombo, ure og stjerner
 scripts/progress.gd       stjerner, rekord og fejltæller, gemt i user://
 scripts/strings.gd        alt spillervendt tekst, afsnit 14
+scripts/continue_gate.gd  prisen paa en RE-ENTRY, sømmen en reklame kobles paa
 scripts/screens.gd        titel, indstillinger, intro, clear, game over
 scripts/settings.gd       indstillinger der overlever et genstart
 scripts/audio.gd          buser med rumklang, stemmer, drone

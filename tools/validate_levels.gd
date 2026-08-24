@@ -26,7 +26,7 @@ func _initialize() -> void:
 		var name := str(data.get("name", "?"))
 		if result["ok"]:
 			var grid: Array = data.get("grid", [])
-			var anchor := float(data.get("gridAnchor", 0))
+			var anchor := LevelLoader.anchor_of(data)
 			print("  ok   level %d %-14s %2d rows, %3d bricks, sky %3.0f px, wall line %.0f"
 				% [id, name, grid.size(), LevelLoader.breakable_count(grid),
 					BrickGrid.sky_for(grid, anchor),

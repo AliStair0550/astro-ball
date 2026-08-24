@@ -25,6 +25,8 @@ func _ready() -> void:
 	_test_powerup_timers()
 	_test_giant()
 	await _test_feel_lab()
+	_test_review_regressions()
+	_test_continue_gate()
 
 	print("--- PHASE 3: %d checks, %d failures ---" % [checks, fails])
 	for child in get_children():
@@ -490,6 +492,165 @@ func _test_feel_lab() -> void:
 	lab.set_mode(lab.Mode.SINGLE)
 	eq(lab.game.grid.remaining_breakable(), 1, "single mode is one brick")
 
+	# 6. The lab froze forever on the first lost ball: it zeroed the state
+	#    timer, but the game only advances state while the timer is above
+	#    zero. Drop a ball and check it comes back.
+	var doomed: Ball = lab.game._balls[0]
+	doomed.global_position = Vector2(195.0, lab.game.arena.death_y + 20.0)
+	lab.game._on_ball_lost(doomed)
+	eq(lab.game.state, Game.State.BALL_LOST, "the lab notices a lost ball")
+	lab._process(1.0 / 60.0)
+	eq(lab.game.state, Game.State.PLAYING, "and the ball comes straight back")
+	eq(lab.game._balls.size(), 1, "with a ball to hit")
+	ok(lab.game.paddle.input_enabled, "and the paddle answering again")
+
 	lab.game.audio.stop_all()
 	lab.free()
 	await get_tree().process_frame
+
+
+## One test per defect the adversarial review confirmed. Each of these
+## was green before the fix, which is the whole point of writing them.
+func _test_review_regressions() -> void:
+	# 1. float(null) threw inside validate(), and a throw hands the caller
+	#    an empty error list, so a broken level came back clean.
+	var poisoned := {
+		"grid": [".VVVZVVV", ".VVVVVVVVVVV."],
+		"gridAnchor": null,
+		"powerups": {"wide": 40, "narrow": 40},
+		"forcedFirstPowerup": "teleport",
+	}
+	var errors := LevelLoader.validate(poisoned)
+	ok(errors.size() >= 4, "a null gridAnchor no longer swallows the other errors (%d found)" % errors.size())
+	about(LevelLoader.anchor_of(poisoned), 0.0, 0.01, "a null anchor reads as zero")
+	about(LevelLoader.anchor_of({"gridAnchor": 25}), 25.0, 0.01, "a real anchor still reads")
+	about(LevelLoader.anchor_of({}), 0.0, 0.01, "a missing anchor reads as zero")
+	ok(not LevelLoader.validate({"grid": [".VVVVVVVVVVV.", ".VVVVVVVVVVV.",
+		".VVVVVVVVVVV.", ".VVVVVVVVVVV."], "gridAnchor": "down",
+		"powerups": {"wide": 100}}).is_empty(), "a non-numeric anchor is reported")
+
+	# 2. The Stone rule read the last array row, so one trailing blank row
+	#    turned it off for the row actually closest to the paddle.
+	var padded := {
+		"grid": [".VVVVVVVVVVV.", ".VVVVVVVVVVV.", ".SSSSSSSSSSS.", "............."],
+		"powerups": {"wide": 100},
+	}
+	var padded_errors := LevelLoader.validate(padded)
+	var caught := false
+	for e in padded_errors:
+		if str(e).contains("Stone"):
+			caught = true
+	ok(caught, "Stone in the lowest brick row is caught behind a trailing blank row")
+
+	# 3. Every paddle overlap was resolved upward, so a ball passing
+	#    beside the paddle was lifted onto it and bounced: a miss turned
+	#    into a save.
+	var arena := Arena.new()
+	add_child(arena)
+	var paddle := Paddle.new()
+	add_child(paddle)
+	paddle.position = Vector2(195.0, 780.0)
+	paddle.set_bounds(6.0, 384.0)
+	var ball := Ball.new()
+	ball.arena = arena
+	ball.paddle = paddle
+	ball.grid = grid
+	add_child(ball)
+	ball.stuck = false
+	ball.giant = true
+	var rect := paddle.world_rect()
+	ball.global_position = Vector2(rect.position.x - 7.0, 778.0)
+	ball.velocity = Vector2(-40.0, 300.0)
+	ball._resolve_paddle_overlap()
+	ok(ball.global_position.y > paddle.top_y() - ball.radius,
+		"a ball beside the paddle is not lifted onto it (y=%.1f)" % ball.global_position.y)
+	ok(ball.velocity.y > 0.0, "and it keeps falling, the miss stays a miss")
+
+	# A real hit from above still saves.
+	ball.global_position = Vector2(195.0, paddle.top_y() - 1.0)
+	ball.velocity = Vector2(0.0, 300.0)
+	ball._resolve_paddle_overlap()
+	ok(ball.velocity.y < 0.0, "a hit from above is still a save")
+
+	# 4. Giant claimed the branch before Glass could, so a giant ball
+	#    bounced off glass instead of going through it.
+	grid.build([".............", ".G...........", "............."], 0.0)
+	var glass := grid.brick_at(1, 1)
+	eq(glass.type, Brick.Type.GLASS, "a glass brick to aim at")
+	var seen := {"passed": false, "damage": 0}
+	var handler := func(_b: Brick, damage: int, _p: Vector2, passed: bool):
+		seen["passed"] = passed
+		seen["damage"] = damage
+	ball.brick_hit.connect(handler)
+	ball.giant = true
+	ball.global_position = glass.rect.get_center() + Vector2(0.0, 50.0)
+	ball.velocity = Vector2(0.0, -320.0)
+	ball._advance(0.3)
+	ball.brick_hit.disconnect(handler)
+	ok(seen["passed"], "a giant ball still passes through glass")
+	ok(ball.velocity.y < 0.0, "and keeps going the way it was going")
+
+	# 5. A growth with no room was held, and switching Giant off left the
+	#    request armed, so the ball grew after the power-up was gone.
+	ball.giant = false
+	ball.global_position = Vector2(195.0, 700.0)
+	ball._pending_radius = Ball.BASE_RADIUS * 2.0
+	ball.giant = false
+	ball._physics_process(1.0 / 60.0)
+	about(ball.radius, Ball.BASE_RADIUS, 0.01,
+		"a pending growth does not outlive the power-up that asked for it")
+
+	ball.queue_free()
+	paddle.queue_free()
+	arena.queue_free()
+
+
+## Section 16 and 19: the price of a re-entry. No ad network and no store
+## in this build, so the gate answers FREE. The branches have to be there
+## and have to work, because that is the whole reason the seam exists.
+func _test_continue_gate() -> void:
+	var gate := ContinueGate.new()
+
+	eq(gate.cost_for(0), ContinueGate.Cost.FREE, "with no store and no ads, a re-entry is free")
+	ok(gate.available(0), "and it is offered")
+	eq(gate.cost_for(1), ContinueGate.Cost.UNAVAILABLE, "but only once per field")
+	ok(not gate.available(1), "the second time it is not offered")
+
+	# The paid unlock, section 19.
+	gate.entitled = true
+	eq(gate.cost_for(0), ContinueGate.Cost.FREE, "the paid version keeps it free")
+	gate.entitled = false
+
+	# The free version once an ad layer exists.
+	gate.rewarded_ready = true
+	eq(gate.cost_for(0), ContinueGate.Cost.WATCH_AD, "with an ad ready, it costs an ad")
+	eq(gate.cost_for(1), ContinueGate.Cost.UNAVAILABLE, "still only once per field")
+
+	# Asking for it waits for the ad rather than granting at once.
+	var log := {"granted": 0, "denied": 0, "asked": 0}
+	gate.granted.connect(func(): log["granted"] += 1)
+	gate.denied.connect(func(): log["denied"] += 1)
+	gate.ad_requested.connect(func(): log["asked"] += 1)
+
+	gate.request(0)
+	eq(log["asked"], 1, "the gate asks the ad layer")
+	eq(log["granted"], 0, "and grants nothing yet")
+	ok(gate.is_pending(), "it is waiting")
+	gate.resolve(true)
+	eq(log["granted"], 1, "a watched ad grants the re-entry")
+	ok(not gate.is_pending(), "and the wait is over")
+
+	gate.resolve(true)
+	eq(log["granted"], 1, "a stray resolve does nothing")
+
+	gate.request(0)
+	gate.resolve(false)
+	eq(log["denied"], 1, "an abandoned ad denies it")
+
+	# And with no ad ready it grants straight away, which is today.
+	gate.rewarded_ready = false
+	gate.request(0)
+	eq(log["granted"], 2, "with no ad layer it grants at once")
+
+	gate.request(1)
+	eq(log["denied"], 2, "and a used-up field is denied")

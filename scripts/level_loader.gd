@@ -46,6 +46,19 @@ static func load_level(path: String) -> Dictionary:
 	return {"ok": errors.is_empty(), "data": data, "errors": errors}
 
 
+## gridAnchor read safely. float(null) throws, and a throw inside
+## validate() hands the caller an empty error list, so a broken level
+## comes back clean. An explicit null is this project's own idiom for an
+## absent optional field, so it has to be survivable.
+static func anchor_of(data: Dictionary) -> float:
+	var raw: Variant = data.get("gridAnchor", 0)
+	if raw == null:
+		return 0.0
+	if typeof(raw) != TYPE_INT and typeof(raw) != TYPE_FLOAT:
+		return 0.0
+	return float(raw)
+
+
 static func validate(data: Dictionary) -> PackedStringArray:
 	var errors := PackedStringArray()
 
@@ -75,7 +88,10 @@ static func validate(data: Dictionary) -> PackedStringArray:
 				breakable += 1
 
 	if not grid.is_empty():
-		var last: String = str(grid[grid.size() - 1])
+		# The row closest to the paddle, which is not the last array row
+		# when a level pads itself with blank rows. Placement already
+		# uses last_brick_row; the rule has to look at the same row.
+		var last: String = str(grid[BrickGrid.last_brick_row(grid)])
 		if last.contains("S"):
 			errors.append("Stone in the bottom row")
 
@@ -94,7 +110,10 @@ static func validate(data: Dictionary) -> PackedStringArray:
 	# Section 20: gridAnchor is a px offset from the default wall line.
 	# A negative one lifts the wall, and lifting it too far eats the sky
 	# the ball needs to get up behind the wall.
-	var anchor := float(data.get("gridAnchor", 0))
+	var raw_anchor: Variant = data.get("gridAnchor", 0)
+	if raw_anchor != null and typeof(raw_anchor) != TYPE_INT and typeof(raw_anchor) != TYPE_FLOAT:
+		errors.append("gridAnchor must be a number, not %s" % type_string(typeof(raw_anchor)))
+	var anchor := anchor_of(data)
 	var sky := BrickGrid.sky_for(grid, anchor)
 	if sky < BrickGrid.MIN_SKY:
 		errors.append("gridAnchor %.0f leaves %.0f px of sky, the minimum is %.0f"
