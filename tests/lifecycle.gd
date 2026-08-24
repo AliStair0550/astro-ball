@@ -155,7 +155,7 @@ func _test_pause() -> void:
 	for button in game.screens._buttons:
 		ids.append(str(button["id"]))
 	eq(ids[0], "resume", "the way back into the field is the first button")
-	ok(ids.has("chart") and ids.has("restart"), "with a way out beside it")
+	ok(ids.has("menu") and ids.has("restart"), "with a way out beside it")
 	eq(ids.size(), 3, "and nothing else on it")
 	ok(not ids.has("settings"),
 		"a held level is not where anybody goes to change the haptics")

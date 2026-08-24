@@ -54,6 +54,8 @@ const TABLE := {
 	"BTN_BACK": "BACK",
 	"BTN_RESUME": "RESUME",
 	"BTN_LEVELS": "SELECT LEVEL",
+	"BTN_MENU": "MAIN MENU",
+	"BTN_START": "START",
 	# Was RE-ENTRY. A word the player has to learn first is a word in
 	# the way, and this is the screen where they are already losing.
 	"BTN_RE_ENTRY": "CONTINUE",
@@ -96,6 +98,8 @@ const TABLE := {
 	"MAP_LOCKED_HINT": "CLEAR THE LEVEL BEFORE IT",
 	"MAP_BEST": "BEST %s",
 	"MAP_COMPLETE": "ALL LEVELS CLEARED",
+	"MAP_START_HERE": "START HERE",
+	"MAP_DESTINATION": "THE WAY IN",
 
 	# --- Level cleared ---------------------------------------------------
 	"FIELD_CLEARED": "LEVEL CLEARED",

@@ -185,6 +185,36 @@ func _test_flow() -> void:
 	eq(int(game.level_data["id"]), 2, "the one that was chosen")
 	ok(not game.star_map.visible, "and the list steps out of the way")
 
+	# The caption names a level and sits under the thumb. It shipped as a
+	# label: it read like a choice and did nothing when pressed.
+	game._open_chart(false)
+	var chart := game.star_map
+	var started := {"index": -1}
+	var handler := func(i: int) -> void: started["index"] = i
+	chart.chosen.connect(handler)
+	chart.focus = 0
+	var caption := Rect2()
+	for button in chart._buttons:
+		if str(button["id"]) == "start":
+			caption = Rect2(button["rect"])
+	ok(caption.size.x > 0.0, "the caption is a button")
+	ok(caption.size.y >= 44.0, "and a thumb fits on it (%.0f px)" % caption.size.y)
+	var press := InputEventScreenTouch.new()
+	press.pressed = true
+	press.position = caption.get_center()
+	chart._unhandled_input(press)
+	eq(started["index"], 0, "pressing it starts the level it names")
+
+	# And it does not start a level nobody has reached.
+	started["index"] = -1
+	chart.focus = 6
+	chart._unhandled_input(press)
+	eq(started["index"], -1, "a locked level is not started from the caption")
+	chart.chosen.disconnect(handler)
+
+	# The chart says where to start, and it is the first level standing.
+	eq(chart.next_index, 1, "the chart marks the first level still standing")
+
 	# And back from the levels is the universe list, not the title.
 	game._open_chart(false)
 	game._on_map_action("back")

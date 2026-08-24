@@ -75,6 +75,11 @@ var focus := -1
 ## Runs the constellation on, one line at a time, when the zone is done.
 var reveal := 0.0
 
+## The level the player is meant to press next: the first still standing.
+var next_index := 0
+
+const CHART := Rect2(18.0, 182.0, 354.0, 486.0)
+
 var _buttons: Array[Dictionary] = []
 var _time := 0.0
 var _fade := 0.0
@@ -89,11 +94,12 @@ func _ready() -> void:
 
 
 ## Called by the game every time the chart is opened.
-func open(level_data: Array, next_index: int, celebrate: bool) -> void:
+func open(level_data: Array, start_at: int, celebrate: bool) -> void:
 	fields.clear()
 	for entry in level_data:
 		fields.append(entry)
-	focus = clampi(next_index, 0, maxi(fields.size() - 1, 0))
+	next_index = clampi(start_at, 0, maxi(level_data.size() - 1, 0))
+	focus = next_index
 	_time = 0.0
 	_fade = 0.0
 	_hover = -1
@@ -154,6 +160,15 @@ func field_at(point: Vector2) -> int:
 
 func _layout() -> void:
 	_buttons.clear()
+	# The caption is a button. It names a level and sits under the thumb,
+	# so pressing it has to start that level: a label that reads like a
+	# choice and does nothing is worse than no label.
+	_buttons.append({
+		"id": "start",
+		"label": Strings.text("BTN_START"),
+		"rect": Rect2(24.0, 686.0, screen_size.x - 48.0, 58.0),
+		"tint": VOLT,
+	})
 	_buttons.append({
 		"id": "back",
 		"label": Strings.text("BTN_BACK"),
@@ -207,10 +222,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	for button in _buttons:
-		if Rect2(button["rect"]).has_point(point):
+		if not Rect2(button["rect"]).has_point(point):
+			continue
+		get_viewport().set_input_as_handled()
+		if str(button["id"]) == "start":
+			if unlocked(focus):
+				chosen.emit(focus)
+			else:
+				action.emit("locked")
+		else:
 			action.emit(str(button["id"]))
-			get_viewport().set_input_as_handled()
-			return
+		return
 
 	var index := field_at(point)
 	if index < 0:
@@ -234,9 +256,10 @@ func _draw() -> void:
 	# drifting at different rates, so the sky is not a flat sheet.
 	var tint := Cosmos.tint_of(Strings.universe_index(zone_slug) - 1)
 	Cosmos.draw_wash(self, Vector2(screen_size.x * 0.30 + sin(_time * 0.11) * 12.0, 470.0),
-		250.0, tint, 0.10 * _fade)
+		250.0, tint, 0.09 * _fade)
 	Cosmos.draw_wash(self, Vector2(screen_size.x * 0.72 + cos(_time * 0.08) * 10.0, 300.0),
-		210.0, tint.lerp(PULSE, 0.5), 0.09 * _fade)
+		210.0, tint.lerp(PULSE, 0.5), 0.08 * _fade)
+	_draw_chart_paper()
 
 	_draw_header()
 	_draw_route()
@@ -245,7 +268,8 @@ func _draw() -> void:
 		_draw_node(i)
 	_draw_caption()
 	for button in _buttons:
-		_draw_button(button)
+		if str(button["id"]) != "start":
+			_draw_button(button)
 
 
 func _draw_header() -> void:
@@ -271,6 +295,37 @@ func _draw_header() -> void:
 		_text(FONT_UI, Strings.text("MAP_COMPLETE"), Vector2(screen_size.x * 0.5, 204.0), 9, mark, true)
 
 
+## The paper the chart is drawn on: a grid to measure by, a frame with
+## corner ticks, and a heading. It is the difference between twelve
+## points floating in the dark and a chart of somewhere.
+func _draw_chart_paper() -> void:
+	var ink := Color("2A2A3A")
+	ink.a = 0.5 * _fade
+	var step := 44.0
+	var x := CHART.position.x + step
+	while x < CHART.end.x:
+		draw_line(Vector2(x, CHART.position.y), Vector2(x, CHART.end.y), Color(ink, 0.10 * _fade), 1.0)
+		x += step
+	var y := CHART.position.y + step
+	while y < CHART.end.y:
+		draw_line(Vector2(CHART.position.x, y), Vector2(CHART.end.x, y), Color(ink, 0.10 * _fade), 1.0)
+		y += step
+	draw_rect(CHART, Color(ink, 0.55 * _fade), false, 1.0)
+	# Corner ticks, like an instrument rather than a dialogue box.
+	var mark := PULSE
+	mark.a = 0.55 * _fade
+	var m := 12.0
+	for corner in [
+			[CHART.position, Vector2(1.0, 1.0)],
+			[Vector2(CHART.end.x, CHART.position.y), Vector2(-1.0, 1.0)],
+			[Vector2(CHART.position.x, CHART.end.y), Vector2(1.0, -1.0)],
+			[CHART.end, Vector2(-1.0, -1.0)]]:
+		var at: Vector2 = corner[0]
+		var dir: Vector2 = corner[1]
+		draw_line(at, at + Vector2(m * dir.x, 0.0), mark, 1.0)
+		draw_line(at, at + Vector2(0.0, m * dir.y), mark, 1.0)
+
+
 ## The route, drawn as it is flown. A line appears between two levels
 ## once both of them have fallen, so the chart fills in behind the
 ## player. The figure itself still waits for the whole universe: this is
@@ -278,6 +333,13 @@ func _draw_header() -> void:
 func _draw_route() -> void:
 	if reveal >= 1.0:
 		return
+	# The whole way, dotted, so the destination is visible from the
+	# start: the chart is a reason to keep going, not a record of where
+	# you have been.
+	var faint := Color("3A3A50")
+	faint.a = 0.5 * _fade
+	for i in range(1, mini(fields.size(), NODES.size())):
+		_dashed(NODES[i - 1], NODES[i], faint)
 	for i in range(1, mini(fields.size(), NODES.size())):
 		if not bool(fields[i]["cleared"]) or not bool(fields[i - 1]["cleared"]):
 			continue
@@ -286,6 +348,29 @@ func _draw_route() -> void:
 		draw_line(NODES[i - 1], NODES[i], line, 4.0)
 		line.a = 0.32
 		draw_line(NODES[i - 1], NODES[i], line, 1.0)
+
+
+static func _dash_points(a: Vector2, b: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var length := a.distance_to(b)
+	if length <= 0.01:
+		return out
+	var dir := (b - a) / length
+	var travelled := 0.0
+	while travelled < length:
+		var to := minf(travelled + 4.0, length)
+		out.append(a + dir * travelled)
+		out.append(a + dir * to)
+		travelled = to + 5.0
+	return out
+
+
+func _dashed(a: Vector2, b: Vector2, color: Color) -> void:
+	var points := _dash_points(a, b)
+	var i := 0
+	while i + 1 < points.size():
+		draw_line(points[i], points[i + 1], color, 1.0)
+		i += 2
 
 
 func _draw_edges() -> void:
@@ -328,8 +413,8 @@ func _draw_node(index: int) -> void:
 		# Lit, and the glow says how many of the three you took.
 		var glow := VOLT if stars >= 3 else BONE
 		for ring in 3:
-			glow.a = (0.13 + 0.05 * float(stars)) / float(ring + 1)
-			_diamond(at, 9.0 + float(ring) * 5.0 + float(stars) * 2.0, glow)
+			glow.a = (0.08 + 0.035 * float(stars)) / float(ring + 1)
+			_diamond(at, 9.0 + float(ring) * 4.0 + float(stars) * 1.5, glow)
 		# Three of three gets a cross of light. It is the only mark on
 		# the chart that says perfect, and it should be visible from the
 		# other side of the screen.
@@ -356,6 +441,26 @@ func _draw_node(index: int) -> void:
 	label.a = 0.8
 	_text(FONT_SCORE, "%02d" % (index + 1), at + Vector2(0.0, 26.0), 9, label, true)
 
+	# The end of the road, marked from the beginning. A chart is a reason
+	# to keep going, and a reason has to be visible from where you are.
+	if index == fields.size() - 1 and not cleared:
+		var ring := PULSE
+		ring.a = 0.42
+		_diamond_outline(at, 20.0, ring)
+		_diamond_outline(at, 26.0, Color(ring, 0.2))
+		ring.a = 0.7
+		_text(FONT_UI, str(entry.get("name", "")).to_upper(), at + Vector2(0.0, -26.0), 8, ring, true)
+
+	# The one to press. A chart with nothing marked on it is a chart you
+	# have to work out before you can play.
+	if index == next_index and not cleared:
+		var beat := 0.5 + 0.5 * sin(_time * 3.0)
+		var ring := VOLT
+		ring.a = 0.35 + 0.45 * beat
+		_diamond_outline(at, 18.0 + 3.0 * beat, ring)
+		ring.a = 0.8
+		_text(FONT_UI, Strings.text("MAP_START_HERE"), at + Vector2(0.0, -24.0), 8, ring, true)
+
 
 func _draw_caption() -> void:
 	if focus < 0 or focus >= fields.size():
@@ -371,8 +476,21 @@ func _draw_caption() -> void:
 	var name := str(entry.get("name", ""))
 	var line := Strings.fmt("MAP_FIELD", [focus + 1, name.to_upper()]) if open \
 		else Strings.text("MAP_LOCKED")
-	_text(FONT_DISPLAY, line, Vector2(screen_size.x * 0.5, box.position.y + 24.0), 13,
-		BONE if open else SLATE, true)
+	_text(FONT_DISPLAY, line, Vector2(screen_size.x * 0.5 - (12.0 if open else 0.0),
+		box.position.y + 24.0), 13, BONE if open else SLATE, true)
+
+	# It is a button, so it says so: the word and the way in.
+	if open:
+		var go := VOLT
+		go.a = 0.9
+		var tip := Vector2(box.end.x - 22.0, box.position.y + 20.0)
+		draw_colored_polygon(PackedVector2Array([
+			tip + Vector2(-3.0, -7.0), tip + Vector2(5.0, 0.0), tip + Vector2(-3.0, 7.0),
+			tip + Vector2(-6.0, 4.0), tip + Vector2(-1.0, 0.0), tip + Vector2(-6.0, -4.0),
+		]), go)
+		var edge := VOLT
+		edge.a = 0.35
+		draw_rect(box, edge, false, 1.0)
 
 	if not open:
 		_text(FONT_UI, Strings.text("MAP_LOCKED_HINT"),

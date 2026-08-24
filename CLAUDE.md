@@ -1028,3 +1028,31 @@ mærke på kortet, der siger perfekt.
 Navnet `Sky` var optaget af Godot selv, og den slags kollision viser sig
 som "Static function not found in base GDScriptNativeClass". Klassen
 hedder `Cosmos`.
+
+---
+
+## Kortet, tegnet som et kort
+
+Levellisten var tolv punkter i mørket. Den er nu et kort: en ramme med
+hjørnemærker, et svagt gitter at måle på, og ruten stiplet hele vejen op
+til The Core, så man kan se, hvor det ender, fra det sted man står.
+
+- **Der står, hvor man begynder.** Den første bane, der stadig står, har
+  en pulserende ring og ordet START HERE over sig. Et kort uden noget
+  markeret er et kort, man skal regne ud, før man kan spille.
+- **Målet er markeret fra begyndelsen.** Den sidste bane bærer sit navn
+  og to ringe. En rute er kun en rute, hvis der er noget for enden.
+- **Navnebjælken er en knap.** Der stod "LEVEL 05 · THE HOLD" nederst,
+  under tommelfingeren, og der skete ingenting, når man trykkede. En
+  etiket, der læses som et valg og ikke er et, er værre end ingen
+  etiket. Nu starter den den bane, den nævner, og den har en pil.
+- **Planeterne er skruet ned.** Skyerne bag kortet er halvt så stærke,
+  og gloriet om en klaret bane er mindre. Kortet skal kunne læses.
+
+Farveovergangene tegnes som en vifte af trekanter fra en oplyst midte
+til en gennemsigtig kant. Cirkler stablet med faldende alfa efterlader
+synlige ringe, uanset hvor mange man bruger, og en ring ligner en skydeskive,
+ikke en sky.
+
+Pauseskærmens tredje knap hedder MAIN MENU og går til titlen. SELECT
+LEVEL var et sted at gå hen, ikke en vej ud.

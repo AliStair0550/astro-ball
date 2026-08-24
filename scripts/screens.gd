@@ -127,7 +127,7 @@ func _layout() -> void:
 			# One place per universe, down the path that runs inward
 			# through the system. The open one is a button; the rest are
 			# there to be seen, not pressed.
-			var y := 286.0
+			var y := 322.0
 			for i in universes.size():
 				var entry: Dictionary = universes[i]
 				var open := bool(entry.get("open", false))
@@ -163,7 +163,7 @@ func _layout() -> void:
 			# field is not where anybody goes to change the haptics.
 			_add_button("resume", Strings.text("BTN_RESUME"), Vector2(cx, 476.0), Vector2(240.0, 54.0), VOLT)
 			_add_button("restart", Strings.text("BTN_RESTART_FIELD"), Vector2(cx, 542.0), Vector2(240.0, 44.0), SLATE)
-			_add_button("chart", Strings.text("BTN_LEVELS"), Vector2(cx, 596.0), Vector2(240.0, 44.0), ICE)
+			_add_button("menu", Strings.text("BTN_MENU"), Vector2(cx, 596.0), Vector2(240.0, 44.0), ICE)
 		Screen.SIGNAL_LOST:
 			# Two ways on. There is no way back to a main menu from here.
 			var order := ["re_entry", "restart"]

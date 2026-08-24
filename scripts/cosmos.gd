@@ -139,24 +139,31 @@ static func _hole(ci: CanvasItem, at: Vector2, r: float, lit: float, time: float
 
 ## A soft wash of colour, for putting a place behind a screen.
 ##
-## Twenty steps with a squared falloff. Five with a straight one left
-## visible rings, which reads as a target rather than as a cloud.
+## A fan of triangles from a lit centre to a transparent rim, so the
+## falloff is interpolated rather than stepped. Stacked circles at
+## descending alpha leave visible rings however many of them there are,
+## and a ring reads as a target, not as a cloud.
 static func draw_wash(ci: CanvasItem, at: Vector2, radius: float, color: Color,
 		strength: float) -> void:
-	var steps := 20
+	var middle := color
+	middle.a = strength
+	var rim := color
+	rim.a = 0.0
+	var steps := 28
 	for i in steps:
-		var t := float(i) / float(steps)
-		var c := color
-		c.a = strength * (1.0 - t) * (1.0 - t) * 0.55
-		ci.draw_circle(at, radius * (0.16 + t * 0.9), c)
+		var a0 := TAU * float(i) / float(steps)
+		var a1 := TAU * float(i + 1) / float(steps)
+		ci.draw_polygon(
+			PackedVector2Array([
+				at,
+				at + Vector2(cos(a0), sin(a0)) * radius,
+				at + Vector2(cos(a1), sin(a1)) * radius,
+			]),
+			PackedColorArray([middle, rim, rim]))
 
 
 static func _glow(ci: CanvasItem, at: Vector2, radius: float, color: Color, strength: float) -> void:
-	for i in 5:
-		var t := float(i) / 5.0
-		var c := color
-		c.a = strength * (1.0 - t) * (1.0 - t)
-		ci.draw_circle(at, radius * (0.45 + t * 0.75), c)
+	draw_wash(ci, at, radius * 1.15, color, strength * 0.9)
 
 
 static func _ellipse(ci: CanvasItem, at: Vector2, rx: float, ry: float, tilt: float,
