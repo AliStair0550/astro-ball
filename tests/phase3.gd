@@ -143,13 +143,22 @@ func _test_loader_fixtures() -> void:
 	eq(str(one["forcedFirstPowerup"]), "wide", "level 1 forces Wide first")
 	eq(int(one["parTime"]), 60, "level 1 par time is 60")
 	eq(LevelLoader.breakable_count(one["grid"]), 47, "level 1 has 47 bricks")
-	# The first fields teach the chain before they teach patience:
-	# blast bricks early, and no Hardened at all.
-	for path in LevelLoader.level_paths():
-		var d: Dictionary = LevelLoader.load_level(path)["data"]
+	# The first fields teach the chain before they teach patience: blast
+	# bricks in all three, and no Hardened until level 6, which is the
+	# one built out of it.
+	var paths := LevelLoader.level_paths()
+	for i in 3:
+		var d: Dictionary = LevelLoader.load_level(paths[i])["data"]
 		var joined := "".join(PackedStringArray(d["grid"]))
-		ok(joined.contains("E"), "%s has blast bricks" % path)
-		ok(not joined.contains("H"), "%s has no Hardened yet" % path)
+		ok(joined.contains("E"), "%s has blast bricks" % paths[i])
+		ok(not joined.contains("H"), "%s has no Hardened yet" % paths[i])
+	for i in 5:
+		var d: Dictionary = LevelLoader.load_level(paths[i])["data"]
+		ok(not "".join(PackedStringArray(d["grid"])).contains("H"),
+			"%s is still before the Hardened fields" % paths[i])
+	var six: Dictionary = LevelLoader.load_level(paths[5])["data"]
+	ok("".join(PackedStringArray(six["grid"])).contains("H"),
+		"level 6 is where Hardened arrives")
 
 	# Section 9 gave level 1 no bad drops at all. It has one now, at a
 	# weight low enough to teach the dark edge and the zigzag without
@@ -164,18 +173,31 @@ func _test_loader_fixtures() -> void:
 	ok(one["powerups"].has("giant"), "level 1 can drop Giant")
 
 	# And the punishments spread out rather than arriving all at once.
+	# The share climbs the length of the zone: no field is ever kinder
+	# than the one before it, which is the only difficulty curve this
+	# game has that the player cannot see.
 	var previous := 0.0
+	var shares: Array[float] = []
 	for path in LevelLoader.level_paths():
 		var d: Dictionary = LevelLoader.load_level(path)["data"]
 		var share := 0.0
-		var kinds := 0
 		for id in d.get("powerups", {}):
-			if not Powerup.is_good(str(id)):
+			if Powerup.is_bad(str(id)):
 				share += float(d["powerups"][id])
-				kinds += 1
 		ok(share >= previous - 0.01, "%s is no gentler than the level before it" % path)
 		previous = share
-	ok(previous >= 25.0, "by level 3 a quarter of the drops can hurt (%.0f %%)" % previous)
+		shares.append(share)
+	ok(shares[2] >= 25.0, "by level 3 a quarter of the drops can hurt (%.0f %%)" % shares[2])
+	ok(shares[shares.size() - 1] >= 35.0,
+		"and by the zone finale better than a third (%.0f %%)" % shares[shares.size() - 1])
+	# A neutral is neither, and must not be counted as a punishment.
+	var neutral_seen := false
+	for path in LevelLoader.level_paths():
+		var d: Dictionary = LevelLoader.load_level(path)["data"]
+		for id in d.get("powerups", {}):
+			if Powerup.is_neutral(str(id)):
+				neutral_seen = true
+	ok(neutral_seen, "the zone offers a coin flip somewhere")
 
 	# Every punishment in section 7 except Death is reachable somewhere.
 	var seen := {}
@@ -183,9 +205,13 @@ func _test_loader_fixtures() -> void:
 		var d: Dictionary = LevelLoader.load_level(path)["data"]
 		for id in d.get("powerups", {}):
 			seen[str(id)] = true
-	for id in ["narrow", "fast", "heavy", "blind", "invert"]:
+	for id in ["narrow", "fast", "heavy", "blind", "invert", "death"]:
 		ok(seen.has(id), "the punishment '%s' is reachable" % id)
-	ok(not seen.has("death"), "and Death is not, section 7 keeps it out of the first five")
+	# Death is reachable, but not before it is allowed to be.
+	for i in PowerupManager.HARSH_SAFE_LEVELS:
+		var d: Dictionary = LevelLoader.load_level(LevelLoader.level_paths()[i])["data"]
+		ok(not d.get("powerups", {}).has("death"),
+			"level %d cannot drop Death" % [i + 1])
 
 
 # --- Section 20, the bottom anchor --------------------------------------

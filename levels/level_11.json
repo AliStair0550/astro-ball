@@ -1,0 +1,35 @@
+{
+  "id": 11,
+  "name": "Blackout",
+  "zone": "baeltet",
+  "grid": [
+    ".............",
+    ".....VVV.....",
+    "...VVVVVVV...",
+    "..VVVVVVVVV..",
+    ".VVVVEEEVVVV.",
+    "..VVVVVVVVV..",
+    "...VVVVVVV...",
+    ".....VVV....."
+  ],
+  "ballSpeed": 380,
+  "gridAnchor": 0,
+  "powerups": {
+    "multi": 13,
+    "fireball": 11,
+    "magnet": 11,
+    "wide": 8,
+    "laser": 7,
+    "life": 5,
+    "shield": 5,
+    "slow": 4,
+    "narrow": 9,
+    "fast": 9,
+    "invert": 8,
+    "heavy": 7,
+    "death": 3
+  },
+  "blind": true,
+  "forcedFirstPowerup": null,
+  "parTime": 85
+}

@@ -1,0 +1,32 @@
+{
+  "id": 4,
+  "name": "The Constellation",
+  "zone": "baeltet",
+  "grid": [
+    ".............",
+    ".VVVVVVVVVVV.",
+    ".V?VVVVVVV?V.",
+    ".............",
+    "..IIIIIIIII..",
+    "..II?I?I?II..",
+    ".............",
+    ".PPPPPPPPPPP.",
+    ".P?PPPPPPP?P."
+  ],
+  "ballSpeed": 380,
+  "gridAnchor": 0,
+  "powerups": {
+    "multi": 18,
+    "fireball": 15,
+    "wide": 14,
+    "magnet": 12,
+    "laser": 10,
+    "life": 6,
+    "narrow": 8,
+    "fast": 7,
+    "blind": 5,
+    "heavy": 5
+  },
+  "forcedFirstPowerup": null,
+  "parTime": 110
+}

@@ -1,0 +1,33 @@
+{
+  "id": 7,
+  "name": "Off Axis",
+  "zone": "baeltet",
+  "grid": [
+    ".............",
+    ".VVVVVV..EEE.",
+    ".VVVVVV..VVV.",
+    "..IIIIII.....",
+    "...IIIIII....",
+    "....PPPPPP...",
+    ".....PPPPPP..",
+    "......FFFFFF."
+  ],
+  "ballSpeed": 390,
+  "gridAnchor": 0,
+  "powerups": {
+    "multi": 14,
+    "fireball": 12,
+    "magnet": 10,
+    "wide": 10,
+    "laser": 8,
+    "splinter": 6,
+    "life": 5,
+    "swap": 5,
+    "narrow": 8,
+    "fast": 8,
+    "invert": 7,
+    "heavy": 7
+  },
+  "forcedFirstPowerup": null,
+  "parTime": 85
+}

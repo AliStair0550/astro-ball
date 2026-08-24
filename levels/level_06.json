@@ -1,0 +1,30 @@
+{
+  "id": 6,
+  "name": "The Anvil",
+  "zone": "baeltet",
+  "grid": [
+    ".............",
+    "..HHHHHHHHH..",
+    "..H.EEE...H..",
+    "..HHHHHHHHH..",
+    "....VVVVV....",
+    "...VVVVVVV..."
+  ],
+  "ballSpeed": 360,
+  "gridAnchor": 0,
+  "powerups": {
+    "splinter": 16,
+    "fireball": 14,
+    "multi": 12,
+    "shield": 10,
+    "wide": 10,
+    "life": 6,
+    "giant": 4,
+    "narrow": 8,
+    "heavy": 8,
+    "fast": 6,
+    "blind": 6
+  },
+  "forcedFirstPowerup": null,
+  "parTime": 135
+}

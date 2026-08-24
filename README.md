@@ -35,6 +35,18 @@ gridAnchor      valgfrit px-offset i leveldata, positivt = længere ned
 Level-loaderen afviser et anker, der æder himlen eller fører muren
 forbi murlinjen.
 
+### Zonen
+
+Tolv felter, The Drift. De ni sidste bygger paa afsnit 10: en
+konstellation i skjulte klodser, et gitter der kun giver Magnet og Laser,
+en ambolt af Haerdet, et diagonalt baand, en stenlabyrint, en ramme af
+spraengklodser der tager 62 procent i ét slag, to lag glas, en blind
+diamant, og en finale med alle ti klodstyper.
+
+Alle atten power-ups fra afsnit 7 er bygget, plus Giant. Neutrale
+kapsler har graa kant og er hverken gode eller daarlige: Lotteri bliver
+til en af banens egne drops, Byt roterer feltets fire almindelige typer.
+
 ### Klodserne
 
 Sprængklodserne ligger ved siden af hinanden, saa en kaede loeber.

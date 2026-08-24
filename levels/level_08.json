@@ -1,0 +1,33 @@
+{
+  "id": 8,
+  "name": "The Labyrinth",
+  "zone": "baeltet",
+  "grid": [
+    ".............",
+    ".VVVVVVVVVVV.",
+    ".S...S...S.S.",
+    ".VVVVVVVVVVV.",
+    ".S.S...S...S.",
+    ".IIIIIIIIIII.",
+    "...S.....S...",
+    "..PPPPPPPPP.."
+  ],
+  "ballSpeed": 380,
+  "gridAnchor": 0,
+  "powerups": {
+    "multi": 12,
+    "fireball": 12,
+    "laser": 10,
+    "wide": 9,
+    "magnet": 8,
+    "shield": 6,
+    "life": 5,
+    "lottery": 6,
+    "narrow": 9,
+    "fast": 8,
+    "heavy": 8,
+    "blind": 7
+  },
+  "forcedFirstPowerup": null,
+  "parTime": 115
+}

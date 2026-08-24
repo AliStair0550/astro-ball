@@ -44,17 +44,19 @@ func eq(got: Variant, want: Variant, label: String) -> void:
 
 func _test_level_validation() -> void:
 	var paths := LevelLoader.level_paths()
-	eq(paths.size(), 3, "three level files exist")
+	eq(paths.size(), 12, "The Drift is twelve fields")
 	for path in paths:
 		var result := LevelLoader.load_level(path)
 		ok(result["ok"], "%s validates: %s" % [path, ", ".join(result["errors"])])
 	var one: Dictionary = LevelLoader.load_level("res://levels/level_01.json")["data"]
 	eq(LevelLoader.breakable_count(one["grid"]), 47, "level 1 has 47 bricks")
 	eq(str(one["forcedFirstPowerup"]), "wide", "level 1 forces Wide first")
-	# Slow belongs where it gets hard, not in the opening fields.
-	for path in paths:
-		var data: Dictionary = LevelLoader.load_level(path)["data"]
-		ok(not data.get("powerups", {}).has("slow"), "%s has no Slow" % path)
+	# Slow belongs where it gets hard, not in the opening fields. At 400
+	# px/s in the last two it is a rescue; at 360 in level 1 it is a
+	# punishment wearing a good capsule's edge.
+	for i in 3:
+		var data: Dictionary = LevelLoader.load_level(paths[i])["data"]
+		ok(not data.get("powerups", {}).has("slow"), "%s has no Slow" % paths[i])
 
 
 func _test_broken_levels() -> void:

@@ -47,6 +47,8 @@ var max_x := 390.0
 
 var width := WIDTH_NORMAL
 var laser := false
+## Section 5: an Ice glow along the top, and the ball sticks.
+var magnet := false
 ## Off while a screen is up.
 var input_enabled := true
 ## The mouse steers by absolute position. Touch steers by delta, and the
@@ -263,6 +265,8 @@ func _draw() -> void:
 
 	if laser:
 		_draw_laser_tubes(top, h, hw)
+	if magnet:
+		_draw_magnet_field(top, hw)
 
 	_draw_end_glow(top, h, hw)
 
@@ -270,6 +274,22 @@ func _draw() -> void:
 		var c := _catch_color
 		c.a = _catch_flash * 0.7
 		draw_rect(Rect2(-hw - 2.0, top - 3.0, width + 4.0, h + 5.0), c)
+
+
+## The Magnet, drawn as what it is: the shield reaching a little way up
+## to take the ball instead of hitting it. It breathes, so the player can
+## see it is still on without looking at the dock.
+func _draw_magnet_field(top: float, hw: float) -> void:
+	var pull := 0.75 + 0.25 * sin(_time * 5.0)
+	var ice := ICE
+	for i in 4:
+		ice.a = (0.30 - float(i) * 0.06) * pull
+		var lift := 2.0 + float(i) * 2.4
+		draw_rect(Rect2(-hw + float(i) * 1.5, top - lift, width - float(i) * 3.0, 1.6), ice)
+	# Two claws, so it reads as a magnet and not just a glow.
+	ice.a = 0.55 * pull
+	for side in [-1.0, 1.0]:
+		draw_rect(Rect2(side * hw - (2.0 if side > 0.0 else 0.0), top - 6.0, 2.0, 7.0), ice)
 
 
 func _cap_color(light: float) -> Color:

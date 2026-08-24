@@ -10,6 +10,7 @@ var index := 0
 var names := [
 	"01_title", "02_settings", "03_level_intro", "04_level1",
 	"05_level3", "06_effects", "07_wide_laser", "08_signal_lost", "09_crt", "10_field_cleared", "11_title_settling",
+	"12_capsules", "13_the_fuse", "14_the_core",
 ]
 
 
@@ -128,6 +129,59 @@ func _process(_delta: float) -> void:
 			game._set_state(Game.State.PLAYING)
 			get_node("/root/GameSettings").crt = true
 			get_node("/root/GameSettings").changed.emit()
+		11:
+			# The six capsules that had never been catchable, the Magnet
+			# holding the ball, and the Shield line lit under the field.
+			get_node("/root/GameSettings").crt = false
+			get_node("/root/GameSettings").changed.emit()
+			game._load_level(3)
+			game._set_state(Game.State.PLAYING)
+			for child in game.powerups.get_children():
+				child.queue_free()
+			game.powerups._capsules.clear()
+			var falling := [
+				["magnet", Vector2(70.0, 470.0)], ["shield", Vector2(160.0, 540.0)],
+				["splinter", Vector2(250.0, 470.0)], ["death", Vector2(330.0, 545.0)],
+				["swap", Vector2(115.0, 630.0)], ["lottery", Vector2(290.0, 630.0)],
+			]
+			for entry in falling:
+				var cap := Powerup.new()
+				game.powerups.add_child(cap)
+				cap.setup(str(entry[0]), entry[1], 900.0)
+			game.paddle.magnet = true
+			game.arena.shield_armed = true
+			game.powerups._active = {"magnet": 14.2, "laser": 8.0}
+			game._refresh_hud()
+			if not game._balls.is_empty():
+				var held := game._balls[0]
+				held.paddle = game.paddle
+				held.stuck = true
+				held.frozen = false
+				held.stick_to_paddle(22.0)
+		12:
+			# The shots share one game, so a previous frame's capsules
+			# would otherwise still be falling through this one.
+			for child in game.powerups.get_children():
+				child.queue_free()
+			game.powerups._capsules.clear()
+			game.powerups._active = {}
+			game.paddle.magnet = false
+			game.arena.shield_armed = false
+			game._load_level(8)
+			game._set_state(Game.State.PLAYING)
+			game.score = 26800
+			game.combo = 9
+			for brick in game.grid.live_bricks():
+				if brick.type == Brick.Type.BLAST:
+					brick.proximity = 1.0
+			game._refresh_hud()
+			game.hud.displayed_score = 26800.0
+		13:
+			game._load_level(11)
+			game._set_state(Game.State.PLAYING)
+			game.score = 104200
+			game._refresh_hud()
+			game.hud.displayed_score = 104200.0
 	game.arena.queue_redraw()
 	game.grid.queue_redraw()
 	game.paddle.queue_redraw()

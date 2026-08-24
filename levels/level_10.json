@@ -1,0 +1,32 @@
+{
+  "id": 10,
+  "name": "The Pane",
+  "zone": "baeltet",
+  "grid": [
+    ".GGGGGGGGGGG.",
+    ".GGGGGGGGGGG.",
+    ".VVVVVVVVVVV.",
+    ".IIIIIIIIIII.",
+    ".PPPPPPPPPPP.",
+    "..FFFFFFFFF.."
+  ],
+  "ballSpeed": 390,
+  "gridAnchor": 0,
+  "powerups": {
+    "multi": 13,
+    "fireball": 12,
+    "magnet": 10,
+    "wide": 10,
+    "laser": 8,
+    "shield": 5,
+    "life": 4,
+    "swap": 4,
+    "narrow": 9,
+    "fast": 9,
+    "blind": 8,
+    "heavy": 5,
+    "death": 3
+  },
+  "forcedFirstPowerup": null,
+  "parTime": 80
+}

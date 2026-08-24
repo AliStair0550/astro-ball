@@ -1,0 +1,35 @@
+{
+  "id": 9,
+  "name": "The Fuse",
+  "zone": "baeltet",
+  "grid": [
+    ".............",
+    ".EEEEEEEEEEE.",
+    ".EVVVVVVVVVE.",
+    ".EVIIIIIIIVE.",
+    ".EEEEEEEEEEE.",
+    ".............",
+    "..PPPPPPPPP..",
+    "..FFFFFFFFF..",
+    "..VVVVVVVVV.."
+  ],
+  "ballSpeed": 400,
+  "gridAnchor": 0,
+  "powerups": {
+    "multi": 14,
+    "fireball": 12,
+    "wide": 10,
+    "giant": 8,
+    "laser": 8,
+    "life": 5,
+    "splinter": 4,
+    "lottery": 5,
+    "narrow": 9,
+    "fast": 9,
+    "invert": 6,
+    "heavy": 6,
+    "death": 4
+  },
+  "forcedFirstPowerup": null,
+  "parTime": 90
+}

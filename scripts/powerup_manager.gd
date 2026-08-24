@@ -25,6 +25,10 @@ const EXCLUSIVE := {
 }
 
 var table: Dictionary = {}
+## Section 10, level 5: a field can narrow what its Spark bricks give,
+## so a level can teach two power-ups by handing out only those two.
+## Empty means the Spark draws from the level's ordinary table.
+var spark_table: Array[String] = []
 var forced_first := ""
 var level_number := 1
 var paddle: Paddle
@@ -44,9 +48,22 @@ func configure(level_data: Dictionary) -> void:
 	table = level_data.get("powerups", {})
 	var forced: Variant = level_data.get("forcedFirstPowerup", null)
 	forced_first = "" if forced == null else str(forced)
+	spark_table.clear()
+	for entry in data_array(level_data, "sparkPowerups"):
+		var name := str(entry)
+		if Powerup.CATALOG.has(name):
+			spark_table.append(name)
 	level_number = int(level_data.get("id", 1))
 	_first_spawned = false
 	_last_was_bad = false
+
+
+## A JSON list read safely: an absent or malformed field is not a crash.
+static func data_array(data: Dictionary, key: String) -> Array:
+	var raw: Variant = data.get(key, null)
+	if typeof(raw) != TYPE_ARRAY:
+		return []
+	return raw
 
 
 ## Section 15. Points are taken from the bad entries and handed to the
@@ -65,7 +82,7 @@ func effective_table() -> Dictionary:
 	for id in table:
 		if Powerup.is_good(str(id)):
 			good_sum += float(table[id])
-		else:
+		elif Powerup.is_bad(str(id)):
 			bad_sum += float(table[id])
 	if bad_sum <= 0.0 or good_sum <= 0.0:
 		return table
@@ -75,8 +92,10 @@ func effective_table() -> Dictionary:
 		var weight := float(table[id])
 		if Powerup.is_good(str(id)):
 			out[id] = weight * (good_sum + moved) / good_sum
-		else:
+		elif Powerup.is_bad(str(id)):
 			out[id] = weight * (bad_sum - moved) / bad_sum
+		else:
+			out[id] = weight
 	return out
 
 
@@ -97,23 +116,29 @@ func guarantee_good() -> void:
 
 
 ## The brick's own chance decides whether anything drops at all.
-func roll_for(at: Vector2, chance: float) -> void:
+func roll_for(at: Vector2, chance: float, from_spark := false) -> void:
 	if chance <= 0.0 or randf() > chance:
 		return
-	spawn(at)
+	spawn(at, from_spark)
 
 
-func spawn(at: Vector2) -> void:
+## The Spark's own short list. It ignores the two-in-a-row rule on
+## purpose: a level that promises Magnet or Laser has to deliver one.
+func _pick_spark() -> String:
+	return spark_table[randi() % spark_table.size()]
+
+
+func spawn(at: Vector2, from_spark := false) -> void:
 	if _capsules.size() >= MAX_ON_SCREEN:
 		return
-	var id := _pick_id()
+	var id := _pick_spark() if from_spark and not spark_table.is_empty() else _pick_id()
 	if id.is_empty():
 		return
 	var capsule := Powerup.new()
 	add_child(capsule)
 	capsule.setup(id, at, kill_y)
 	_capsules.append(capsule)
-	_last_was_bad = not Powerup.is_good(id)
+	_last_was_bad = Powerup.is_bad(id)
 	if not Powerup.is_good(id):
 		_next_guaranteed_good = false
 	_first_spawned = true
@@ -125,7 +150,12 @@ func _pick_id() -> String:
 	if not _first_spawned and not forced_first.is_empty():
 		return forced_first
 
-	var must_be_good := _next_guaranteed_good or _last_was_bad
+	# Two different promises. After a lost ball the next one is good.
+	# After a bad one the next is merely not bad, which a coin flip
+	# satisfies: section 7 forbids two punishments in a row, not a
+	# punishment followed by a chance.
+	var must_be_good := _next_guaranteed_good
+	var must_not_be_bad := _last_was_bad
 	var candidates: Array[String] = []
 	var weights: Array[float] = []
 	var total := 0.0
@@ -137,6 +167,8 @@ func _pick_id() -> String:
 		if level_number <= HARSH_SAFE_LEVELS and name in HARSH:
 			continue
 		if must_be_good and not Powerup.is_good(name):
+			continue
+		if must_not_be_bad and Powerup.is_bad(name):
 			continue
 		candidates.append(name)
 		var w := float(source[id])
@@ -181,7 +213,39 @@ func _process(delta: float) -> void:
 			expired.emit(id)
 
 
+## Lottery is a wrapper, not an effect. It picks one of the level's own
+## drops and becomes it, so a field can never hand out something it does
+## not otherwise contain, and Death still cannot reach level 5.
+func resolve_lottery() -> String:
+	var candidates: Array[String] = []
+	var weights: Array[float] = []
+	var total := 0.0
+	for key in table:
+		var name := str(key)
+		if not Powerup.CATALOG.has(name) or Powerup.is_neutral(name):
+			continue
+		if level_number <= HARSH_SAFE_LEVELS and name in HARSH:
+			continue
+		candidates.append(name)
+		var w := maxf(float(table[key]), 0.0)
+		weights.append(w)
+		total += w
+	if candidates.is_empty():
+		return "wide"
+	if total <= 0.0:
+		return candidates[0]
+	var pick := randf() * total
+	for i in candidates.size():
+		pick -= weights[i]
+		if pick <= 0.0:
+			return candidates[i]
+	return candidates[candidates.size() - 1]
+
+
 func _apply(id: String) -> void:
+	if id == "lottery":
+		_apply(resolve_lottery())
+		return
 	for other in EXCLUSIVE.get(id, []):
 		if _active.has(other):
 			_active.erase(other)

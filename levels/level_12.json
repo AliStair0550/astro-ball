@@ -1,0 +1,43 @@
+{
+  "id": 12,
+  "name": "The Core",
+  "zone": "baeltet",
+  "grid": [
+    "SVVVVVVVVVVVS",
+    "VHHVVVVVVVHHV",
+    "VVIIIIIIIIIVV",
+    ".VHIPPPPPIHV.",
+    ".VVIPFFFPIVV.",
+    ".VVIPFEFPIVV.",
+    ".VVIPFGFPIVV.",
+    ".VHIPPPPPIHV.",
+    ".VVIIIIIIIVV.",
+    ".VHHVVVVVHHV.",
+    ".VVVVVVVVVVV.",
+    ".X?X?X?X?X?X."
+  ],
+  "ballSpeed": 400,
+  "gridAnchor": 0,
+  "powerups": {
+    "multi": 11,
+    "fireball": 11,
+    "giant": 8,
+    "wide": 7,
+    "laser": 6,
+    "magnet": 4,
+    "splinter": 4,
+    "shield": 3,
+    "slow": 2,
+    "life": 1,
+    "lottery": 3,
+    "swap": 2,
+    "narrow": 8,
+    "fast": 8,
+    "blind": 7,
+    "invert": 6,
+    "heavy": 6,
+    "death": 3
+  },
+  "forcedFirstPowerup": null,
+  "parTime": 130
+}

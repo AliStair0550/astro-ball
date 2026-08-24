@@ -70,6 +70,9 @@ var best_combo: int:
 var level_index := 0
 var level_data: Dictionary = {}
 var level_paths: PackedStringArray
+## Section 10, level 11. Set per level, and not cleared by a power-up
+## running out: the field is blind because it is that field.
+var _level_blind := false
 
 var _balls: Array[Ball] = []
 ## Section 16 and 19: a re-entry is free in the paid version and costs a
@@ -289,7 +292,10 @@ func _load_level(index: int) -> void:
 
 	level_data = result["data"]
 	grid.build(level_data.get("grid", []), LevelLoader.anchor_of(level_data))
-	grid.blind = false
+	# Section 10, level 11: a field can start blind. The Blind capsule
+	# then has nothing left to take, which is the joke.
+	_level_blind = bool(level_data.get("blind", false))
+	grid.blind = _level_blind
 	arena.reset()
 	effects.clear_all()
 	powerups.reset_level()
@@ -338,6 +344,7 @@ func _spawn_ball(stuck: bool, at := Vector2.ZERO, angle_deg := 0.0) -> Ball:
 	ball.paddle_hit.connect(_on_paddle_hit)
 	ball.brick_hit.connect(_on_brick_hit.bind(ball))
 	ball.launched.connect(_on_ball_launched)
+	ball.caught.connect(_on_ball_caught)
 	ball.lost.connect(_on_ball_lost)
 
 	if stuck:
@@ -469,7 +476,8 @@ func _on_brick_destroyed(brick: Brick, by_chain: bool) -> void:
 
 	if brick.type != Brick.Type.BLAST:
 		game_feel.pulse(GameFeel.HAPTIC_BRICK)
-	powerups.roll_for(brick.rect.get_center(), brick.powerup_chance())
+	powerups.roll_for(brick.rect.get_center(), brick.powerup_chance(),
+		brick.type == Brick.Type.SPARK)
 	_refresh_hud()
 
 
@@ -507,7 +515,32 @@ func _on_level_cleared() -> void:
 	_set_state(State.LEVEL_CLEAR)
 
 
+## The Magnet held it. Same note as a paddle hit, a fifth lower, so the
+## hand knows the ball is waiting without the eye having to check.
+func _on_ball_caught(_ball: Ball) -> void:
+	audio.play("paddle", 0.72, -4.0)
+	game_feel.pulse(GameFeel.HAPTIC_PADDLE)
+
+
+## One free save, spent only on the last ball on the field. It never goes
+## on a spare, and it does catch Death, which is the moment worth having.
+func _shield_save(ball: Ball) -> bool:
+	if not arena.shield_armed:
+		return false
+	arena.spend_shield()
+	ball.save_at(arena.ember_line_y() - 2.0)
+	effects.sparks(Vector2(ball.global_position.x, arena.ember_line_y()), Vector2.UP, 8, Powerup.VOLT)
+	effects.shockwave(Vector2(ball.global_position.x, arena.ember_line_y()), 60.0, Powerup.VOLT)
+	game_feel.shake(0.0, 4.0)
+	audio.play("powerup_good", 0.8, 0.0)
+	game_feel.pulse(GameFeel.HAPTIC_POWERUP)
+	arena.set_danger(0.0)
+	return true
+
+
 func _on_ball_lost(ball: Ball) -> void:
+	if state == State.PLAYING and _balls.size() <= 1 and _shield_save(ball):
+		return
 	_remove_ball(ball)
 	if not _balls.is_empty():
 		return
@@ -515,7 +548,11 @@ func _on_ball_lost(ball: Ball) -> void:
 		return
 
 	var final := run.on_ball_lost()
-	effects.ball_lost(Vector2(ball.global_position.x, arena.death_y - 6.0))
+	# Death takes the ball in mid-air, so the comet has to come apart
+	# where it actually was, not always at the bottom of the field.
+	effects.ball_lost(Vector2(
+		ball.global_position.x,
+		minf(ball.global_position.y, arena.death_y - 6.0)))
 	arena.set_danger(1.0)
 	background.dim()
 	audio.play("life_lost")
@@ -524,6 +561,7 @@ func _on_ball_lost(ball: Ball) -> void:
 	powerups.reset_level()
 	paddle.set_width(Paddle.WIDTH_NORMAL)
 	paddle.laser = false
+	paddle.magnet = false
 	powerups.guarantee_good()
 
 	if final:
@@ -556,6 +594,14 @@ func _on_powerup_collected(id: String) -> void:
 			_split_balls()
 		"life":
 			run.add_life()
+		"shield":
+			arena.shield_armed = true
+		"splinter":
+			_splinter()
+		"swap":
+			_swap_bricks()
+		"death":
+			_death()
 	_sync_powerup_state()
 	_refresh_hud()
 
@@ -576,10 +622,11 @@ func _sync_powerup_state() -> void:
 		width = Paddle.WIDTH_NARROW
 	paddle.set_width(width)
 	paddle.laser = active.has("laser")
+	paddle.magnet = active.has("magnet")
 	# Section 7's three remaining punishments. Each takes away something
 	# different: what you can see, which way you mean, and how fast the
 	# shield answers.
-	grid.blind = active.has("blind")
+	grid.blind = _level_blind or active.has("blind")
 	paddle.inverted = active.has("invert")
 	paddle.follow_speed = 0.6 if active.has("heavy") else 1.0
 
@@ -593,6 +640,32 @@ func _sync_powerup_state() -> void:
 		ball.fireball = active.has("fireball")
 		ball.giant = active.has("giant")
 		ball.zap = active.has("zap")
+
+
+## Splinter: everything one hit from breaking goes at once.
+func _splinter() -> void:
+	var count := grid.splinter()
+	if count <= 0:
+		return
+	audio.play("powerup_good", 1.15, 0.0)
+	game_feel.shake(0.0, 3.0)
+
+
+## Swap: the whole field changes what it is worth.
+func _swap_bricks() -> void:
+	if grid.swap_types() <= 0:
+		return
+	audio.play("glass", 0.85, -4.0)
+	background.field_glint()
+
+
+## Death: it takes one ball, not the field. With three in play you lose
+## a third of your luck; with one in play the Shield still gets its say.
+func _death() -> void:
+	if _balls.is_empty():
+		return
+	audio.play("life_lost", 1.25, -6.0)
+	_balls[0].kill()
 
 
 ## Multi: the ball splits into 3.

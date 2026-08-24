@@ -1,12 +1,14 @@
 extends Node
 
-## Plays all three levels through on autopilot and watches that nothing
-## breaks on the way. Time runs 6 times faster by raising both
+## Plays the whole zone through on autopilot and watches that nothing
+## breaks on the way. Twelve fields is the only way to find out that
+## field nine's chain leaves something unreachable, or that the stones
+## in field eight can trap a ball. Time runs 6 times faster by raising both
 ## time_scale and the physics rate, so delta per tick is still 1/60 and
 ## collision behaves exactly as it does in a real game.
 
 const SPEEDUP := 6.0
-const MAX_SECONDS := 900.0
+const MAX_SECONDS := 2600.0
 
 var game: Game
 var frames := 0
@@ -64,7 +66,7 @@ func _physics_process(delta: float) -> void:
 	_autopilot()
 	_check_invariants()
 
-	if levels_cleared >= 3 or elapsed > MAX_SECONDS:
+	if levels_cleared >= 12 or elapsed > MAX_SECONDS:
 		_report()
 
 
@@ -118,7 +120,7 @@ func _check_invariants() -> void:
 			max_speed = maxf(max_speed, speed)
 			if absf(speed - ball.current_speed()) > 1.0:
 				_err("speed drifted: %.1f against %.1f" % [speed, ball.current_speed()])
-			if speed > Ball.MAX_SPEED * 1.15:
+			if speed > Ball.ABSOLUTE_MAX_SPEED + 0.5:
 				_err("speed broke the cap: %.1f" % speed)
 			var ang := rad_to_deg(atan2(absf(ball.velocity.y), absf(ball.velocity.x)))
 			min_angle = minf(min_angle, ang)
@@ -160,9 +162,12 @@ func _report() -> void:
 	print("bricks broken:     %d (%d by chains)" % [bricks_destroyed, chains])
 	print("power-ups caught:  %d %s" % [powerups_collected, str(powerup_counts)])
 	print("most balls:        %d" % max_balls_seen)
-	print("fastest ball:      %.0f px/s (cap %.0f)" % [max_speed, Ball.MAX_SPEED])
+	print("fastest ball:      %.0f px/s (ramp cap %.0f, ceiling %.0f)"
+		% [max_speed, Ball.MAX_SPEED, Ball.ABSOLUTE_MAX_SPEED])
 	print("score:             %d" % game.score)
 	print("smallest angle:    %.2f degrees" % min_angle)
+	if levels_cleared < 12:
+		_err("only %d of 12 fields cleared in %.0f seconds" % [levels_cleared, elapsed])
 	print("failures:          %d" % errors.size())
 	for e in errors:
 		print("   " + e)

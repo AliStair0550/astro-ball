@@ -61,6 +61,11 @@ var _walls: Array[Dictionary] = []
 var _hits: Array[Dictionary] = []
 var _emitter_blink := 0.0
 var _danger := 0.0
+## Section 5: the Shield is a Volt line across the bottom of the field,
+## good for one save. It is drawn over the Ember line, because it is
+## standing between you and it.
+var shield_armed := false
+var _shield_flash := 0.0
 var _celebrate := 0.0
 var _time := 0.0
 
@@ -121,6 +126,13 @@ func register_hit(pos: Vector2) -> void:
 
 
 ## 0 to 1. The Ember line burns harder the closer the ball is to the edge.
+## Spent. The line goes out in a flash rather than simply vanishing, so
+## the save is something you watch happen.
+func spend_shield() -> void:
+	shield_armed = false
+	_shield_flash = 1.0
+
+
 func set_danger(level: float) -> void:
 	_danger = clampf(level, 0.0, 1.0)
 
@@ -142,6 +154,8 @@ func _process(delta: float) -> void:
 
 	if _emitter_blink > 0.0:
 		_emitter_blink = maxf(0.0, _emitter_blink - delta / EMITTER_BLINK_TIME)
+	if _shield_flash > 0.0:
+		_shield_flash = maxf(0.0, _shield_flash - delta * 4.0)
 	if _celebrate > 0.0:
 		_celebrate = maxf(0.0, _celebrate - delta)
 
@@ -293,3 +307,21 @@ func _draw_ember_line() -> void:
 	var c := EMBER
 	c.a = alpha
 	draw_rect(Rect2(WALL, ember_line_y(), SCREEN.x - WALL * 2.0, 1.0), c)
+	_draw_shield_line()
+
+
+func _draw_shield_line() -> void:
+	if not shield_armed and _shield_flash <= 0.0:
+		return
+	var y := ember_line_y() - 3.0
+	var w := SCREEN.x - WALL * 2.0
+	var volt := VOLT
+	if shield_armed:
+		var pulse := 0.72 + 0.28 * sin(_time * 3.4)
+		volt.a = 0.30 * pulse
+		draw_rect(Rect2(WALL, y - 2.0, w, 5.0), volt)
+		volt.a = 0.95 * pulse
+		draw_rect(Rect2(WALL, y, w, 2.0), volt)
+	if _shield_flash > 0.0:
+		volt.a = _shield_flash
+		draw_rect(Rect2(WALL, y - 8.0 * _shield_flash, w, 3.0 + 16.0 * _shield_flash), volt)

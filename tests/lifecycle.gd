@@ -200,7 +200,21 @@ func _test_level_progression() -> void:
 	eq(game.grid.remaining_breakable(), 48, "level 3 has 48 bricks")
 	game._begin_level()
 	game._next_level()
-	eq(int(game.level_data["id"]), 1, "after level 3 the zone starts over")
+	eq(int(game.level_data["id"]), 4, "and the zone keeps going")
+	eq(game.screens.level_title, "The Constellation", "the intro shows level 4 name")
+
+	# Every field in the zone loads, is named, and hangs its wall where
+	# the rules say. Walking the whole list is the only way a broken
+	# level twelve shows up before a player finds it.
+	for i in range(5, 13):
+		game._begin_level()
+		game._next_level()
+		eq(int(game.level_data["id"]), i, "level %d loads" % i)
+		ok(not game.screens.level_title.is_empty(), "level %d is named" % i)
+		ok(game.grid.remaining_breakable() >= 20, "level %d has a field" % i)
+	game._begin_level()
+	game._next_level()
+	eq(int(game.level_data["id"]), 1, "after the finale the zone starts over")
 	game._begin_level()
 
 

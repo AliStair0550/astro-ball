@@ -16,6 +16,8 @@ extends CharacterBody2D
 
 signal wall_hit(pos: Vector2, normal: Vector2)
 signal paddle_hit(pos: Vector2, exit_angle_deg: float, sweet: bool)
+## The Magnet held it. Not a bounce, so it gets its own note.
+signal caught(ball: Ball)
 signal brick_hit(brick: Brick, damage: int, pos: Vector2, passed_through: bool)
 signal launched()
 signal lost(ball: Ball)
@@ -37,6 +39,11 @@ const FREE_PASSES := 6
 const BASE_SPEED := 320.0
 ## Speed rises 4 per cent per 10 bricks and stops here.
 const MAX_SPEED := 520.0
+## Section 4 caps the ramp at 520. Fast, and the sweet spot's ten per
+## cent, multiply on top of it, and 520 x 1.4 x 1.1 is 800 px/s: two
+## field widths a second, which is not a punishment but an execution.
+## The ramp keeps its own cap; this is the ceiling nothing passes.
+const ABSOLUTE_MAX_SPEED := MAX_SPEED * 1.25
 const SPEED_STEP := 1.04
 const SPEED_STEP_BRICKS := 10
 
@@ -136,7 +143,8 @@ func _renormalize() -> void:
 
 func current_speed() -> float:
 	var bonus := SWEET_BONUS * (_bonus_left / SWEET_BONUS_TIME)
-	return speed_base * speed_scale * (1.0 + maxf(bonus, 0.0))
+	var speed := speed_base * speed_scale * (1.0 + maxf(bonus, 0.0))
+	return minf(speed, ABSOLUTE_MAX_SPEED)
 
 
 func look() -> Look:
@@ -153,13 +161,27 @@ func look() -> Look:
 	return Look.NORMAL
 
 
-func stick_to_paddle() -> void:
+## Where on the shield the ball is held. Zero for a fresh serve; the
+## Magnet keeps the spot it caught you at, because a magnet you cannot
+## aim is just a pause button.
+var stick_offset := 0.0
+
+
+func stick_to_paddle(offset_x := 0.0) -> void:
 	stuck = true
 	velocity = Vector2.ZERO
 	_bonus_left = 0.0
+	stick_offset = offset_x
 	if paddle:
-		global_position = paddle.ball_anchor(radius)
+		global_position = _stick_position()
 	_fill_trail()
+
+
+func _stick_position() -> Vector2:
+	var limit := maxf(paddle.half_width() - radius - 2.0, 0.0)
+	var anchor := paddle.ball_anchor(radius)
+	anchor.x += clampf(stick_offset, -limit, limit)
+	return anchor
 
 
 func _fill_trail() -> void:
@@ -181,11 +203,35 @@ func launch() -> void:
 	if not stuck:
 		return
 	stuck = false
+	stick_offset = 0.0
 	var angle := LAUNCH_ANGLE_DEG + randf_range(-LAUNCH_SPREAD_DEG, LAUNCH_SPREAD_DEG)
 	var dir_x := 1.0 if randf() < 0.5 else -1.0
 	var a := deg_to_rad(angle)
 	velocity = Vector2(cos(a) * dir_x, -sin(a)) * current_speed()
 	launched.emit()
+
+
+## Death takes the ball wherever it happens to be. The Shield still gets
+## its say: this goes down the same path as falling off the bottom.
+func kill() -> void:
+	if frozen:
+		return
+	lost.emit(self)
+
+
+## The Shield caught it. Put it back above the line and send it up, at
+## the speed it was doing, never flatter than the minimum angle.
+func save_at(y: float) -> void:
+	stuck = false
+	frozen = false
+	global_position.y = y - radius
+	var speed := maxf(velocity.length(), current_speed())
+	var dir := velocity.normalized()
+	if dir == Vector2.ZERO:
+		dir = Vector2(0.0, -1.0)
+	dir.y = -absf(dir.y)
+	velocity = _enforce_min_angle(dir * speed)
+	_fill_trail()
 
 
 ## Used by Multi: a new ball leaves in a new direction at the same speed.
@@ -207,7 +253,7 @@ func _physics_process(delta: float) -> void:
 
 	if stuck:
 		if paddle:
-			global_position = paddle.ball_anchor(radius)
+			global_position = _stick_position()
 		_fill_trail()
 		queue_redraw()
 		return
@@ -341,6 +387,9 @@ func _advance(delta: float) -> void:
 				if not pass_through:
 					_reflect(best_normal)
 				brick_hit.emit(best_brick, damage, global_position, pass_through)
+		# The Magnet ended the ball's frame the moment it caught it.
+		if stuck:
+			return
 
 
 func _reflect(normal: Vector2) -> void:
@@ -351,6 +400,13 @@ func _reflect(normal: Vector2) -> void:
 func _bounce_off_paddle() -> void:
 	var half := paddle.half_width()
 	var dx := global_position.x - paddle.global_position.x
+	# The Magnet catches instead of returning. The paddle still lights
+	# up and still squashes, so the contact reads the same either way.
+	if paddle.magnet:
+		paddle.on_ball_hit(global_position.x)
+		stick_to_paddle(dx)
+		caught.emit(self)
+		return
 	var offset := clampf(dx / half, -1.0, 1.0)
 	var sweet := paddle.is_sweet(dx)
 

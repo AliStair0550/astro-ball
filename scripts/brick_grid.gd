@@ -38,6 +38,12 @@ const MIN_SKY := 90.0
 
 ## The chain has to be seen, not only heard.
 const CHAIN_DELAY := 0.04
+## Faster than the chain: a Splinter is one event, not eight.
+const SPLINTER_DELAY := 0.022
+## The four plain types, in the order Swap rotates them.
+const PLAIN_CYCLE: Array = [
+	Brick.Type.VOLT, Brick.Type.ICE, Brick.Type.PULSE, Brick.Type.FLARE,
+]
 const CLEAR_POP_DELAY := 0.09
 
 ## A clockwise spiral from the top left. The order is the whole point of
@@ -214,6 +220,46 @@ func zap_neighbours(brick: Brick) -> void:
 		var neighbour := brick_at(brick.col + offset.x, brick.row + offset.y)
 		if neighbour != null and neighbour.alive and neighbour.is_breakable():
 			_pending.append({"brick": neighbour, "delay": CHAIN_DELAY})
+
+
+## Splinter: everything one hit from breaking goes at once. Staggered
+## like a chain, left to right, so it reads as a wave crossing the field
+## instead of the screen simply emptying.
+func splinter() -> int:
+	var doomed: Array[Brick] = []
+	for brick in _bricks:
+		if brick == null or not brick.alive:
+			continue
+		if not brick.is_breakable() or brick.hits_left > 1:
+			continue
+		doomed.append(brick)
+	doomed.sort_custom(func(a: Brick, b: Brick) -> bool:
+		return a.rect.position.x + a.rect.position.y * 0.35 < b.rect.position.x + b.rect.position.y * 0.35)
+	var step := 0
+	for brick in doomed:
+		_pending.append({"brick": brick, "delay": SPLINTER_DELAY * float(step)})
+		step += 1
+	return doomed.size()
+
+
+## Swap: every plain brick becomes a different plain one. Points and drop
+## chances move under the player's feet, which is what a neutral should
+## do; the shape of the field does not, which is what keeps it fair. The
+## specials are left alone on purpose: turning a Volt into a Blast would
+## be a gift, and turning one into Hardened would be a sentence.
+func swap_types() -> int:
+	var changed := 0
+	for brick in _bricks:
+		if brick == null or not brick.alive:
+			continue
+		var at := PLAIN_CYCLE.find(brick.type)
+		if at < 0:
+			continue
+		brick.type = PLAIN_CYCLE[(at + 1) % PLAIN_CYCLE.size()]
+		brick.flash = 1.0
+		changed += 1
+	queue_redraw()
+	return changed
 
 
 ## Hidden bricks show themselves when a neighbour breaks.

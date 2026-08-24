@@ -55,6 +55,19 @@ const CATALOG := {
 		"name": "Slow", "color": ICE, "kind": Kind.GOOD,
 		"duration": 15.0, "icon": "turtle",
 	},
+	"magnet": {
+		"name": "Magnet", "color": ICE, "kind": Kind.GOOD,
+		"duration": 20.0, "icon": "magnet",
+	},
+	# No clock: it lasts until it saves you.
+	"shield": {
+		"name": "Shield", "color": VOLT, "kind": Kind.GOOD,
+		"duration": 0.0, "icon": "shield_line",
+	},
+	"splinter": {
+		"name": "Splinter", "color": FLARE, "kind": Kind.GOOD,
+		"duration": 0.0, "icon": "star",
+	},
 	"life": {
 		"name": "Life", "color": BONE, "kind": Kind.GOOD,
 		"duration": 0.0, "icon": "heart",
@@ -89,6 +102,21 @@ const CATALOG := {
 		"name": "Heavy", "color": SLATE, "kind": Kind.BAD,
 		"duration": 12.0, "icon": "anchor",
 	},
+	# Death is the one capsule that looks like nothing else: Ember with a
+	# black edge. Section 7 keeps it out of the first five levels.
+	"death": {
+		"name": "Death", "color": EMBER, "kind": Kind.BAD,
+		"duration": 0.0, "icon": "skull", "edge": Color("07070C"),
+	},
+	# Neutral: a grey edge, and no promise either way.
+	"swap": {
+		"name": "Swap", "color": PULSE, "kind": Kind.NEUTRAL,
+		"duration": 0.0, "icon": "swap_arrows",
+	},
+	"lottery": {
+		"name": "Lottery", "color": FLARE, "kind": Kind.NEUTRAL,
+		"duration": 0.0, "icon": "question",
+	},
 }
 
 var id := "wide"
@@ -107,6 +135,17 @@ static func info(powerup_id: String) -> Dictionary:
 
 static func is_good(powerup_id: String) -> bool:
 	return info(powerup_id)["kind"] == Kind.GOOD
+
+
+## Not the same question as "is it good". A neutral is neither, and the
+## spawn rules have to be able to tell the difference: "never two bad in
+## a row" must not be tripped by a coin flip.
+static func is_bad(powerup_id: String) -> bool:
+	return info(powerup_id)["kind"] == Kind.BAD
+
+
+static func is_neutral(powerup_id: String) -> bool:
+	return info(powerup_id)["kind"] == Kind.NEUTRAL
 
 
 func setup(powerup_id: String, at: Vector2, bottom: float) -> void:
@@ -165,8 +204,16 @@ func _draw() -> void:
 	well.a = body.a
 	draw_rect(Rect2(-half + Vector2(3.0, 3.0), (half - Vector2(3.0, 3.0)) * 2.0), well)
 
-	# The edge tells you whether you want it.
-	var edge := color.lightened(0.55) if good else color.darkened(0.6)
+	# The edge tells you whether you want it. Three answers, not two:
+	# light means yes, dark and jagged means no, grey means find out.
+	var kind: Kind = data["kind"]
+	var edge: Color = color.lightened(0.55)
+	if kind == Kind.BAD:
+		edge = color.darkened(0.6)
+	elif kind == Kind.NEUTRAL:
+		edge = SLATE
+	if data.has("edge"):
+		edge = data["edge"]
 	edge.a = body.a
 	var thickness := 2.0 if good else 1.0
 	draw_rect(Rect2(-half + Vector2(2.0, 0.0), Vector2(half.x * 2.0 - 4.0, thickness)), edge)
@@ -174,7 +221,7 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2(-half.x, -half.y + 2.0), Vector2(thickness, half.y * 2.0 - 4.0)), edge)
 	draw_rect(Rect2(Vector2(half.x - thickness, -half.y + 2.0), Vector2(thickness, half.y * 2.0 - 4.0)), edge)
 
-	if not good:
+	if kind == Kind.BAD:
 		_draw_zigzag(half, edge)
 
 	var ink := Color.WHITE
@@ -285,6 +332,42 @@ static func _icon_shapes(ci: CanvasItem, icon: String, ink: Color) -> void:
 			# blob, and the icon has to survive being 10 px wide.
 			ci.draw_arc(Vector2.ZERO, 5.0, 0.0, TAU, 24, ink, 2.0, true)
 			ci.draw_arc(Vector2.ZERO, 1.5, 0.0, TAU, 12, ink, 1.5, true)
+		"magnet":
+			# A horseshoe, open end down. The gap is the whole point.
+			ci.draw_arc(Vector2(0.0, 1.0), 4.0, PI, TAU, 18, ink, 2.0, true)
+			_bar(ci, Vector2(-5.0, 1.0), Vector2(2.0, 4.0), ink)
+			_bar(ci, Vector2(3.0, 1.0), Vector2(2.0, 4.0), ink)
+		"shield_line":
+			# The line it puts under you, with the dome it makes.
+			_bar(ci, Vector2(-5.0, 2.6), Vector2(10.0, 1.8), ink)
+			ci.draw_arc(Vector2(0.0, 2.6), 4.6, PI, TAU, 18, ink, 1.6, true)
+		"star":
+			ci.draw_colored_polygon(PackedVector2Array([
+				Vector2(0.0, -5.5), Vector2(1.5, -1.5), Vector2(5.5, 0.0),
+				Vector2(1.5, 1.5), Vector2(0.0, 5.5), Vector2(-1.5, 1.5),
+				Vector2(-5.5, 0.0), Vector2(-1.5, -1.5),
+			]), ink)
+		"skull":
+			# The eyes are the gaps. One ink colour, so anything dark has
+			# to be something the shape leaves out.
+			_bar(ci, Vector2(-3.0, -5.0), Vector2(6.0, 2.0), ink)
+			_bar(ci, Vector2(-4.0, -3.0), Vector2(8.0, 2.0), ink)
+			_bar(ci, Vector2(-4.0, -1.0), Vector2(1.6, 2.0), ink)
+			_bar(ci, Vector2(-1.0, -1.0), Vector2(2.0, 2.0), ink)
+			_bar(ci, Vector2(2.4, -1.0), Vector2(1.6, 2.0), ink)
+			_bar(ci, Vector2(-4.0, 1.0), Vector2(8.0, 1.6), ink)
+			for x in [-2.5, -0.7, 1.1]:
+				_bar(ci, Vector2(x, 2.6), Vector2(1.4, 2.0), ink)
+		"swap_arrows":
+			_bar(ci, Vector2(-3.0, -3.2), Vector2(6.0, 1.4), ink)
+			_arrow(ci, Vector2(4.6, -2.5), Vector2(1.0, 0.0), ink)
+			_bar(ci, Vector2(-3.0, 1.8), Vector2(6.0, 1.4), ink)
+			_arrow(ci, Vector2(-4.6, 2.5), Vector2(-1.0, 0.0), ink)
+		"question":
+			ci.draw_arc(Vector2(0.0, -2.0), 3.0, PI, 2.3 * PI, 20, ink, 1.8, true)
+			ci.draw_line(Vector2(1.4, 0.4), Vector2(0.2, 1.2), ink, 1.8)
+			_bar(ci, Vector2(-0.9, 1.0), Vector2(1.8, 1.8), ink)
+			_bar(ci, Vector2(-0.9, 3.6), Vector2(1.8, 1.8), ink)
 		"bolt":
 			ci.draw_colored_polygon(PackedVector2Array([
 				Vector2(1.0, -5.0), Vector2(-3.0, 1.0), Vector2(0.0, 1.0),

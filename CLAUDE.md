@@ -402,6 +402,21 @@ Hvert level er en JSON-fil. Claude Code kan generere og validere dem.
 }
 ```
 
+Valgfrie felter ud over dem ovenfor:
+
+```json
+"sparkPowerups": ["magnet", "laser"],
+"blind": true
+```
+
+`sparkPowerups` er Gnist-klodsens korte liste. Den garanterede power-up
+trækkes kun herfra, så en bane kan lære spilleren præcis to ting (level
+5). Uden feltet trækker Gnist fra banens almindelige tabel.
+
+`blind` gør feltet blindt fra første frame (level 11). Det er ikke en
+power-up, der løber ud: når Blind-kapslen udløber, er banen stadig blind,
+fordi det er den bane.
+
 Valideringsregler:
 - Præcis 13 tegn pr. række.
 - Maks 12 rækker.
@@ -696,3 +711,80 @@ De vises nu på FIELD CLEARED, én ad gangen med en halv sekunds
 mellemrum, med en tone hver. En stjerne man allerede havde, sidder
 stille i grå. At få tre på én gang og få det at vide i ét frame er ikke
 den samme følelse som at se den tredje lande.
+
+---
+
+## De sidste power-ups, og hvorfor de opfører sig sådan
+
+Afsnit 7's atten er bygget nu. Seks af dem havde aldrig været til at
+fange. Det, dokumentet ikke kunne vide på forhånd, står her.
+
+**Neutral er ikke dårlig.** Byt og Lotteri har grå kant, og spawn-reglen
+"aldrig to dårlige i træk" gælder dem ikke. Reglen forbyder to straffe i
+træk, ikke en straf efterfulgt af en chance. Den gamle kode spurgte "er
+den god", og svarede nej for en neutral, så en bane med kun en straf og
+en neutral kunne slet ikke give noget efter en straf.
+
+**Lotteri er en indpakning, ikke en effekt.** Den bliver til en af banens
+egne drops. En bane kan derfor aldrig uddele noget, den ikke i forvejen
+indeholder, og Død kan ikke snige sig ind i de første fem levels ad
+bagvejen.
+
+**Magnet husker, hvor den greb.** Bolden bliver liggende, hvor den ramte,
+ikke på midten. En magnet, man ikke kan sigte med, er en pauseknap.
+
+**Skjoldet bruges kun på den sidste bold.** Med tre bolde i luften ville
+det ellers gå til en reserve, spilleren ikke havde brug for at redde. Til
+gengæld griber det Død. Kapslen er stadig ikke spildt, den brænder dit
+skjold, og at se skjoldet æde et kranie er øjeblikket værd.
+
+**Byt roterer kun de fire almindelige typer.** Volt bliver Ice, Ice
+bliver Pulse, og så videre rundt. Point og drop-chancer flytter sig under
+fødderne på spilleren, hvilket er, hvad en neutral skal gøre. Feltets
+form flytter sig ikke, hvilket er, hvad der holder den fair. At lave en
+Volt om til en Sprængklods ville være en gave; at lave den om til Hærdet
+ville være en dom.
+
+**Splint løber fra venstre mod højre**, 22 ms mellem hver. Et felt, der
+bare tømmes, ser ud som en fejl. En bølge, der krydser skærmen, ser ud
+som noget, man gjorde.
+
+### Loftet over farten
+
+Afsnit 4 sætter rampen til maks 520 px/s. Hurtig ganger 140 procent
+ovenpå, og sweet spot ti procent mere: 800 px/s, to skærmbredder i
+sekundet. Det er ikke en straf, det er en henrettelse. Der er nu et
+absolut loft på 650. Hurtig bider stadig, og tidligt i en bane får den
+sine fulde 140 procent. Autopiloten fandt fejlen: den kørte hele zonen
+igennem og råbte op om 771 px/s i level 9.
+
+---
+
+## The Drift, alle tolv felter
+
+Grids ligger i `levels/*.json` og er sandheden. Afsnit 10's plan holdt,
+med tre afvigelser, der blev målt frem:
+
+| Level | Navn | Klodser | Det, banen er | Afvigelse |
+|---|---|---|---|---|
+| 4 | The Constellation | 62 | Orion tegnet i skjulte klodser. Konstellationen dukker op, mens feltet forsvinder | |
+| 5 | The Hold | 43 | Et gitter med lodrette kanaler. Gnist giver kun Magnet og Laser | |
+| 6 | The Anvil | 35 | En ambolt af Hærdet med tre sprængklodser låst inde i den | Ikke ren Hærdet: 84 slag alene tog 213 sekunder på autopiloten. Foden er Volt, så banen åbner hurtigt |
+| 7 | Off Axis | 48 | Et diagonalt bånd. Ingen symmetri overhovedet | |
+| 8 | The Labyrinth | 42 | Sten i lag, der kaster bolden på tværs | |
+| 9 | The Fuse | 71 | En ramme af sprængklodser. Ét slag tager 62 procent | Afsnit 10 lovede 60 |
+| 10 | The Pane | 64 | To lag glas over det hele. Første skud går igennem begge | |
+| 11 | Blackout | 49 | En diamant, blind fra første frame | |
+| 12 | The Core | 136 | Alle ti klodstyper i ringe om en kerne | 136, ikke 140: kolonne 0 og 12 holdes åbne i de nederste rækker, så banerne op bag muren består |
+
+Straffenes andel stiger hele zonen igennem: 8, 24, 25, 25, 26, 28, 30,
+32, 34, 34, 36, 38 procent. Det er den eneste sværhedskurve, spilleren
+ikke kan se, og den er testet, så den ikke kan falde ved et uheld.
+
+Død dukker først op i level 9, ikke i 6, hvor reglen ville tillade den.
+Tre felter mellem "reglen tillader det" og "det sker" er forskellen på en
+straf og et baghold.
+
+Par-tiderne er sat fra autopiloten gange halvanden. Autopiloten misser
+aldrig bolden, så et menneske, der spiller rent, rammer stjernen, og et
+menneske, der roder, gør ikke.
