@@ -944,3 +944,46 @@ ingenting foroven. En linje af void giver det en kant at stå på.
 Bunden er stadig åben, som afsnit 2 kræver, men den har fået to fødder,
 én i hvert hjørne. Åbningen imellem dem er vejen ud, og nu ligner den
 noget, der er tegnet med vilje.
+
+---
+
+## Fire ting fra en telefon
+
+**Pauseskærmen bar for meget.** Den gentog level og score fra panelet to
+tommer ovenover og tilbød indstillinger. Nu står der ét ord og tre veje:
+RESUME, RESTART LEVEL, SELECT LEVEL. Et hold-felt er ikke der, hvor nogen
+går hen for at skifte haptik. Ordet har fået et blødt bånd under sig, for
+feltet skal blive stående bagved, og et hvidt ord på en mur af klodser er
+et ord, man skal lede efter.
+
+**Et holdt level bliver holdt.** Kapslerne blev ved med at falde bag
+skærmen, blev grebet af en paddle, ingen styrede, og klokken løb på alt,
+der var aktivt. Rettelsen skulle laves to gange: `set_process(false)` på
+manageren gør ingenting ved kapslerne, fordi de er dens børn med deres
+eget `_process`. `process_mode = DISABLED` arves, det gør en slukket
+`_process` ikke. Testen fangede den forkerte rettelse.
+
+**Paddlen er rykket op.** Feltets bund er 778 i stedet for 800, så
+skjoldet ligger 713 og der er 126 px tommelfinger under det. Faldzonen
+bliver 22 px kortere, hvilket er den pris, en hånd, der holder telefonen,
+altid kommer til at koste.
+
+**Alle tolv baner har en kæde nu.** Fire af dem havde ingen sprængklods
+overhovedet: The Constellation, The Hold, The Labyrinth og The Pane. En
+mur, der kommer ned én klods ad gangen, er ikke et øjeblik. Gulvet er en
+femtedel af banen i ét slag, og det står i testene:
+
+| Level | Kæde | | Level | Kæde |
+|---|---|---|---|---|
+| Liftoff | 45 % | | The Anvil | 37 % |
+| The Capsule | 21 % | | Off Axis | 31 % |
+| The Chain | 38 % | | The Labyrinth | 52 % |
+| The Constellation | 31 % | | The Fuse | 62 % |
+| The Hold | 35 % | | The Pane | 42 % |
+| Blackout | 31 % | | The Core | 21 % |
+
+The Fuse er stadig den, kæden hører til: ingen anden bane må overhale
+den, og det er også en test. The Constellation blev tegnet om undervejs,
+så båndene rører hinanden: en kæde kan ikke springe over en tom række,
+og konstellationen er nu det, der bliver stående, i stedet for et lag
+for sig.

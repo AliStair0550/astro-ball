@@ -197,6 +197,23 @@ func _set_state(new_state: State) -> void:
 	var interactive := state == State.PLAYING
 	touch.enabled = interactive
 	touch.dead_zone_top = Arena.HUD_HEIGHT
+	# Capsules fall in the field's own time. Behind a full screen they
+	# used to keep falling, keep being caught by a paddle nobody was
+	# steering, and run the clock down on everything already active.
+	# A lost ball and a cleared level are not that: their effects have to
+	# play out, so only the states that put a screen over everything stop
+	# the field.
+	var suspended := state == State.TITLE or state == State.UNIVERSES \
+		or state == State.SETTINGS or state == State.STAR_MAP \
+		or state == State.PAUSED or state == State.SIGNAL_LOST
+	# process_mode, not set_process: the capsules are children of the
+	# manager and have their own _process. Switching off the parent's
+	# left them falling exactly as before, which is the bug this is here
+	# to fix. A disabled mode is inherited; a disabled process is not.
+	var mode := Node.PROCESS_MODE_DISABLED if suspended else Node.PROCESS_MODE_INHERIT
+	powerups.process_mode = mode
+	effects.process_mode = mode
+	grid.process_mode = mode
 	if not interactive:
 		# A finger that dismissed a screen must not also steer or launch.
 		touch.reset()

@@ -6,12 +6,12 @@
     ".............",
     ".VVVVVVVVVVV.",
     ".V?VVVVVVV?V.",
-    ".............",
-    "..IIIIIIIII..",
-    "..II?I?I?II..",
-    ".............",
+    ".IIIIIIIIIII.",
+    ".III?I?I?III.",
+    ".IIEEEEEEEII.",
     ".PPPPPPPPPPP.",
-    ".P?PPPPPPP?P."
+    ".P?PPPPPPP?P.",
+    ".PPPPPPPPPPP."
   ],
   "ballSpeed": 380,
   "gridAnchor": 0,
@@ -28,5 +28,5 @@
     "heavy": 5
   },
   "forcedFirstPowerup": null,
-  "parTime": 110
+  "parTime": 125
 }

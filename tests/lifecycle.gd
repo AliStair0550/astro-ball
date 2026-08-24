@@ -105,18 +105,26 @@ func _test_pause() -> void:
 		ids.append(str(button["id"]))
 	eq(ids[0], "resume", "the way back into the field is the first button")
 	ok(ids.has("chart") and ids.has("restart"), "with a way out beside it")
+	eq(ids.size(), 3, "and nothing else on it")
+	ok(not ids.has("settings"),
+		"a held level is not where anybody goes to change the haptics")
 	game._on_screen_action("resume")
 	eq(game.state, Game.State.PLAYING, "and it goes back in")
 	ok(not ball.frozen, "with the ball live again")
 
-	# Settings from a held field comes back to the field, not the title.
+	# A held level is held. Capsules used to keep falling behind the
+	# screen, and be caught by a paddle nobody was steering.
+	game.powerups.spawn(Vector2(195.0, 300.0))
+	var capsule: Powerup = game.powerups._capsules[0]
 	game._on_screen_action("pause")
-	game._on_screen_action("settings")
-	eq(game.state, Game.State.SETTINGS, "settings opens from a held field")
-	game._on_screen_action("back")
-	eq(game.state, Game.State.PAUSED, "and comes back to it")
-	game._on_screen_action("back")
-	eq(game.state, Game.State.TITLE, "while settings from the title goes back to the title")
+	ok(not game.powerups.can_process(), "the capsules stop falling while the level is held")
+	ok(not capsule.can_process(), "the one already falling included")
+	ok(not game.grid.can_process(), "and the field stops with them")
+	game._on_screen_action("resume")
+	ok(capsule.can_process(), "and they fall again the moment it is not")
+	ok(game.grid.can_process(), "with the field")
+	capsule.queue_free()
+	game.powerups._capsules.clear()
 
 	# Whatever takes the screen, the ball is not still falling.
 	game._start_new_game()

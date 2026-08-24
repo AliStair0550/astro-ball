@@ -425,11 +425,22 @@ func _test_chains() -> void:
 	var nine: Dictionary = LevelLoader.load_level("res://levels/level_09.json")["data"]
 	var share := _best_chain_share(nine["grid"])
 	ok(share >= 0.55, "one hit takes most of The Fuse (%.0f %%)" % (share * 100.0))
-	# And the fields that teach the chain still do.
-	for i in [1, 3]:
-		var d: Dictionary = LevelLoader.load_level(LevelLoader.level_paths()[i - 1])["data"]
-		ok(_best_chain_share(d["grid"]) >= 0.3,
-			"level %d still has a chain worth finding" % i)
+
+	# Every level has a chain worth finding. Four of them once had no
+	# blast brick at all, which meant no moment: just a wall coming down
+	# one brick at a time. The floor is a fifth of the level in one hit.
+	var paths := LevelLoader.level_paths()
+	for i in paths.size():
+		var d: Dictionary = LevelLoader.load_level(paths[i])["data"]
+		var s := _best_chain_share(d["grid"])
+		ok(s >= 0.20, "%s: one hit takes %.0f %% of it" % [str(d["name"]), s * 100.0])
+	# And The Fuse is still the one the chain belongs to.
+	for i in paths.size():
+		if i == 8:
+			continue
+		var d: Dictionary = LevelLoader.load_level(paths[i])["data"]
+		ok(_best_chain_share(d["grid"]) < share,
+			"%s does not out-chain The Fuse" % str(d["name"]))
 
 
 ## The share of a field a single blast brick takes with it, measured the

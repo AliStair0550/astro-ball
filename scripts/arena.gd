@@ -49,7 +49,10 @@ const EMBER_WARN_DISTANCE := 100.0
 ## where the thumb goes: with relative steering the finger never has to
 ## be near the paddle, but it does have to be somewhere, and that
 ## somewhere must not be on top of the thing you are watching.
-const FIELD_BOTTOM := 800.0
+## The field ends above the screen, and the shield rides 65 px above
+## that. Everything below is thumb: 126 px of it, because a hand holding
+## a phone covers the bottom of it whatever the design says.
+const FIELD_BOTTOM := 778.0
 const EMBER_LINE_BASE := FIELD_BOTTOM - 4.0
 
 const CELEBRATE_TIME := 0.9

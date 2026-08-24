@@ -154,12 +154,12 @@ func _layout() -> void:
 				Vector2(cx, y + step * 5.0), w, EMBER if _reset_armed else SLATE)
 			_add_button("back", Strings.text("BTN_BACK"), Vector2(cx, y + step * 6.4), Vector2(180.0, 42.0), SLATE)
 		Screen.PAUSED:
-			# Three ways on, and the first is always the way back into
-			# the field: a pause screen is not a menu you meant to open.
-			_add_button("resume", Strings.text("BTN_RESUME"), Vector2(cx, 470.0), Vector2(240.0, 52.0), VOLT)
-			_add_button("restart", Strings.text("BTN_RESTART_FIELD"), Vector2(cx, 534.0), Vector2(240.0, 44.0), SLATE)
-			_add_button("chart", Strings.text("BTN_LEVELS"), Vector2(cx, 588.0), Vector2(240.0, 44.0), ICE)
-			_add_button("settings", Strings.text("BTN_SETTINGS"), Vector2(cx, 642.0), Vector2(240.0, 44.0), PULSE)
+			# The first is always the way back in: a pause is not a menu
+			# you meant to open. Settings is not here, because a held
+			# field is not where anybody goes to change the haptics.
+			_add_button("resume", Strings.text("BTN_RESUME"), Vector2(cx, 476.0), Vector2(240.0, 54.0), VOLT)
+			_add_button("restart", Strings.text("BTN_RESTART_FIELD"), Vector2(cx, 542.0), Vector2(240.0, 44.0), SLATE)
+			_add_button("chart", Strings.text("BTN_LEVELS"), Vector2(cx, 596.0), Vector2(240.0, 44.0), ICE)
 		Screen.SIGNAL_LOST:
 			# Two ways on. There is no way back to a main menu from here.
 			var order := ["re_entry", "restart"]
@@ -401,24 +401,20 @@ func _draw_settings() -> void:
 	_centered(FONT_UI, note, cx, 640.0, 8, EMBER if _reset_armed else SLATE, 1.4, false)
 
 
+## One word and the way out. The score and the level were repeated here
+## from the panel two inches above, and a pause screen that has to be
+## read is a pause screen in the way.
 func _draw_paused() -> void:
 	var cx := screen_size.x * 0.5
-	# The field stays visible on purpose, so the readout needs ground of
-	# its own. Small text over bricks is text you have to work at.
-	var panel := Color("0B0B12")
-	panel.a = 0.9
-	var box := Rect2(20.0, 318.0, screen_size.x - 40.0, 132.0)
-	draw_rect(box, panel)
-	var edge := VOLT
-	edge.a = 0.25
-	draw_rect(Rect2(box.position, Vector2(box.size.x, 1.0)), edge)
-	draw_rect(Rect2(Vector2(box.position.x, box.end.y - 1.0), Vector2(box.size.x, 1.0)), edge)
-	_centered(FONT_BRAND, Strings.text("PAUSED"), cx, 360.0, 30, BONE, 3.0, true)
-	_rule(cx, 382.0, 120.0, VOLT, 0.5)
-	_centered(FONT_UI, Strings.fmt("HUD_LEVEL_LINE",
-		[Strings.universe_short(zone_slug), level_number, level_title.to_upper()]),
-		cx, 406.0, 9, SLATE, 1.6, false)
-	_centered(FONT_SCORE, HUD.group_digits(final_score), cx, 434.0, 20, VOLT, 1.0, false)
+	# A band under the word, fading out at both edges. The field is meant
+	# to stay visible, but a white word on a wall of bricks is a word you
+	# have to hunt for.
+	for i in 4:
+		var band := VOID
+		band.a = (0.62 - float(i) * 0.14) * _fade
+		draw_rect(Rect2(0.0, 376.0 - float(i) * 5.0, screen_size.x, 56.0 + float(i) * 10.0), band)
+	_centered(FONT_BRAND, Strings.text("PAUSED"), cx, 404.0, 26, BONE, 3.2, true)
+	_rule(cx, 424.0, 90.0, VOLT, 0.5)
 
 
 func _draw_level_intro() -> void:

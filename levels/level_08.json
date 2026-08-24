@@ -5,10 +5,10 @@
   "grid": [
     ".............",
     ".VVVVVVVVVVV.",
-    ".S...S...S.S.",
-    ".VVVVVVVVVVV.",
-    ".S.S...S...S.",
-    ".IIIIIIIIIII.",
+    ".S...SE..S.S.",
+    ".VVEEEEEEEVV.",
+    ".S.S..ES...S.",
+    ".IIEEEEEEEII.",
     "...S.....S...",
     "..PPPPPPPPP.."
   ],
