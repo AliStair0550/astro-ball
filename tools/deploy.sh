@@ -42,7 +42,9 @@ fail() { printf '\033[31m%s\033[0m\n' "$1" >&2; exit 1; }
 
 # --- 0. The two things that make everything else lie ------------------
 
-if pgrep -f "Godot.app/Contents/MacOS/Godot .*--path" >/dev/null 2>&1; then
+# Only a real editor counts. The same binary runs the test suite, and
+# matching that too made this refuse to build because of its own tests.
+if pgrep -lf "Godot.app/Contents/MacOS/Godot" 2>/dev/null | grep -qv -- "--headless"; then
   fail "The Godot editor is open. Close it with Cmd-Q first: while it runs it
 owns project.godot and export_presets.cfg, and it will write its own
 copy over anything this script changes, without saying so."
@@ -88,11 +90,24 @@ Project -> Export in the editor: the dialog shows the reason in red."
 
 # --- 2. Build ---------------------------------------------------------
 
+# The identifier is picked out by shape rather than by column, because
+# both the state and the model are two words wide and the columns move.
+# A phone paired over the network reports "available (paired)", not
+# "connected", and installs perfectly well: only "unavailable" is out.
+UUID_RE='[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}'
+
+find_device() {
+  local rows
+  rows="$(xcrun devicectl list devices 2>/dev/null | grep -E 'iPhone|iPad' | grep -v 'unavailable')"
+  # A tethered phone wins over one that is merely reachable.
+  printf '%s\n' "$rows" | grep -m1 'connected' | grep -m1 -oE "$UUID_RE" && return 0
+  printf '%s\n' "$rows" | grep -m1 -oE "$UUID_RE"
+}
+
 step "Building with Xcode ($CONFIG)"
 DEST="generic/platform=iOS"
 if [ "$INSTALL" = "1" ]; then
-  DEVICE_ID=$(xcrun devicectl list devices 2>/dev/null \
-    | awk '/connected/ && /iPhone|iPad/ {print $(NF-2); exit}')
+  DEVICE_ID="$(find_device)"
   [ -n "${DEVICE_ID:-}" ] && DEST="id=$DEVICE_ID"
 fi
 
