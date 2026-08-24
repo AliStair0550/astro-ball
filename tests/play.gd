@@ -170,7 +170,7 @@ func _report() -> void:
 	get_tree().quit(1 if errors.size() > 0 else 0)
 
 
-## Rydder scenen af inden exit, saa motoren ikke rapporterer objekter,
+## Clears the scene before exit, so the engine does not report nodes
 ## der bare stod i traeet, da vi lukkede midt i en frame.
 func _teardown() -> void:
 	# Time runs 6 times faster. Without resetting it the timer below
@@ -187,6 +187,6 @@ func _teardown() -> void:
 		game.free()
 		await get_tree().process_frame
 	# Lad motoren rydde op, inden vi lukker, ellers rapporterer den
-	# noder, der bare stod i traeet, som laekager.
+	# that were merely still in the tree as leaks.
 	await get_tree().process_frame
 	await get_tree().process_frame

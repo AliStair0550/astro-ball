@@ -1,6 +1,6 @@
 extends Node
 
-## Spillets tilstande: liv, game over, level-progression, fartstigning.
+## The game's states: lives, signal lost, level progression, speed ramp.
 
 var game: Game
 var fails := 0
@@ -230,7 +230,7 @@ func _test_scoring() -> void:
 	eq(HUD.group_digits(1234567), "1 234 567", "seven digits get two spaces")
 
 
-## Indstillinger skal overleve et genstart.
+## Settings have to survive a restart.
 func _test_settings() -> void:
 	var s := get_node("/root/GameSettings")
 	var was_crt: bool = s.crt
@@ -300,7 +300,7 @@ func _test_english() -> void:
 				"level %d carries its official name" % id)
 
 
-## Rydder scenen af inden exit, saa motoren ikke rapporterer objekter,
+## Clears the scene before exit, so the engine does not report nodes
 ## der bare stod i traeet, da vi lukkede midt i en frame.
 func _teardown() -> void:
 	if is_instance_valid(game):
@@ -314,6 +314,6 @@ func _teardown() -> void:
 		game.free()
 		await get_tree().process_frame
 	# Lad motoren rydde op, inden vi lukker, ellers rapporterer den
-	# noder, der bare stod i traeet, som laekager.
+	# that were merely still in the tree as leaks.
 	await get_tree().process_frame
 	await get_tree().process_frame

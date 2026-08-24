@@ -61,7 +61,7 @@ func set_mode(new_mode: Mode) -> void:
 	game.paddle.input_enabled = true
 	game.combo = 0
 	game.score = 0
-	game._bricks_this_level = 0
+	game.run.start_level()
 	# The lab holds one speed so the hand can learn it.
 	game.level_data["ballSpeed"] = MAX_SPEED if mode == Mode.MAX_SPEED else Ball.BASE_SPEED
 

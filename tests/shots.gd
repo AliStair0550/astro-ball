@@ -30,7 +30,7 @@ func _process(_delta: float) -> void:
 	game.paddle.position.x = 195.0
 	match index:
 		0:
-			get_node("/root/GameSettings").high_score = 41200
+			get_node("/root/GameProgress").high_score = 41200
 			game._set_state(Game.State.TITLE)
 		1:
 			game._set_state(Game.State.SETTINGS)
@@ -104,9 +104,9 @@ func _process(_delta: float) -> void:
 					ball._trail[i] = ball.global_position + Vector2(-2.0 * i, 5.0 * i)
 		7:
 			game.score = 45500
-			game.run_bricks = 168
-			game.best_combo = 14
-			game.run_time = 252.0
+			game.run.run_bricks = 168
+			game.run.best_combo = 14
+			game.run.run_time = 252.0
 			game.screens.high_score = 41200
 			game._set_state(Game.State.SIGNAL_LOST)
 			game.screens.new_record = true

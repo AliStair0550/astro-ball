@@ -316,7 +316,7 @@ def make_drone():
         f = cycles / loop_s
         for i in range(n):
             buf[i] += gain * math.sin(2.0 * math.pi * f * i / RATE)
-    # Langsom aandedraet, ogsaa med hel periode.
+    # A slow breath, also on a whole period.
     for i in range(n):
         breathe = 0.82 + 0.18 * math.sin(2.0 * math.pi * (1.0 / loop_s) * i / RATE)
         buf[i] *= breathe

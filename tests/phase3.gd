@@ -24,10 +24,14 @@ func _ready() -> void:
 	_test_silent_helper()
 	_test_powerup_timers()
 	_test_giant()
+	await _test_feel_lab()
 
 	print("--- PHASE 3: %d checks, %d failures ---" % [checks, fails])
 	for child in get_children():
 		child.free()
+	# The audio server releases its playbacks a few ticks later. Quitting
+	# on top of a running sound is what reports as a leak.
+	await get_tree().create_timer(0.4).timeout
 	get_tree().quit(1 if fails > 0 else 0)
 
 
@@ -465,3 +469,27 @@ func _test_giant() -> void:
 	ball.queue_free()
 	paddle.queue_free()
 	arena.queue_free()
+
+
+## The feel lab is a tool, not a test, which is exactly why nothing was
+## watching when a field it reads moved into LevelState and killed it.
+## This is the tripwire: build it, and check it actually built a field.
+func _test_feel_lab() -> void:
+	var lab: Node = load("res://scenes/feel_test.tscn").instantiate()
+	add_child(lab)
+	ok(lab.game != null, "the feel lab builds the game")
+	ok(lab.game.grid.remaining_breakable() > 0, "and a field to hit")
+	eq(lab.game._balls.size(), 1, "and a ball to hit it with")
+	ok(lab.game.state == Game.State.PLAYING, "and it is playing, not behind a screen")
+
+	lab.set_mode(lab.Mode.WALL)
+	eq(lab.game.grid.remaining_breakable(), 11 * 6, "the wall mode is 11 wide and 6 rows")
+	lab.set_mode(lab.Mode.MAX_SPEED)
+	about(lab.game._balls[0].current_speed(), Ball.MAX_SPEED, 0.5,
+		"max speed mode pins the ball at the cap")
+	lab.set_mode(lab.Mode.SINGLE)
+	eq(lab.game.grid.remaining_breakable(), 1, "single mode is one brick")
+
+	lab.game.audio.stop_all()
+	lab.free()
+	await get_tree().process_frame
