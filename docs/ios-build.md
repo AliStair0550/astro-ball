@@ -71,12 +71,15 @@ Fra editoren:
 
 1. **Project → Export.**
 2. Vælg **iOS** i listen.
-3. Under **Application** skriver du dit **App Store Team ID** i feltet af
-   samme navn. Du finder det i Xcode under
-   *Settings → Accounts → dit team → Manage Certificates*, eller på
-   [developer.apple.com/account](https://developer.apple.com/account)
-   under Membership. Med en gratis konto må feltet også stå tomt; så
-   sætter du teamet i Xcode i stedet, i trin 5.
+3. **App Store Team ID** står allerede i presetten. Skal du finde et
+   andet, ligger det i certifikatet:
+
+   ```
+   security find-certificate -a -c "Apple Development" -p \
+     | openssl x509 -noout -subject | tr ',' '\n' | grep OU=
+   ```
+
+   Feltet må ikke være tomt. Godot afviser eksporten uden det.
 4. **Export Project** (ikke "Export PCK/Zip"). Vælg en mappe. Godot
    laver et helt Xcode-projekt, ikke en færdig app.
 
@@ -131,9 +134,15 @@ Kør så ⌘R igen.
 
 ## 7. Når det ikke virker
 
+**"Cannot export project ... due to configuration errors:" uden noget efter kolonet**
+Kommandolinjen udskriver ikke selve fejlen. Åbn **Project → Export** i
+editoren i stedet: dialogen viser den med rødt nederst. Det er den
+hurtigste vej, og den er ofte et ikon eller et felt, presetten mangler.
+
 **"Export templates for this platform are missing"**
 Trin 1. Og tjek at skabelonernes version er præcis den samme som
-Godots.
+Godots. Kun `ios.zip` og `version.txt` er nødvendige for iOS; de øvrige
+3 GB til Android, Windows, Linux og web behøver ikke ligge der.
 
 **"Signing for ... requires a development team"**
 Trin 5. Team er ikke valgt.
