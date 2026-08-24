@@ -110,11 +110,15 @@ func _process(_delta: float) -> void:
 
 
 func _capture() -> void:
+	if frames > 2400:
+		push_error("shots: gav op ved billede %d" % index)
+		get_tree().quit(1)
+		return
 	if frames < 7 or index >= names.size():
 		return
 	var img := get_viewport().get_texture().get_image()
 	img.save_png("user://%s.png" % names[index])
-	print("gemte %s" % names[index])
+	print("gemte %s (frame %d)" % [names[index], frames])
 	index += 1
 	if index >= names.size():
 		get_node("/root/GameSettings").crt = false

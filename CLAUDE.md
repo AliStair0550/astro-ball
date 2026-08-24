@@ -477,6 +477,8 @@ RE-ENTRY: ét ekstra liv, fortsæt præcis hvor spillet stod. Gratis-version: mo
 RESTART FIELD: levelet forfra med 3 liv. Level-score nulstilles.
 Stjerner, zone-progression og gyldne splinter mistes aldrig ved død.
 Der findes ikke game over til hovedmenu, energi-systemer eller ventetid.
+
+
 17. Indstillinger
 
 Hele listen. Der tilføjes ikke flere uden beslutning:
@@ -486,8 +488,9 @@ Music (til/fra)
 Haptics (til/fra)
 CRT Mode (til/fra, fra som standard: scanlines, vignette, 1 px fringing)
 Left-handed UI (spejler knapper på skærme, ikke gameplay)
-Difficulty (Normal / Drift)
 Reset Progress (med bekræftelse)
+
+
 18. Optage-tilstand
 
 Skjult udvikler-feature, aldrig synlig for spillere. Aktiveres med en debug-genvej.
@@ -496,6 +499,7 @@ HUD kan slås fra.
 Scenarier kan trigges direkte: fyldt mur, kædereaktion, multiball, level clear.
 Formål: klip til TikTok/Reels/LinkedIn under hele udviklingen.
 Bygges billigt oven på feel_test-scenen fra fase 2.
+
 19. Monetisering (scope-beslutning)
 
 Model: gratis download med hele The Belt (12 levels).
@@ -504,5 +508,7 @@ Interstitial-reklame kun mellem levels, efter hvert 3. level. Aldrig midt i spil
 Rewarded video: frivillig, giver ekstra liv (Re-entry) eller garanteret god power-up.
 Én IAP: "Astro Ball Complete", 39 til 49 kr. Fjerner alle reklamer, åbner alle zoner, gør Re-entry gratis (1 pr. level).
 Ingen møntøkonomi, ingen energi, ingen gameplay-køb. Eventuelle senere småkøb er udelukkende kosmetiske (komethaler, CRT-temaer).
+
+Struktur: Universe 1 (The Belt) er gratis. Universe 2 til 5 åbnes med købet. Plan B, hvis spillet får stor trækkraft: prissætning pr. univers eller bundles. Zonerne er separate i leveldata, så skiftet er en App Store Connect-ændring, ikke en kodeændring. Beslutningen om plan B kræver data fra lanceringen, den tages ikke på forhånd.
 
 Implementeres først efter fase 8. Intet reklame-SDK i projektet før da.
