@@ -229,7 +229,7 @@ Spawn-regler:
 
 ## 8. HUD
 
-Øverst, 140 px høj. Grafit-panel med en Pulse-linje under. (Rettet under bygning fra 44 px, se afsnit 21.)
+Øverst, 196 px høj. Grafit-panel med en Pulse-linje under. (Rettet under bygning fra 44 px, se afsnit 21.)
 
 Venstre: ASTRO BALL i Unbounded 900, 28 px, Pulse-lilla med mørk forskydning. Under: UNIVERSE 1 · LEVEL 7 · LIFTOFF i Space Grotesk 9 px, Slate.
 Højre: Score i Space Grotesk 700, 32 px, Volt, tabular, mellemrum som tusindtalsseparator. Under: tre små kometer for liv. Fulde er Bone, tabte er #444441.
@@ -241,6 +241,14 @@ Aktive power-ups i en dock med fire faste pladser nederst i panelet, hver med ik
 
 ## 9. De første tre levels
 
+**Forældet. Griddene i dette afsnit er ikke dem, spillet bruger.** De
+rigtige ligger i `levels/level_01.json` til `level_03.json`, og de er
+gengivet herunder. Afsnittet er beholdt, fordi begrundelserne for hvorfor
+hvert level virker stadig gælder. Det, der ændrede sig under bygningen:
+sprængklodser kom ind fra level 1, Hærdet gik ud af alle tre og venter på
+level 6, og level 3 blev tegnet om til en vinge, så silhuet-reglen i
+afsnit 20 også gælder den. Se afsnit 21.
+
 Formålet: lære spilleren alt i afsnit 3 til 7 uden en eneste tekstforklaring. Hvert level lærer én ting.
 
 Grid er 13 kolonner, maks 12 rækker. Symboler:
@@ -249,31 +257,34 @@ Grid er 13 kolonner, maks 12 rækker. Symboler:
 .  tom
 V  Volt       I  Ice        P  Pulse      F  Flare
 H  Hærdet     S  Sten       E  Sprængklods
+              (H bruges først fra level 6, se afsnit 21)
 G  Glas       X  Gnist      ?  Skjult
 ```
 
 ---
 
-### Level 1: Afgang
+### Level 1: Liftoff (Afgang)
 
-Lærer: Bolden, paddlen, at vinkel er alt.
+Lærer: Bolden, paddlen, at vinkel er alt. Og kæden, fra første bane.
 
 ```
 .............
 .VVVVVVVVVVV.
 .IIIIIIIIIII.
-..FFFFFFFFF..
-...PPPPPPP...
+..FFEFFFEFF..
+...PPPEPPP...
 ....VVVVV....
 .....III.....
 ......X......
 ```
 
-47 klodser. Forventet tid 45 til 70 sekunder. Ingen Sten, ingen Hærdet.
+47 klodser, heraf 3 sprængklodser. Silhuet: pilespids. parTime 60
+sekunder, boldfart 360 px/s. Ingen Sten, ingen Hærdet.
 
 Hvorfor det virker:
 - Den omvendte trekant sender hurtigt bolden op bag muren. Det er øjeblikket, alle husker fra DX-Ball: bolden bouncer i hjørnet og smadrer 10 klodser, mens man ser til.
 - Spidsen er en Gnist. Nem at ramme først, garanteret power-up, tvunget til Bred i level 1. Succes inden for 5 sekunder.
+- De tre sprængklodser ligger inde i trekanten. Kædereaktionen er det mest belønnende i spillet, og den skal findes mens man stadig er ved at blive fanget, ikke i level 3.
 - Farverne skifter pr. række, så grid og pointsystem læres visuelt.
 
 Power-up-tabel: Multi 25 %, Ildkugle 25 %, Bred 15 %, Laser 15 %, Liv 10 %, Giant 10 %. Ingen dårlige. (Rettet under bygning: Langsom er ude af de tre første levels, se afsnit 21.)
@@ -282,14 +293,14 @@ Visuelt øjeblik: Ved sidste klods lyser rammen op, og hele stjernefeltet blitze
 
 ---
 
-### Level 2: Kapslen
+### Level 2: The Capsule (Kapslen)
 
-Lærer: Hærdet tager flere slag. Sten kan ikke smadres, men bruges.
+Lærer: Sten kan ikke smadres, men bruges.
 
 ```
 .S.........S.
 .VVVVVVVVVVV.
-.VHHHHHHHHHV.
+.VFFFFEFFFFV.
 .V.........V.
 .V.IIIIIII.V.
 .V.I.....I.V.
@@ -299,47 +310,48 @@ Lærer: Hærdet tager flere slag. Sten kan ikke smadres, men bruges.
 .VVVVVVVVVVV.
 ```
 
-68 smadrelige klodser plus 2 Sten. Hærdet-rækken kræver 27 slag alene. Forventet tid 90 til 130 sekunder.
+68 smadrelige klodser plus 2 Sten, heraf 1 sprængklods. Silhuet: kapsel.
+parTime 110 sekunder, boldfart 360 px/s. Hærdet-rækken er erstattet af
+Flare med en sprængklods i midten.
 
 Hvorfor det virker:
 - En kapsel i en kapsel. Ydre Volt-skal, indre Ice-skal, Pulse-kerne. Tre små sejre i ét level.
-- Hærdet-rækken øverst ryger sidst. Spilleren lærer skadestadierne ved at se dem langsomt.
+- Flare-rækken øverst ryger sidst, og sprængklodsen i dens midte er belønningen for at nå derop.
 - De to Sten-kerner i hjørnerne kaster bolden ind mod midten i stedet for at fange den. Sten er aldrig dekoration. De styrer altid bolden.
 
 Power-up-tabel: Multi 25 %, Ildkugle 20 %, Laser 20 %, Bred 15 %, Giant 10 %, Smal 10 %. Første dårlige, men kun én.
 
-Visuelt øjeblik: Når Pulse-kernen smadres, sender den en større lysbølge end normalt, alle Ice-klodser flimrer, og planeten i baggrunden får et kort lysglimt på atmosfærelinjen.
+Visuelt øjeblik: Når Pulse-kernen smadres, sender den en større lysbølge end normalt, alle Ice-klodser flimrer, og det fjerne lys i baggrunden får et kort glimt.
 
 ---
 
-### Level 3: Kæden
+### Level 3: The Chain (Kæden)
 
 Lærer: Sprængklodser smadrer naboer. Glas lader bolden gå igennem.
 
 ```
 .............
-.HHHHHHHHHHH.
-.H....E....H.
-.HHHHHHHHHHH.
-.............
-.GGEGG.GGEGG.
-..PPPPPPPPP..
-...E..E..E...
-....VVVVV....
+.VV.......VV.
+.VVVV...VVVV.
+.VVVVVEVVVVV.
+..GGEGGGEGG..
+...PPPPPPP...
+....PPEPP....
+.....VVV.....
 ......?......
 ```
 
-53 smadrelige plus 6 Sprængklodser. Forventet tid 60 til 100 sekunder, kan gøres på 30 med de rigtige slag.
+48 smadrelige klodser, heraf 4 sprængklodser. Silhuet: vinge. parTime 80
+sekunder, boldfart 380 px/s.
 
 Hvorfor det virker:
-- De tre Sprængklodser nederst ligger lige over paddlen. Kædereaktionen ses inden for 10 sekunder.
-- Glas-rækken lader bolden passere. Første gang føles det som en fejl. Anden gang forstår man, at det er vejen op bag Hærdet-kapslen.
-- Hærdet-kassen øverst har én Sprængklods i midten. Det eneste, der rydder de 24 Hærdet hurtigt. Den, der opdager det, føler sig klog.
+- Sprængklodserne ligger på vingeknoglen. Ét slag løber ud gennem hele vingen.
+- Glas-rækken lader bolden passere. Første gang føles det som en fejl. Anden gang forstår man, at det er vejen op bag vingespidserne.
 - Den skjulte klods i bunden viser sig, når en Volt over den ryger. Lille overraskelse.
 
 Power-up-tabel: Multi 20 %, Ildkugle 20 %, Giant 15 %, Laser 15 %, Zap 10 %, Bred 10 %, Hurtig 5 %, Smal 5 %.
 
-Visuelt øjeblik: Sprængklodsen i Hærdet-kassen tager alle 8 naboer i spiral med 40 ms forsinkelse hver. Screen shake 6 px. Stjernerne omkring blinker Ember. Det er spillets første wow og skal sidde perfekt.
+Visuelt øjeblik: Sprængklodsen midt i vingen tager alle 8 naboer i spiral med 40 ms forsinkelse hver. Screen shake 6 px. Stjernerne omkring blinker Ember. Det er spillets første wow og skal sidde perfekt.
 
 ---
 
@@ -520,9 +532,19 @@ Silhuet-reglen. Hvert levels grid skal danne en silhuet, der kan navngives med �
 Ny power-up: Giant (tilføjes tabellen over gode i afsnit 7):
 
 Navn	Farve	Ikon	Effekt	Varighed
-Giant	Bone	Stor cirkel	Bold 200 % diameter, halen vokser med, smadrer Hærdet i ét slag	15 s
+Giant	Bone	Stor cirkel	Bold 200 % diameter, halen vokser med, smadrer en klods med flere slag i ét	15 s
 
 Giant og Ildkugle kan ikke være aktive samtidig; senest opsamlede vinder.
+
+Hvad Giant er til i The Drift. Der er ingen Hærdet i level 1 til 3, så
+evnen til at smadre en flerslags-klods i ét slag betyder først noget fra
+level 6. Tidligt er Giant en anden ting: en dobbelt så stor bold rammer
+flere klodser pr. tur, er sværere at misse med, og gør en tæt mur til et
+brag i stedet for et arbejde. Den er værd at fange i alle tre baner, af
+den grund og ikke af Hærdet-grunden.
+
+Giant lader bolden gå igennem Glas som enhver anden bold. Gennemgangen er
+Glassets egen regel, ikke en power-ups.
 
 Lodret placering af muren (bundanker). Skærmen er 390x844 logisk. Reglerne:
 
@@ -543,10 +565,11 @@ ved magt, indtil den omgøres bevidst.
 
 Layout og tempo
 
-- HUD'en er 140 px, ikke 44 (afsnit 8). Skærmen er dobbelt så høj som
-  bred. Et højere panel skubber muren ned i spillerens rækkevidde i
-  stedet for at efterlade en halv skærm dødt rum, og det er der,
-  brandet får plads.
+- HUD'en er 196 px, ikke 44 (afsnit 8). Skærmen er dobbelt så høj som
+  bred. Panelet er der, hvor det døde rum skal hen: hver pixel det
+  tager, er en pixel muren ikke skal svæve over. Det bar først 140 px,
+  men da murens placering blev vendt om, overtog panelet resten.
+  196 er tallet, alle steder.
 - Boldens grundfart står i hver levelfil: 360, 360, 380 (afsnit 4 siger
   320). Dokumentets egne forventede leveltider kan ikke nås på et 698 px
   højt felt ved 320 px/s. Farten er data, ikke kode.
@@ -566,8 +589,9 @@ Power-ups
   banen er let. Den hører til, når det bliver svært.
 - Liv er tilbage i level 1. Den røg ud sammen med Langsom, men et ekstra
   liv er ikke en straf.
-- Giant (afsnit 20) er i alle tre levels. Den er mest værd, hvor der er
-  Hærdet, altså level 2 og 3.
+- Giant er i alle tre levels. Ikke på grund af Hærdet, som ikke findes i
+  dem, men fordi en dobbelt så stor bold rammer flere klodser pr. tur og
+  er sværere at misse med. Hærdet-evnen sover til level 6.
 
 Skærme og tekst
 
