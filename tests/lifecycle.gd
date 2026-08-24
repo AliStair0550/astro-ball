@@ -214,7 +214,9 @@ func _test_level_progression() -> void:
 		ok(game.grid.remaining_breakable() >= 20, "level %d has a field" % i)
 	game._begin_level()
 	game._next_level()
-	eq(int(game.level_data["id"]), 1, "after the finale the zone starts over")
+	eq(game.state, Game.State.STAR_MAP, "the zone ends on the chart, not back at field one")
+	eq(int(game.level_data["id"]), 12, "and the finale is still the field it left")
+	game._set_state(Game.State.TITLE)
 	game._begin_level()
 
 

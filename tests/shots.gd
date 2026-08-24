@@ -10,7 +10,7 @@ var index := 0
 var names := [
 	"01_title", "02_settings", "03_level_intro", "04_level1",
 	"05_level3", "06_effects", "07_wide_laser", "08_signal_lost", "09_crt", "10_field_cleared", "11_title_settling",
-	"12_capsules", "13_the_fuse", "14_the_core",
+	"12_capsules", "13_the_fuse", "14_the_core", "15_chart", "16_chart_done",
 ]
 
 
@@ -176,6 +176,26 @@ func _process(_delta: float) -> void:
 					brick.proximity = 1.0
 			game._refresh_hud()
 			game.hud.displayed_score = 26800.0
+		14:
+			# Halfway through the zone: some stars lit, no figure yet.
+			var p := get_node("/root/GameProgress")
+			p.reset()
+			p.record_clear(1, GameProgress.ALL_STARS, 41.0)
+			p.record_clear(2, GameProgress.STAR_CLEARED | GameProgress.STAR_NO_LOSS, 96.0)
+			p.record_clear(3, GameProgress.STAR_CLEARED, 74.0)
+			p.record_clear(4, GameProgress.STAR_CLEARED | GameProgress.STAR_UNDER_PAR, 88.0)
+			game._open_chart(false)
+			game.star_map.focus = 4
+			game.star_map._fade = 1.0
+		15:
+			# The zone finished, the constellation whole.
+			var done := get_node("/root/GameProgress")
+			for id in range(1, 13):
+				done.record_clear(id, GameProgress.ALL_STARS if id % 3 else GameProgress.STAR_CLEARED, 60.0)
+			game._open_chart(false)
+			game.star_map.focus = 11
+			game.star_map._fade = 1.0
+			game.star_map.reveal = 1.0
 		13:
 			game._load_level(11)
 			game._set_state(Game.State.PLAYING)

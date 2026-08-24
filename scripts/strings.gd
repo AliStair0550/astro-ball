@@ -49,6 +49,8 @@ const TABLE := {
 
 	# --- Buttons ---------------------------------------------------------
 	"BTN_PLAY": "PLAY",
+	"BTN_CONTINUE": "CONTINUE",
+	"BTN_CHART": "STAR CHART",
 	"BTN_SETTINGS": "SETTINGS",
 	"BTN_BACK": "BACK",
 	"BTN_RE_ENTRY": "RE-ENTRY",
@@ -73,6 +75,14 @@ const TABLE := {
 	"LEVEL_NUMBER": "LEVEL %d",
 	"HINT_BEGIN": "CLICK TO BEGIN",
 	"HINT_CONTINUE": "CLICK TO CONTINUE",
+
+	# --- Star chart, section 15 ------------------------------------------
+	"MAP_TITLE": "STAR CHART",
+	"MAP_FIELD": "LEVEL %02d · %s",
+	"MAP_LOCKED": "UNCHARTED",
+	"MAP_LOCKED_HINT": "CLEAR THE FIELD BEFORE IT",
+	"MAP_BEST": "BEST %s",
+	"MAP_COMPLETE": "CONSTELLATION CHARTED",
 
 	# --- Field cleared ---------------------------------------------------
 	"FIELD_CLEARED": "FIELD CLEARED",

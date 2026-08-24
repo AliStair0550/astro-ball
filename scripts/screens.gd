@@ -21,6 +21,7 @@ const BONE := Color("F2EFE6")
 const VOLT := Color("D6FF3D")
 const PULSE := Color("B57BFF")
 const PULSE_DEEP := Color("3D2168")
+const ICE := Color("4DD8FF")
 const EMBER := Color("FF4D2E")
 const SLATE := Color("888780")
 const PANEL := Color("11111A")
@@ -90,6 +91,19 @@ func _progress() -> Node:
 	return get_node_or_null("/root/GameProgress")
 
 
+## Has this save anything in it yet. Asked at layout time rather than
+## pushed in, so RESET PROGRESS cannot leave a CONTINUE button behind.
+func has_progress() -> bool:
+	var p := _progress()
+	if p == null:
+		return false
+	for key in p.levels:
+		var entry: Dictionary = p.levels[key]
+		if int(entry.get("stars", 0)) & p.STAR_CLEARED:
+			return true
+	return false
+
+
 # --- Buttons -----------------------------------------------------------
 
 func _layout() -> void:
@@ -97,8 +111,17 @@ func _layout() -> void:
 	var cx := screen_size.x * 0.5
 	match current:
 		Screen.TITLE:
-			_add_button("play", Strings.text("BTN_PLAY"), Vector2(cx, 520.0), Vector2(220.0, 52.0), VOLT)
-			_add_button("settings", Strings.text("BTN_SETTINGS"), Vector2(cx, 586.0), Vector2(220.0, 44.0), PULSE)
+			# PLAY on a fresh save, CONTINUE once there is something to
+			# continue. The chart only appears once there is a chart to
+			# look at: one cleared field.
+			var started := has_progress()
+			_add_button("play", Strings.text("BTN_CONTINUE" if started else "BTN_PLAY"),
+				Vector2(cx, 508.0), Vector2(220.0, 52.0), VOLT)
+			if started:
+				_add_button("chart", Strings.text("BTN_CHART"), Vector2(cx, 570.0), Vector2(220.0, 44.0), ICE)
+				_add_button("settings", Strings.text("BTN_SETTINGS"), Vector2(cx, 626.0), Vector2(220.0, 44.0), PULSE)
+			else:
+				_add_button("settings", Strings.text("BTN_SETTINGS"), Vector2(cx, 574.0), Vector2(220.0, 44.0), PULSE)
 		Screen.SETTINGS:
 			var s := _settings()
 			var y := 262.0

@@ -8,7 +8,7 @@ extends Node2D
 ## do not know what a level is, and the background only knows that
 ## something happened somewhere. It all meets here.
 
-enum State { TITLE, SETTINGS, LEVEL_INTRO, PLAYING, BALL_LOST, LEVEL_CLEAR, SIGNAL_LOST }
+enum State { TITLE, SETTINGS, STAR_MAP, LEVEL_INTRO, PLAYING, BALL_LOST, LEVEL_CLEAR, SIGNAL_LOST }
 
 const START_LIVES := LevelState.START_LIVES
 const MAX_BALLS := 6
@@ -37,6 +37,7 @@ const SHAKE_BLAST := Vector2(6.0, 0.12)
 @onready var audio: Audio = $Audio
 @onready var hud: HUD = $HUDLayer/HUD
 @onready var screens: Screens = $ScreenLayer/Screens
+@onready var star_map: StarMap = $ScreenLayer/StarMap
 @onready var crt: CRT = $CRTLayer/CRT
 @onready var _debug_label: Label = $HUDLayer/Debug
 
@@ -117,6 +118,9 @@ func _ready() -> void:
 
 	paddle.laser_fired.connect(_on_laser_fired)
 	screens.action.connect(_on_screen_action)
+	star_map.screen_size = Arena.SCREEN
+	star_map.chosen.connect(_on_field_chosen)
+	star_map.action.connect(_on_map_action)
 	touch.steered.connect(_on_steered)
 	touch.tapped.connect(_on_tapped)
 	continue_gate.granted.connect(_on_continue_granted)
@@ -166,12 +170,14 @@ func _set_state(new_state: State) -> void:
 	screens.can_re_enter = continue_gate.available(_re_entries_used())
 	screens.re_entry_costs_ad = continue_gate.cost_for(_re_entries_used()) == ContinueGate.Cost.WATCH_AD
 	screens.show_screen(overlay)
+	if state != State.STAR_MAP:
+		star_map.close()
 
 	# Section 16: SIGNAL LOST is a black screen with the star field at
 	# 20 per cent. Title and settings sit over the bare stars too. Bricks
 	# and shield behind a readout are noise, not atmosphere.
 	var field_visible := state != State.TITLE and state != State.SETTINGS \
-		and state != State.SIGNAL_LOST
+		and state != State.SIGNAL_LOST and state != State.STAR_MAP
 	arena.visible = field_visible
 	grid.visible = field_visible
 	paddle.visible = field_visible
@@ -204,6 +210,9 @@ func _on_screen_action(name: String) -> void:
 		"play":
 			audio.play("ui_select")
 			_start_new_game()
+		"chart":
+			audio.play("ui_select")
+			_open_chart(false)
 		"re_entry":
 			audio.play("ui_select")
 			continue_gate.request(_re_entries_used())
@@ -270,10 +279,61 @@ func _on_continue_denied() -> void:
 	_set_state(State.SIGNAL_LOST)
 
 
+## PLAY on a fresh save is level 1. On a save with progress it is the
+## first field still standing, because that is what the player means.
 func _start_new_game() -> void:
 	run.start_run()
-	_load_level(0)
+	_load_level(_first_unfinished())
 	_set_state(State.LEVEL_INTRO)
+
+
+func _first_unfinished() -> int:
+	for i in level_paths.size():
+		var data: Dictionary = LevelLoader.load_level(level_paths[i])["data"]
+		if GameProgress.stars_for(int(data.get("id", i + 1))) & GameProgress.STAR_CLEARED:
+			continue
+		return i
+	return 0
+
+
+## Section 15. Everything the chart needs to draw itself, read once when
+## it opens rather than reached for while it draws.
+func _open_chart(celebrate: bool) -> void:
+	var entries: Array[Dictionary] = []
+	for i in level_paths.size():
+		var data: Dictionary = LevelLoader.load_level(level_paths[i])["data"]
+		var id := int(data.get("id", i + 1))
+		var bits := GameProgress.stars_for(id)
+		entries.append({
+			"name": str(data.get("name", "")),
+			"bits": bits,
+			"stars": GameProgress.star_count(id),
+			"cleared": (bits & GameProgress.STAR_CLEARED) != 0,
+			"best_time": GameProgress.best_time(id),
+		})
+	_set_state(State.STAR_MAP)
+	star_map.open(entries, _first_unfinished(), celebrate)
+
+
+func _on_field_chosen(index: int) -> void:
+	audio.play("ui_select")
+	run.start_run()
+	_load_level(index)
+	_set_state(State.LEVEL_INTRO)
+
+
+func _on_map_action(name: String) -> void:
+	match name:
+		"hover":
+			audio.play("ui_move", 1.0, -8.0)
+		"locked":
+			audio.play("ui_back", 0.8, -4.0)
+		"line_drawn":
+			# One note per line, climbing as the figure closes.
+			audio.play("combo", 0.9 + 0.03 * float(star_map._lines_drawn), -6.0)
+		"back":
+			audio.play("ui_back")
+			_set_state(State.TITLE)
 
 
 func _begin_level() -> void:
@@ -319,6 +379,11 @@ func _load_level(index: int) -> void:
 
 func _next_level() -> void:
 	run.re_entry_used = false
+	if level_index + 1 >= level_paths.size():
+		# The end of the zone is the chart, with the constellation
+		# drawing itself. Wrapping round to level 1 said nothing.
+		_open_chart(true)
+		return
 	_load_level(level_index + 1)
 	_set_state(State.LEVEL_INTRO)
 
@@ -789,7 +854,7 @@ func _refresh_hud() -> void:
 	hud.stars = GameProgress.stars_for(int(level_data.get("id", 1)))
 	hud.best_score = GameProgress.high_score
 	hud.visible = state != State.TITLE and state != State.SETTINGS \
-		and state != State.SIGNAL_LOST
+		and state != State.SIGNAL_LOST and state != State.STAR_MAP
 
 
 func _input(event: InputEvent) -> void:

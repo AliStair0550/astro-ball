@@ -35,6 +35,14 @@ gridAnchor      valgfrit px-offset i leveldata, positivt = længere ned
 Level-loaderen afviser et anker, der æder himlen eller fører muren
 forbi murlinjen.
 
+### Konstellationskortet
+
+Level-select er et stjernekort (afsnit 15). Tolv stjerner i form af en
+komet: halen er banerne i raekkefoelge, hovedet er de sidste fire med The
+Core som kerne. Klarede baner lyser, og glorien siger hvor mange af de
+tre stjerner man tog. Linjerne tegnes foerst, naar hele zonen er klaret,
+og de tegner sig selv mens man ser paa.
+
 ### Zonen
 
 Tolv felter, The Drift. De ni sidste bygger paa afsnit 10: en

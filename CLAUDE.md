@@ -788,3 +788,37 @@ straf og et baghold.
 Par-tiderne er sat fra autopiloten gange halvanden. Autopiloten misser
 aldrig bolden, så et menneske, der spiller rent, rammer stjernen, og et
 menneske, der roder, gør ikke.
+
+---
+
+## Konstellationskortet, som det blev
+
+Afsnit 15 lover et stjernekort i stedet for en liste, og at linjerne
+tegnes, når zonen er fuldført. Det står. Resten blev besluttet undervejs.
+
+**Figuren er en komet.** Halen løber fra nederste venstre hjørne, hvor
+man begyndte, op mod højre, og ender i et hoved af tre stjerner med en
+kerne indeni. Kernen er level 12, The Core. Man er selv kometen, og
+kortet er den flyvning, man har lavet.
+
+**Banen dobler aldrig tilbage.** Rækkefølgen skal kunne læses som en vej,
+og en vej, der krydser sig selv, er et rod. Ingen linje går tættere på en
+tredje stjerne end en tommelfinger er bred, og ingen to stjerner er
+tættere på hinanden end 52 px. Begge dele står i testene, fordi et kort,
+man kan komme til at trykke forkert på, er værre end en liste.
+
+**En bane åbner, når den før den er klaret.** Ikke stjernekrav inden for
+zonen. Adgang mellem zoner kan stadig koste stjerner, som afsnit 15
+siger, men det hører til, når der er en zone to.
+
+**Ikke-nåede baner tegnes stadig.** Svagt, men synligt. Et kort, der
+stopper, hvor spilleren stoppede, ser ud som om der ikke er mere.
+
+**Titlen siger CONTINUE, når der er noget at fortsætte**, og PLAY ellers.
+Knappen går til den første bane, der stadig står. Kortet dukker først op
+på titlen, når der er ét felt at se på. Første gang er der ingen menu
+mellem PLAY og level 1.
+
+**Zonen ender på kortet.** Før løb level 12 rundt til level 1, hvilket
+ikke sagde noget. Nu åbnes kortet med tom himmel, og konstellationen
+tegner sig selv, én linje ad gangen, med en tone til hver.

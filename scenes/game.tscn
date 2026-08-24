@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/game_feel.gd" id="2_game_feel"]
@@ -13,6 +13,7 @@
 [ext_resource type="Script" path="res://scripts/screens.gd" id="11_screens"]
 [ext_resource type="Script" path="res://scripts/crt.gd" id="12_crt"]
 [ext_resource type="Script" path="res://scripts/touch_input.gd" id="13_touch"]
+[ext_resource type="Script" path="res://scripts/star_map.gd" id="14_map"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
@@ -79,6 +80,9 @@ text = "F1"
 
 [node name="ScreenLayer" type="CanvasLayer" parent="."]
 layer = 20
+
+[node name="StarMap" type="Node2D" parent="ScreenLayer"]
+script = ExtResource("14_map")
 
 [node name="Screens" type="Node2D" parent="ScreenLayer"]
 script = ExtResource("11_screens")
