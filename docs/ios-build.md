@@ -1,0 +1,176 @@
+# Sådan får du Astro Ball ind på din iPhone
+
+Skrevet til én, der aldrig har lavet et iOS-build før. Følg den i
+rækkefølge. Der er tre ting, der skal på plads, og de kan alle gøres
+gratis: Godots eksportskabeloner, Xcode, og en gratis Apple-konto.
+
+Du kan lægge spillet på din **egen** telefon uden at betale noget. Vil du
+lægge det i App Store, koster et Apple Developer Program 99 dollars om
+året. Det er ikke nødvendigt endnu.
+
+---
+
+## 0. Hvad du skal bruge
+
+| | |
+|---|---|
+| En Mac | Xcode findes kun til macOS |
+| Xcode | Gratis i Mac App Store, ca. 8 GB |
+| Godot 4.7 | Du har den i `/Applications/Godot.app` |
+| Godots eksportskabeloner til 4.7 | Hentes fra Godot, se trin 1 |
+| Et Apple-ID | Det du bruger til App Store, gratis |
+| Et USB-kabel | Wi-Fi virker også, men kabel er nemmere første gang |
+
+En app signeret med en gratis konto **udløber efter 7 dage**. Så skal du
+køre trin 6 igen. Det er Apples regel, ikke vores.
+
+---
+
+## 1. Hent Godots eksportskabeloner
+
+Uden dem siger Godot "Export templates for this platform are missing".
+
+1. Åbn Godot og luk projektlisten op.
+2. **Editor → Manage Export Templates → Download and Install.**
+3. Vent. Det er omkring 1 GB, og der er ingen fremdriftsbjælke det meste
+   af tiden.
+
+Skabelonerne skal matche din Godot-version præcis. Har du 4.7.2, skal
+skabelonerne være 4.7.2.
+
+---
+
+## 2. Installer Xcode og accepter licensen
+
+1. Installer Xcode fra Mac App Store.
+2. Åbn Xcode én gang og lad den installere sine ekstra komponenter.
+3. Kør i en terminal:
+
+```
+sudo xcodebuild -license accept
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+```
+
+---
+
+## 3. Læg dit Apple-ID ind i Xcode
+
+1. **Xcode → Settings → Accounts → +→ Apple ID.**
+2. Log ind med dit almindelige Apple-ID.
+3. Du får et team, der hedder noget i retning af
+   *Dit Navn (Personal Team)*. Det er det, du skal bruge.
+
+---
+
+## 4. Eksportér fra Godot
+
+Projektet har allerede en iOS-preset. Den hedder **iOS** og peger på
+`build/ios/AstroBall.ipa`.
+
+Fra editoren:
+
+1. **Project → Export.**
+2. Vælg **iOS** i listen.
+3. Under **Application** skriver du dit **App Store Team ID** i feltet af
+   samme navn. Du finder det i Xcode under
+   *Settings → Accounts → dit team → Manage Certificates*, eller på
+   [developer.apple.com/account](https://developer.apple.com/account)
+   under Membership. Med en gratis konto må feltet også stå tomt; så
+   sætter du teamet i Xcode i stedet, i trin 5.
+4. **Export Project** (ikke "Export PCK/Zip"). Vælg en mappe. Godot
+   laver et helt Xcode-projekt, ikke en færdig app.
+
+Fra kommandolinjen, hvis du hellere vil:
+
+```
+/Applications/Godot.app/Contents/MacOS/Godot --headless \
+  --path "$(pwd)" --export-debug "iOS" build/ios/AstroBall.ipa
+```
+
+Første gang fejler den, hvis skabelonerne fra trin 1 mangler. Fejlteksten
+siger det direkte.
+
+---
+
+## 5. Åbn i Xcode og vælg dit team
+
+1. Åbn `astro_ball.xcodeproj` i den mappe, Godot eksporterede til.
+2. Klik projektet øverst i venstre panel.
+3. Fanen **Signing & Capabilities**.
+4. Sæt flueben i **Automatically manage signing**.
+5. Vælg dit **Team** i rullelisten. Det er *(Personal Team)*.
+6. **Bundle Identifier** skal være unik på verdensplan. Vores er
+   `com.alius.astroball`. Er den taget, sætter du noget efter, for
+   eksempel `com.alius.astroball.ali`. Ændrer du den her, så ændr den
+   også i Godots preset, så de to ikke driver fra hinanden.
+
+Ser du rødt her, står grunden altid i teksten under feltet. De to
+almindelige er: intet team valgt, eller et bundle-id, en anden allerede
+har taget.
+
+---
+
+## 6. Kør på telefonen
+
+1. Sæt iPhonen i med kablet.
+2. Lås den op og svar **Trust** på "Trust This Computer?".
+3. Øverst i Xcode, i enhedsvælgeren ved siden af play-knappen, vælger du
+   din telefon i stedet for en simulator.
+4. Tryk **play** (⌘R).
+
+Første gang stopper telefonen appen med
+*"Untrusted Developer"*. Det er forventet:
+
+- På telefonen: **Indstillinger → Generelt → VPN og enhedsadministration**
+- Tryk på din udviklerprofil
+- **Trust**
+
+Kør så ⌘R igen.
+
+---
+
+## 7. Når det ikke virker
+
+**"Export templates for this platform are missing"**
+Trin 1. Og tjek at skabelonernes version er præcis den samme som
+Godots.
+
+**"Signing for ... requires a development team"**
+Trin 5. Team er ikke valgt.
+
+**"Unable to install ... The maximum number of apps for free development profiles has been reached"**
+En gratis konto må have tre apps på telefonen ad gangen. Slet en af de
+andre.
+
+**Appen starter og lukker med det samme**
+Kør den fra Xcode og se konsollen nederst. Godot skriver sine egne fejl
+derned, præcis som i editoren.
+
+**Appen udløb efter en uge**
+Sådan er gratis-signering. Kør trin 6 igen.
+
+**Simulatoren vil ikke køre spillet**
+Godot skal bygge et simulator-bibliotek, og presetten har
+`generate_simulator_library_if_missing` slået til. Det tager tid første
+gang. En rigtig telefon er hurtigere og mere ærlig, især for styring og
+haptik, som simulatoren ikke kan gengive.
+
+---
+
+## Det, der skal mærkes efter, når den kører
+
+Styringen er **relativ**: paddlen flytter sig med fingerens bevægelse, og
+ikke hen til fingeren. Læg tommelfingeren lavt og til siden, hvor den
+ikke dækker for noget, og træk.
+
+Fire ting at holde øje med på selve telefonen, som ikke kan afgøres på en
+computer:
+
+1. **Følsomheden.** `TouchInput.SENSITIVITY` står på 1.0, altså 1 px
+   finger giver 1 px paddle. Føles det tungt, skal det op.
+2. **Accelerationen.** Et hurtigt kast bærer 20 procent længere end
+   fingeren gik. `ACCEL_FROM` og `ACCEL_TO` afgør hvornår.
+3. **Tap mod træk.** Grænsen er 150 ms og 8 px. Affyrer bolden, når du
+   mente at styre, skal 8 px ned.
+4. **Haptikken.** Slå den fra og til i indstillingerne og se, om den
+   tilføjer noget eller bare støjer.

@@ -25,11 +25,32 @@ const COMBO_LIFE := 0.40
 var screen_size := Vector2(390.0, 844.0)
 
 var _bits: Array[Dictionary] = []
+## Dead shards are kept and refilled rather than thrown away. A busy
+## chain reaction can retire eighty of them in a second, and the garbage
+## that makes is the one allocation the game does at speed.
+var _bit_pool: Array[Dictionary] = []
 var _texts: Array[Dictionary] = []
 var _rings: Array[Dictionary] = []
 var _flashes: Array[Dictionary] = []
 var _combo: Dictionary = {}
 var _font: Font = FONT_SCORE
+
+
+## Takes a shard from the pool, or makes one the first time.
+func _take_bit() -> Dictionary:
+	if _bit_pool.is_empty():
+		return {}
+	return _bit_pool.pop_back()
+
+
+func _retire_bit(index: int) -> void:
+	_bit_pool.append(_bits[index])
+	_bits.remove_at(index)
+
+
+## How many shards are being kept warm. The debug overlay reads it.
+func pool_size() -> int:
+	return _bit_pool.size()
 
 
 # --- Bricks ------------------------------------------------------------
@@ -60,7 +81,7 @@ func brick_smashed(rect: Rect2, color: Color, count: int, glass := false,
 			# Ice in vacuum: lighter, drifts longer, almost no gravity.
 			speed = randf_range(30.0, 70.0)
 			size = Vector2(randf_range(1.0, 2.0), randf_range(3.0, 7.0))
-		_bits.append({
+		_bits.append(_fill(_take_bit(), {
 			"kind": "splinter",
 			"pos": center + Vector2(randf_range(-rect.size.x, rect.size.x), randf_range(-rect.size.y, rect.size.y)) * 0.4,
 			"vel": dir * speed,
@@ -71,7 +92,7 @@ func brick_smashed(rect: Rect2, color: Color, count: int, glass := false,
 			"gravity": 60.0 if glass else GRAVITY,
 			"t": 0.0,
 			"life": SHARD_LIFE if glass else SPLINTER_LIFE,
-		})
+		}))
 	_flashes.append({"rect": rect, "color": Color.WHITE, "t": 0.0, "life": 0.017})
 
 
@@ -102,7 +123,7 @@ func shockwave(at: Vector2, radius: float, color: Color) -> void:
 func sparks(at: Vector2, dir: Vector2, count: int, color: Color) -> void:
 	for i in count:
 		var spread := dir.rotated(randf_range(-0.9, 0.9))
-		_bits.append({
+		_bits.append(_fill(_take_bit(), {
 			"kind": "spark",
 			"pos": at,
 			"vel": spread * randf_range(70.0, 160.0),
@@ -113,7 +134,7 @@ func sparks(at: Vector2, dir: Vector2, count: int, color: Color) -> void:
 			"gravity": 240.0,
 			"t": 0.0,
 			"life": SPARK_LIFE,
-		})
+		}))
 
 
 func score_popup(at: Vector2, amount: int) -> void:
@@ -137,7 +158,7 @@ func combo(value: int) -> void:
 func ball_lost(at: Vector2) -> void:
 	for i in 20:
 		var angle := randf_range(-PI, 0.0)
-		_bits.append({
+		_bits.append(_fill(_take_bit(), {
 			"kind": "splinter",
 			"pos": at + Vector2(randf_range(-4.0, 4.0), randf_range(-4.0, 4.0)),
 			"vel": Vector2(cos(angle), sin(angle)) * randf_range(30.0, 110.0),
@@ -149,7 +170,7 @@ func ball_lost(at: Vector2) -> void:
 			"gravity": 1500.0,
 			"t": 0.0,
 			"life": 0.4,
-		})
+		}))
 
 
 func powerup_icon(at: Vector2, text: String, color: Color) -> void:
@@ -165,6 +186,8 @@ func powerup_icon(at: Vector2, text: String, color: Color) -> void:
 
 
 func clear_all() -> void:
+	for bit in _bits:
+		_bit_pool.append(bit)
 	_bits.clear()
 	_texts.clear()
 	_rings.clear()
@@ -174,13 +197,21 @@ func clear_all() -> void:
 
 # --- Update ------------------------------------------------------------
 
+## Refills a recycled shard. Merge rather than replace, so the reused
+## dictionary keeps its allocation.
+static func _fill(target: Dictionary, values: Dictionary) -> Dictionary:
+	for key in values:
+		target[key] = values[key]
+	return target
+
+
 func _process(delta: float) -> void:
 	var i := _bits.size() - 1
 	while i >= 0:
 		var b := _bits[i]
 		b["t"] += delta
 		if b["t"] >= b["life"]:
-			_bits.remove_at(i)
+			_retire_bit(i)
 		else:
 			b["vel"] = b["vel"] + Vector2(0.0, b["gravity"]) * delta
 			b["pos"] = b["pos"] + b["vel"] * delta

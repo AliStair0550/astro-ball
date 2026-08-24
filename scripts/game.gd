@@ -26,6 +26,7 @@ const SHAKE_WALL := Vector2(2.0, 0.06)
 const SHAKE_BLAST := Vector2(6.0, 0.12)
 
 @onready var game_feel: GameFeel = $GameFeel
+@onready var touch: TouchInput = $TouchInput
 @onready var background: Background = $Background
 @onready var arena: Arena = $Arena
 @onready var grid: BrickGrid = $BrickGrid
@@ -84,6 +85,10 @@ var _debug := false
 
 
 func _ready() -> void:
+	# Before anything measures the field: the panel grows to clear the
+	# notch, and every derived position follows from that.
+	Arena.apply_safe_area()
+
 	background.screen_size = Arena.SCREEN
 	effects.screen_size = Arena.SCREEN
 	hud.screen_size = Arena.SCREEN
@@ -106,6 +111,8 @@ func _ready() -> void:
 
 	paddle.laser_fired.connect(_on_laser_fired)
 	screens.action.connect(_on_screen_action)
+	touch.steered.connect(_on_steered)
+	touch.tapped.connect(_on_tapped)
 	continue_gate.granted.connect(_on_continue_granted)
 	continue_gate.denied.connect(_on_continue_denied)
 
@@ -166,6 +173,10 @@ func _set_state(new_state: State) -> void:
 	effects.visible = field_visible
 
 	var interactive := state == State.PLAYING
+	touch.enabled = interactive
+	if not interactive:
+		# A finger that dismissed a screen must not also steer or launch.
+		touch.reset()
 	paddle.input_enabled = interactive
 	for ball in _balls:
 		ball.input_enabled = interactive
@@ -353,6 +364,27 @@ func _shake(amount: Vector2) -> void:
 	game_feel.shake(amount.x, amount.y)
 
 
+## Relative steering, section: the paddle moves BY the finger's delta.
+func _on_steered(delta_x: float) -> void:
+	if state == State.PLAYING:
+		paddle.nudge(delta_x)
+
+
+## A tap does whatever the moment calls for: launch a waiting ball, or
+## fire the laser. A drag does neither.
+func _on_tapped() -> void:
+	if state != State.PLAYING:
+		return
+	var launched := false
+	for ball in _balls:
+		if ball.stuck:
+			ball.launch()
+			launched = true
+			break
+	if not launched and paddle.laser:
+		paddle.fire_laser()
+
+
 func _on_ball_launched() -> void:
 	audio.play("launch", randf_range(0.96, 1.04), -3.0)
 
@@ -371,6 +403,7 @@ func _on_paddle_hit(pos: Vector2, _angle: float, sweet: bool) -> void:
 	audio.set_drone_intensity(0)
 	effects.sparks(pos, Vector2.UP, 2, Paddle.VOLT if sweet else Paddle.BONE)
 	audio.play("paddle", 1.12 if sweet else randf_range(0.97, 1.03), -2.0)
+	game_feel.pulse(GameFeel.HAPTIC_PADDLE)
 	_refresh_hud()
 
 
@@ -388,6 +421,7 @@ func _on_brick_damaged(brick: Brick) -> void:
 	effects.brick_damaged(brick.rect.get_center(), brick.color())
 	game_feel.hitstop(HITSTOP_HARDENED)
 	audio.play("brick_hard", randf_range(0.95, 1.06), -3.0)
+	game_feel.pulse(GameFeel.HAPTIC_HARDENED)
 
 
 func _on_brick_destroyed(brick: Brick, by_chain: bool) -> void:
@@ -406,6 +440,7 @@ func _on_brick_destroyed(brick: Brick, by_chain: bool) -> void:
 			_shake(SHAKE_BLAST)
 			game_feel.hitstop(HITSTOP_BLAST)
 			audio.play("blast", randf_range(0.94, 1.06))
+			game_feel.pulse(GameFeel.HAPTIC_BLAST)
 		Brick.Type.GLASS:
 			audio.play("glass", randf_range(0.94, 1.08), -2.0)
 			if not by_chain:
@@ -428,6 +463,8 @@ func _on_brick_destroyed(brick: Brick, by_chain: bool) -> void:
 	background.set_intensity(combo)
 	audio.set_drone_intensity(combo)
 
+	if brick.type != Brick.Type.BLAST:
+		game_feel.pulse(GameFeel.HAPTIC_BRICK)
 	powerups.roll_for(brick.rect.get_center(), brick.powerup_chance())
 	_refresh_hud()
 
@@ -469,6 +506,7 @@ func _on_ball_lost(ball: Ball) -> void:
 	arena.set_danger(1.0)
 	background.dim()
 	audio.play("life_lost")
+	game_feel.pulse(GameFeel.HAPTIC_BALL_LOST)
 	audio.set_drone_intensity(0)
 	powerups.reset_level()
 	paddle.set_width(Paddle.WIDTH_NORMAL)
@@ -498,6 +536,7 @@ func _on_powerup_collected(id: String) -> void:
 	paddle.on_powerup_caught(info["color"])
 	effects.powerup_icon(paddle.global_position - Vector2(0.0, 22.0), Strings.powerup_name(id), info["color"])
 	audio.play("powerup_good" if Powerup.is_good(id) else "powerup_bad", 1.0, -2.0)
+	game_feel.pulse(GameFeel.HAPTIC_POWERUP)
 
 	match id:
 		"multi":
@@ -578,6 +617,8 @@ func _apply_ball_speed() -> void:
 func _process(delta: float) -> void:
 	if state == State.PLAYING:
 		run.tick(delta)
+	# Once the device has produced a real touch, the mouse stops driving.
+	paddle.follow_mouse = not touch.seen_touch
 	background.set_focus_x(paddle.position.x)
 	_update_danger()
 	_update_lasers()
@@ -671,13 +712,16 @@ func _update_debug() -> void:
 	hud.active = powerups.active_effects()
 	var ball: Ball = _balls[0] if not _balls.is_empty() else null
 	var lines := [
-		"FPS        %d" % Engine.get_frames_per_second(),
+		"FPS        %d (%.2f ms)" % [Engine.get_frames_per_second(),
+			1000.0 / maxf(float(Engine.get_frames_per_second()), 1.0)],
+		"PHYSICS    %d Hz, interpolated" % Engine.physics_ticks_per_second,
 		"STATE      %s" % State.keys()[state],
 		"LEVEL      %d %s" % [int(level_data.get("id", 0)), str(level_data.get("name", ""))],
 		"BRICKS     %d left" % grid.remaining_breakable(),
 		"BALLS      %d" % _balls.size(),
 		"COMBO      %d (best %d, x%d)" % [combo, best_combo, _combo_multiplier()],
-		"SHARDS     %d live" % effects.shard_count(),
+		"SHARDS     %d live, %d pooled" % [effects.shard_count(), effects.pool_size()],
+		"TOUCH      %s" % ("yes" if touch.seen_touch else "mouse"),
 		"LIVES      %d" % lives,
 	]
 	if ball:

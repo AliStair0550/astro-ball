@@ -10,6 +10,15 @@ extends Node
 ## Squash is a small helper the paddle uses now and bricks and capsules
 ## can reuse later.
 
+## Haptics, section 17. Short and specific: you should feel the
+## difference between a brick and an explosion without looking.
+const HAPTIC_BRICK := 10
+const HAPTIC_HARDENED := 6
+const HAPTIC_PADDLE := 8
+const HAPTIC_BLAST := 30
+const HAPTIC_BALL_LOST := 50
+const HAPTIC_POWERUP := 15
+
 ## The camera the shake offsets. Wired from the scene.
 @export var camera_path: NodePath
 
@@ -26,6 +35,21 @@ func _ready() -> void:
 	_camera = get_node_or_null(camera_path) as Camera2D
 	# Run after everything else, so the offset is fresh in the same frame.
 	process_priority = 100
+
+
+## A short pulse, if the player wants them and the device has a motor.
+## The wall gets none on purpose: it is the most frequent contact in the
+## game and buzzing on every one of them turns into noise.
+## Returns whether it actually fired, so the flag can be tested without
+## a phone in your hand.
+func pulse(milliseconds: int) -> bool:
+	if milliseconds <= 0:
+		return false
+	var settings := get_node_or_null("/root/GameSettings")
+	if settings != null and not bool(settings.haptics):
+		return false
+	Input.vibrate_handheld(milliseconds)
+	return true
 
 
 ## True while the game is frozen. The ball and paddle skip their update

@@ -11,7 +11,7 @@ echo "=== validate_levels ==="
 if [ "${PIPESTATUS[0]}" -ne 0 ]; then status=1; fi
 
 log="$(mktemp)"
-for suite in mechanics brick_feel phase3 lifecycle play; do
+for suite in mechanics brick_feel phase3 phase4 lifecycle play; do
   echo "=== $suite ==="
   "$GODOT" --headless --path "$ROOT" "res://tests/$suite.tscn" 2>&1 | grep -v "^Godot Engine" | tee "$log"
   if [ "${PIPESTATUS[0]}" -ne 0 ]; then status=1; fi

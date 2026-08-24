@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/game_feel.gd" id="2_game_feel"]
@@ -12,16 +12,21 @@
 [ext_resource type="Script" path="res://scripts/audio.gd" id="10_audio"]
 [ext_resource type="Script" path="res://scripts/screens.gd" id="11_screens"]
 [ext_resource type="Script" path="res://scripts/crt.gd" id="12_crt"]
+[ext_resource type="Script" path="res://scripts/touch_input.gd" id="13_touch"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 anchor_mode = 0
+process_callback = 0
 
 [node name="GameFeel" type="Node" parent="."]
 script = ExtResource("2_game_feel")
 camera_path = NodePath("../Camera2D")
+
+[node name="TouchInput" type="Node" parent="."]
+script = ExtResource("13_touch")
 
 [node name="Audio" type="Node" parent="."]
 script = ExtResource("10_audio")

@@ -49,6 +49,10 @@ var width := WIDTH_NORMAL
 var laser := false
 ## Off while a screen is up.
 var input_enabled := true
+## The mouse steers by absolute position. Touch steers by delta, and the
+## moment a real touch arrives the mouse stops driving, so a trackpad on
+## a hybrid device cannot fight the thumb.
+var follow_mouse := true
 ## Slowed by Heavy in later levels. 1.0 tracks the mouse exactly.
 var follow_speed := 1.0
 
@@ -85,6 +89,13 @@ func _apply_bounds() -> void:
 	min_x = bounds_min + half_width()
 	max_x = bounds_max - half_width()
 	position.x = clampf(position.x, min_x, max_x)
+
+
+## Relative steering. The paddle moves BY the delta, never TO a position.
+func nudge(delta_x: float) -> void:
+	if not input_enabled:
+		return
+	position.x = clampf(position.x + delta_x, min_x, max_x)
 
 
 func half_width() -> float:
@@ -140,6 +151,14 @@ func has_sweet_spot() -> bool:
 func _physics_process(delta: float) -> void:
 	if not input_enabled:
 		return
+	if not follow_mouse:
+		# Touch has the wheel. nudge() moves us; all that is left here is
+		# to keep the velocity readings the motion trail depends on.
+		_velocity_x = (position.x - _prev_positions[0]) / maxf(delta, 0.0001)
+		_prev_positions.push_front(position.x)
+		if _prev_positions.size() > 2:
+			_prev_positions.resize(2)
+		return
 	var target := clampf(get_global_mouse_position().x, min_x, max_x)
 	if follow_speed < 1.0:
 		target = lerpf(position.x, target, clampf(follow_speed * delta * 18.0, 0.0, 1.0))
@@ -150,15 +169,12 @@ func _physics_process(delta: float) -> void:
 	position.x = target
 
 
+## Mouse only. Touch goes through TouchInput, which knows the difference
+## between a tap and a drag; a raw touch event does not.
 func _unhandled_input(event: InputEvent) -> void:
 	if not laser or not input_enabled:
 		return
-	var tap := false
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		tap = true
-	elif event is InputEventScreenTouch and event.pressed:
-		tap = true
-	if tap:
 		fire_laser()
 
 

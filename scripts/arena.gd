@@ -21,7 +21,15 @@ const SCREEN := Vector2(390.0, 844.0)
 ## The HUD fills the top. On a screen twice as tall as it is wide the
 ## panel is not decoration: it is where the dead space goes. Every pixel
 ## it takes is a pixel the wall does not have to hover above.
-const HUD_HEIGHT := 196.0
+## The panel as designed. On a notched phone the top inset is added to
+## it, and everything below follows: the wall's sky is measured from the
+## frame, so the whole field simply starts lower. That keeps one layout
+## instead of two.
+const HUD_BASE_HEIGHT := 196.0
+static var HUD_HEIGHT := HUD_BASE_HEIGHT
+## How far the Ember line sits above the bottom of the field, so it never
+## hides under the home indicator.
+static var BOTTOM_INSET := 0.0
 const WALL := 6.0
 
 const EMITTER_SIZE := 8.0
@@ -33,7 +41,7 @@ const HIT_WAVE := 20.0
 
 const PULSE_PERIOD := 4.0
 const EMBER_WARN_DISTANCE := 100.0
-const EMBER_LINE_Y := SCREEN.y - 4.0
+const EMBER_LINE_BASE := SCREEN.y - 4.0
 
 const CELEBRATE_TIME := 0.9
 
@@ -46,6 +54,18 @@ var _emitter_blink := 0.0
 var _danger := 0.0
 var _celebrate := 0.0
 var _time := 0.0
+
+
+## Reads the device's safe area and moves the panel and the warning line
+## out from under it. A no-op on desktop.
+static func apply_safe_area() -> void:
+	var insets := SafeArea.insets()
+	HUD_HEIGHT = HUD_BASE_HEIGHT + insets.x
+	BOTTOM_INSET = insets.y
+
+
+static func ember_line_y() -> float:
+	return EMBER_LINE_BASE - BOTTOM_INSET
 
 
 func _ready() -> void:
@@ -253,4 +273,4 @@ func _draw_ember_line() -> void:
 		alpha = 0.12 + 0.88 * _danger * blink
 	var c := EMBER
 	c.a = alpha
-	draw_rect(Rect2(WALL, EMBER_LINE_Y, SCREEN.x - WALL * 2.0, 1.0), c)
+	draw_rect(Rect2(WALL, ember_line_y(), SCREEN.x - WALL * 2.0, 1.0), c)

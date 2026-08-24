@@ -113,7 +113,8 @@ Alle tre er bevidste og lette at rulle tilbage.
 
 - **Motor:** Godot 4.7 (standard, ikke .NET)
 - **Viewport:** 390 x 844 logisk, iPhone portræt, `canvas_items` med aspect `keep`
-- **Styring:** musens x. Klik sender bolden afsted, og skyder med laser. Touch kommer i fase 4.
+- **Styring:** touch med relativt træk, mus på skrivebordet. Et tryk under 150 ms og 8 px affyrer bolden og skyder med laser. Et træk gør aldrig nogen af delene.
+- **iPhone:** portræt, sikre områder, ProMotion, haptik. Se [docs/ios-build.md](docs/ios-build.md).
 - **F1** debug-overlay · **F2** næste level · **F3** genstart level · **ESC** menu
 
 ### Rummet
@@ -189,6 +190,9 @@ scripts/level_state.gd    liv, score, kombo, ure og stjerner
 scripts/progress.gd       stjerner, rekord og fejltæller, gemt i user://
 scripts/strings.gd        alt spillervendt tekst, afsnit 14
 scripts/continue_gate.gd  prisen paa en RE-ENTRY, sømmen en reklame kobles paa
+scripts/touch_input.gd    relativt traek, tap mod traek, multitouch
+scripts/safe_area.gd      hakket og hjemmeindikatoren i logiske pixels
+docs/ios-build.md         fra Godot til din iPhone, trin for trin
 scripts/screens.gd        titel, indstillinger, intro, clear, game over
 scripts/settings.gd       indstillinger der overlever et genstart
 scripts/audio.gd          buser med rumklang, stemmer, drone
@@ -217,6 +221,7 @@ Tre suiter, alle headless:
 | `validate_levels` | alle levelfiler mod afsnit 11 og 20, med exit-kode |
 | `mechanics` | gridet, klodserne, level-validering, power-up-reglerne, boldens sweep |
 | `brick_feel` | refleksion på alle fire flader og hjørner ved 320 og 520 px/s **og ved begge boldstørrelser**, 20 000 gennemløb uden tunnelering, splinterantal, oprydning inden 400 ms, pitch-loft |
+| `phase4` | tap mod traek, accelerationskurven, relativ styring og dens clamping, sikre omraader, haptik-flaget |
 | `phase3` | strengfilen, loaderens afvisninger, gridAnchor, level-tilstand, stjerner, persistens, den stille hjælper, power-up-ure, Giant |
 | `lifecycle` | liv, SIGNAL LOST, RE-ENTRY, level-progression, fartstigning, score, indstillinger |
 | `play` | autopilot spiller alle tre levels igennem og tjekker invarianter hver frame |

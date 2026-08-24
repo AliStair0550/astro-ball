@@ -113,6 +113,14 @@ var last_exit_angle := 0.0
 
 var _bonus_left := 0.0
 var _trail: Array[Vector2] = []
+## Reused every substep. Building this array inside the sweep loop meant
+## up to sixteen allocations per ball per tick, for a shape that never
+## changes.
+var _paddle_faces: Array = [
+	[Vector2.ZERO, Vector2.ZERO, "paddle_top"],
+	[Vector2.ZERO, Vector2.ZERO, "paddle_side"],
+	[Vector2.ZERO, Vector2.ZERO, "paddle_side"],
+]
 var _spark_drip := 0.0
 
 
@@ -160,15 +168,12 @@ func _fill_trail() -> void:
 		_trail.append(global_position)
 
 
+## Mouse only. A touch is a tap or a drag, and only TouchInput can tell
+## them apart. A drag must never launch the ball.
 func _unhandled_input(event: InputEvent) -> void:
 	if not stuck or not input_enabled or frozen:
 		return
-	var fire := false
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		fire = true
-	elif event is InputEventScreenTouch and event.pressed:
-		fire = true
-	if fire:
 		launch()
 
 
@@ -257,12 +262,13 @@ func _advance(delta: float) -> void:
 			var r := paddle.world_rect()
 			var top_left := r.position
 			var top_right := Vector2(r.end.x, r.position.y)
-			var faces := [
-				[top_left, top_right, "paddle_top"],
-				[top_left, Vector2(r.position.x, r.end.y), "paddle_side"],
-				[top_right, r.end, "paddle_side"],
-			]
-			for face in faces:
+			_paddle_faces[0][0] = top_left
+			_paddle_faces[0][1] = top_right
+			_paddle_faces[1][0] = top_left
+			_paddle_faces[1][1] = Vector2(r.position.x, r.end.y)
+			_paddle_faces[2][0] = top_right
+			_paddle_faces[2][1] = r.end
+			for face in _paddle_faces:
 				var hit := _sweep_circle_segment(global_position, motion, radius, face[0], face[1])
 				if hit["hit"] and hit["t"] < best_t:
 					best_t = hit["t"]
