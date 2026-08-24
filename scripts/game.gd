@@ -1,14 +1,14 @@
 class_name Game
 extends Node2D
 
-## Spillets dirigent.
+## The conductor.
 ##
-## Ingen af de andre scripts kender hinanden. Bolden ved ikke, hvad en
-## score er, gridet ved ikke, at der findes power-ups, skærmene ved ikke,
-## hvad et level er, og baggrunden ved kun, at noget skete et bestemt
-## sted. Alt mødes her.
+## None of the other scripts know each other. The ball does not know
+## what a score is, the grid does not know power-ups exist, the screens
+## do not know what a level is, and the background only knows that
+## something happened somewhere. It all meets here.
 
-enum State { TITLE, SETTINGS, LEVEL_INTRO, PLAYING, BALL_LOST, LEVEL_CLEAR, GAME_OVER }
+enum State { TITLE, SETTINGS, LEVEL_INTRO, PLAYING, BALL_LOST, LEVEL_CLEAR, SIGNAL_LOST }
 
 const START_LIVES := 3
 const MAX_BALLS := 6
@@ -16,9 +16,9 @@ const BALL_LOST_PAUSE := 0.5
 const LEVEL_INTRO_PAUSE := 2.2
 const LEVEL_CLEAR_PAUSE := 2.4
 
-## Hitstop. Fase 1 havde den sat til 0. Nu er det den, der giver
-## sprængklodsen sin vægt.
-const HITSTOP_BRICK := 0.018
+## Hitstop. 16 ms on a brick, 60 on a blast. It is what gives the blast
+## brick its weight.
+const HITSTOP_BRICK := 0.016
 const HITSTOP_HARDENED := 0.012
 const HITSTOP_BLAST := 0.06
 
@@ -50,8 +50,16 @@ var level_data: Dictionary = {}
 var level_paths: PackedStringArray
 
 var _balls: Array[Ball] = []
-## Klodser smadret i dette level. Farten stiger med dem.
+## Telemetry for the SIGNAL LOST readout.
+var run_bricks := 0
+var run_time := 0.0
+var _level_start_score := 0
+## Section 16: one re-entry per field.
+var _re_entry_used := false
+## Bricks broken in this level. The ball speeds up with them.
 var _bricks_this_level := 0
+## Where the ball last touched a brick. The shards fly away from it.
+var _last_impact := Vector2.INF
 var _state_timer := 0.0
 var _debug := false
 
@@ -90,7 +98,7 @@ func _ready() -> void:
 	_debug_label.visible = false
 
 
-# --- Tilstande ---------------------------------------------------------
+# --- States ------------------------------------------------------------
 
 func _set_state(new_state: State) -> void:
 	state = new_state
@@ -108,19 +116,25 @@ func _set_state(new_state: State) -> void:
 		State.LEVEL_CLEAR:
 			overlay = Screens.Screen.LEVEL_CLEAR
 			_state_timer = LEVEL_CLEAR_PAUSE
-		State.GAME_OVER:
-			overlay = Screens.Screen.GAME_OVER
+		State.SIGNAL_LOST:
+			overlay = Screens.Screen.SIGNAL_LOST
 		State.BALL_LOST:
 			_state_timer = BALL_LOST_PAUSE
 
 	screens.level_number = int(level_data.get("id", 1))
 	screens.level_title = str(level_data.get("name", ""))
 	screens.final_score = score
+	screens.bricks_cleared = run_bricks
+	screens.best_combo = best_combo
+	screens.run_time = run_time
+	screens.can_re_enter = not _re_entry_used
 	screens.show_screen(overlay)
 
-	# Titel og indstillinger vises over det bare stjernefelt. Klodser og
-	# skjold bag et logo er støj, ikke stemning.
-	var field_visible := state != State.TITLE and state != State.SETTINGS
+	# Section 16: SIGNAL LOST is a black screen with the star field at
+	# 20 per cent. Title and settings sit over the bare stars too. Bricks
+	# and shield behind a readout are noise, not atmosphere.
+	var field_visible := state != State.TITLE and state != State.SETTINGS \
+		and state != State.SIGNAL_LOST
 	arena.visible = field_visible
 	grid.visible = field_visible
 	paddle.visible = field_visible
@@ -146,9 +160,30 @@ func _on_screen_action(name: String) -> void:
 	match name:
 		"hover":
 			audio.play("ui_move", 1.0, -6.0)
-		"play", "restart":
+		"play":
 			audio.play("ui_select")
 			_start_new_game()
+		"re_entry":
+			# Section 16: one extra life, continue exactly where it stood.
+			# The bricks, the score and the clock are all untouched.
+			audio.play("ui_select")
+			_re_entry_used = true
+			lives = 1
+			_spawn_ball(true)
+			_set_state(State.PLAYING)
+		"restart":
+			# The field from the start, three lives, level score cleared.
+			audio.play("ui_select")
+			score = _level_start_score
+			lives = START_LIVES
+			_re_entry_used = false
+			_load_level(level_index)
+			_set_state(State.LEVEL_INTRO)
+		"arm_reset":
+			audio.play("ui_move")
+		"reset_progress":
+			audio.play("ui_back")
+			GameSettings.reset_progress()
 		"settings":
 			audio.play("ui_select")
 			_set_state(State.SETTINGS)
@@ -164,31 +199,34 @@ func _on_screen_action(name: String) -> void:
 			elif state == State.LEVEL_CLEAR:
 				_next_level()
 		"toggle_sound":
-			GameSettings.sound_on = not GameSettings.sound_on
+			GameSettings.sound = not GameSettings.sound
+			GameSettings.apply()
+			audio.play("ui_select")
+		"toggle_music":
+			GameSettings.music = not GameSettings.music
+			GameSettings.apply()
+			audio.play("ui_select")
+		"toggle_haptics":
+			GameSettings.haptics = not GameSettings.haptics
 			GameSettings.apply()
 			audio.play("ui_select")
 		"toggle_crt":
 			GameSettings.crt = not GameSettings.crt
 			GameSettings.apply()
 			audio.play("ui_select")
-		"toggle_shake":
-			GameSettings.screen_shake = not GameSettings.screen_shake
+		"toggle_handed":
+			GameSettings.left_handed = not GameSettings.left_handed
 			GameSettings.apply()
 			audio.play("ui_select")
-		"volume_up":
-			GameSettings.volume = clampf(GameSettings.volume + 0.1, 0.0, 1.0)
-			GameSettings.apply()
-			audio.play("ui_move")
-		"volume_down":
-			GameSettings.volume = clampf(GameSettings.volume - 0.1, 0.0, 1.0)
-			GameSettings.apply()
-			audio.play("ui_move")
 
 
 func _start_new_game() -> void:
 	score = 0
 	lives = START_LIVES
 	best_combo = 0
+	run_bricks = 0
+	run_time = 0.0
+	_re_entry_used = false
 	_load_level(0)
 	_set_state(State.LEVEL_INTRO)
 
@@ -226,15 +264,17 @@ func _load_level(index: int) -> void:
 
 	combo = 0
 	_bricks_this_level = 0
+	_level_start_score = score
 	_refresh_hud()
 
 
 func _next_level() -> void:
+	_re_entry_used = false
 	_load_level(level_index + 1)
 	_set_state(State.LEVEL_INTRO)
 
 
-# --- Bolde -------------------------------------------------------------
+# --- Balls -------------------------------------------------------------
 
 func _spawn_ball(stuck: bool, at := Vector2.ZERO, angle_deg := 0.0) -> Ball:
 	if _balls.size() >= MAX_BALLS:
@@ -279,11 +319,10 @@ func _remove_ball(ball: Ball) -> void:
 		ball.queue_free()
 
 
-# --- Signaler ----------------------------------------------------------
+# --- Signals -----------------------------------------------------------
 
 func _shake(amount: Vector2) -> void:
-	if GameSettings.screen_shake:
-		game_feel.shake(amount.x, amount.y)
+	game_feel.shake(amount.x, amount.y)
 
 
 func _on_ball_launched() -> void:
@@ -298,8 +337,8 @@ func _on_wall_hit(pos: Vector2, _normal: Vector2) -> void:
 
 
 func _on_paddle_hit(pos: Vector2, _angle: float, sweet: bool) -> void:
-	# Komboen nulstilles ved paddle-ramt. Det er den, der gør en lang
-	# tur oppe bag muren værd at jagte.
+	# The combo resets on paddle contact. That is what makes a long run
+	# up behind the wall worth chasing.
 	combo = 0
 	audio.set_drone_intensity(0)
 	effects.sparks(pos, Vector2.UP, 2, Paddle.VOLT if sweet else Paddle.BONE)
@@ -310,13 +349,14 @@ func _on_paddle_hit(pos: Vector2, _angle: float, sweet: bool) -> void:
 func _on_brick_hit(brick: Brick, damage: int, pos: Vector2, _passed: bool, ball: Ball) -> void:
 	if brick == null or not brick.alive:
 		return
+	_last_impact = pos
 	if ball.zap and brick.is_breakable():
 		grid.zap_neighbours(brick)
 	grid.hit(brick, damage)
 
 
 func _on_brick_damaged(brick: Brick) -> void:
-	# Hærdet tager skade: 3 gnister, ingen splinter, klodsen ryster.
+	# Hardened takes damage: 3 sparks, no shards, the brick shakes.
 	effects.brick_damaged(brick.rect.get_center(), brick.color())
 	game_feel.hitstop(HITSTOP_HARDENED)
 	audio.play("brick_hard", randf_range(0.95, 1.06), -3.0)
@@ -326,12 +366,14 @@ func _on_brick_destroyed(brick: Brick, by_chain: bool) -> void:
 	combo += 1
 	best_combo = maxi(best_combo, combo)
 	_bricks_this_level += 1
+	run_bricks += 1
 	_apply_ball_speed()
 
 	var points := brick.score_value() * _combo_multiplier()
 	score += points
 
-	effects.brick_smashed(brick.rect, brick.color(), brick.shard_count(), brick.type == Brick.Type.GLASS)
+	effects.brick_smashed(brick.rect, brick.color(), brick.shard_count(),
+		brick.type == Brick.Type.GLASS, _last_impact)
 	effects.score_popup(brick.rect.get_center(), points)
 	background.flash_near(brick.rect.get_center(), randi_range(5, 8), brick.color())
 
@@ -347,7 +389,7 @@ func _on_brick_destroyed(brick: Brick, by_chain: bool) -> void:
 			if not by_chain:
 				game_feel.hitstop(HITSTOP_BRICK)
 		Brick.Type.PULSE:
-			# Pulse-kernen sender en større lysbølge end normalt.
+			# The Pulse core sends a wider wave of light than usual.
 			effects.shockwave(brick.rect.get_center(), 54.0, brick.color())
 			background.field_glint()
 			audio.play_brick(combo, "brick", 1.0)
@@ -409,9 +451,8 @@ func _on_ball_lost(ball: Ball) -> void:
 	if lives <= 0:
 		screens.high_score = GameSettings.high_score
 		screens.new_record = GameSettings.submit_score(score)
-		screens.final_score = score
 		audio.play("game_over")
-		_set_state(State.GAME_OVER)
+		_set_state(State.SIGNAL_LOST)
 	else:
 		_set_state(State.BALL_LOST)
 	_refresh_hud()
@@ -443,8 +484,8 @@ func _on_powerup_expired(_id: String) -> void:
 	_sync_powerup_state()
 
 
-## Alt, der har en varighed, udledes af listen over aktive power-ups.
-## Så kan to modsatrettede aldrig efterlade paddlen i en umulig tilstand.
+## Everything with a duration is derived from the list of active
+## power-ups, so two opposing ones can never leave the paddle stuck.
 func _sync_powerup_state() -> void:
 	var active := powerups.active_effects()
 
@@ -467,7 +508,7 @@ func _sync_powerup_state() -> void:
 		ball.zap = active.has("zap")
 
 
-## Multi: bolden deler sig i 3.
+## Multi: the ball splits into 3.
 func _split_balls() -> void:
 	var source: Ball = null
 	for ball in _balls:
@@ -494,9 +535,9 @@ func _combo_multiplier() -> int:
 	return 1
 
 
-## Hastigheden starter på levelets egen og stiger 4 procent per 10
-## klodser, med loft ved 520 px/s. Det er den, der gør, at et level
-## slutter hurtigere end det begynder.
+## Speed starts at the level's own and rises 4 per cent per 10 bricks,
+## capped at 520 px/s. It is what makes a field end faster than it
+## begins.
 func level_ball_speed() -> float:
 	var base := float(level_data.get("ballSpeed", Ball.BASE_SPEED))
 	var steps := _bricks_this_level / Ball.SPEED_STEP_BRICKS
@@ -509,9 +550,11 @@ func _apply_ball_speed() -> void:
 		ball.speed_base = speed
 
 
-# --- Løkke -------------------------------------------------------------
+# --- Loop --------------------------------------------------------------
 
 func _process(delta: float) -> void:
+	if state == State.PLAYING:
+		run_time += delta
 	background.set_focus_x(paddle.position.x)
 	_update_danger()
 	_update_lasers()
@@ -576,7 +619,8 @@ func _refresh_hud() -> void:
 	hud.max_lives = maxi(START_LIVES, lives)
 	hud.combo = combo
 	hud.active = powerups.active_effects()
-	hud.visible = state != State.TITLE and state != State.SETTINGS
+	hud.visible = state != State.TITLE and state != State.SETTINGS \
+		and state != State.SIGNAL_LOST
 
 
 func _input(event: InputEvent) -> void:
@@ -607,6 +651,7 @@ func _update_debug() -> void:
 		"BRICKS     %d left" % grid.remaining_breakable(),
 		"BALLS      %d" % _balls.size(),
 		"COMBO      %d (best %d, x%d)" % [combo, best_combo, _combo_multiplier()],
+		"SHARDS     %d live" % effects.shard_count(),
 		"LIVES      %d" % lives,
 	]
 	if ball:

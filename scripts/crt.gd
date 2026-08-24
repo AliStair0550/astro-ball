@@ -1,12 +1,12 @@
 class_name CRT
 extends Node2D
 
-## CRT-tilstanden fra afsnit 12. Slukket som standard.
+## CRT mode from section 12. Off by default.
 ##
-## Selve effekten er en shader over hele billedet. Kan skærmteksturen
-## ikke læses på den aktuelle renderer, falder den tilbage til scanlines
-## og vignette tegnet i hånden, så tilvalget aldrig ender med at gøre
-## ingenting.
+## The effect is a shader over the whole image. If the screen texture
+## cannot be read on the current renderer it falls back to scanlines and
+## a vignette drawn by hand, so the option never ends up doing nothing
+## at all.
 
 const SHADER := preload("res://assets/shaders/crt.gdshader")
 
@@ -51,7 +51,7 @@ func _apply() -> void:
 func _draw() -> void:
 	if not fallback or not visible:
 		return
-	# Reserveløsningen: scanlines og vignette uden at læse skærmen.
+	# The fallback: scanlines and vignette without reading the screen.
 	var line := Color("07070C")
 	line.a = 0.16
 	var y := 0.0

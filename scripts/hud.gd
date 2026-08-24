@@ -1,17 +1,17 @@
 class_name HUD
 extends Node2D
 
-## Lag 6: HUD.
+## Layer 6: the HUD.
 ##
-## Toppen er ikke en statuslinje, den er spillets ansigt. ASTRO BALL står
-## i Unbounded i Pulse-lilla med en mørk forskydning bagved, så navnet
-## sidder i grafitten i stedet for at flyde ovenpå. Under det ligger
-## zonen og levelet, til højre scoren og livene, og nederst i panelet
-## docken med aktive power-ups.
+## The top is not a status bar, it is the game's face. ASTRO BALL sits
+## in Unbounded in Pulse violet with a dark offset behind it, so the
+## name sits in the graphite instead of floating on top. Below it the
+## zone and the level, to the right the score and the lives, and along
+## the bottom the dock of active power-ups.
 ##
-## Panelet er 140 px højt. Det er ikke pynt: på en skærm, der er dobbelt
-## så høj som den er bred, skubber det klodserne ned i spillerens
-## rækkevidde i stedet for at efterlade en halv skærm dødt rum.
+## The panel is 140 px tall. That is not decoration: on a screen twice
+## as tall as it is wide it pushes the bricks down into reach instead
+## of leaving half a screen of dead room.
 
 const HEIGHT := 140.0
 const RULE_Y := HEIGHT - 2.0
@@ -37,8 +37,8 @@ const BRAND_TRACKING := 2.0
 const SCORE_SIZE := 32
 const LABEL_SIZE := 9
 
-## Docken har altid fire pladser. Tomme pladser tegnes svagt, så toppen
-## ser ud som et instrument og ikke som et hul, der venter på indhold.
+## The dock always has four slots. Empty ones are drawn faintly, so the
+## top reads as an instrument and not as a hole waiting to be filled.
 const DOCK_SLOTS := 4
 const DOCK_Y := 108.0
 const DOCK_HEIGHT := 24.0
@@ -62,7 +62,7 @@ var _time := 0.0
 
 func _process(delta: float) -> void:
 	_time += delta
-	# Scoren tæller op i stedet for at hoppe. Små tal, stor forskel.
+	# The score counts up instead of jumping. Small thing, big difference.
 	var gap := absf(float(score) - displayed_score)
 	displayed_score = move_toward(displayed_score, float(score), maxf(300.0, gap * 7.0) * delta)
 	queue_redraw()
@@ -90,8 +90,8 @@ func _draw() -> void:
 	_draw_dock()
 
 
-## Grafit: en lodret tone fra næsten sort til lidt lysere, med en
-## håndfuld svage linjer, så fladen ikke er død.
+## Graphite: a vertical tone from near black to a little lighter, with a
+## handful of faint lines so the surface is not dead.
 func _draw_panel() -> void:
 	var bands := 16
 	for i in bands:
@@ -104,7 +104,7 @@ func _draw_panel() -> void:
 	for i in 6:
 		draw_rect(Rect2(0.0, 16.0 + float(i) * 21.0, screen_size.x, 1.0), etch)
 
-	# Lilla glød bag navnet, så brandet sidder i sit eget lys.
+	# A violet glow behind the name, so the brand sits in its own light.
 	for i in 6:
 		var glow := PULSE_DEEP
 		glow.a = 0.05
@@ -122,7 +122,7 @@ func _draw_panel() -> void:
 
 func _draw_brand() -> void:
 	var at := Vector2(14.0, 42.0)
-	# Mørk forskydning bagved giver navnet dybde uden en outline.
+	# A dark offset behind gives the name depth without an outline.
 	_tracked(FONT_BRAND, "ASTRO BALL", at + Vector2(2.0, 3.0), BRAND_SIZE, PULSE_DEEP, BRAND_TRACKING)
 	_tracked(FONT_BRAND, "ASTRO BALL", at, BRAND_SIZE, PULSE, BRAND_TRACKING)
 
@@ -143,7 +143,7 @@ func _draw_level_line() -> void:
 	_tracked(FONT_UI, text, Vector2(15.0, 64.0), LABEL_SIZE, SLATE, 1.4)
 
 
-## Livene er små kometer, ikke prikker. Det er dem, du er.
+## The lives are small comets, not dots. They are what you are.
 func _draw_lives() -> void:
 	var right := screen_size.x - 15.0
 	var y := 92.0
@@ -161,7 +161,7 @@ func _draw_lives() -> void:
 			draw_rect(Rect2(x + 1.0, y + 1.0, 2.0, 2.0), spark)
 
 
-## Kombo fra 3 og op, midt i panelet, vokser med komboen.
+## Combo from 3 up, centred in the panel, growing with the count.
 func _draw_combo() -> void:
 	if combo < 3:
 		return
@@ -170,7 +170,7 @@ func _draw_combo() -> void:
 	var width := FONT_BRAND.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x
 	var at := Vector2(screen_size.x * 0.5 - width * 0.5, 100.0)
 	var pulse := 0.75 + 0.25 * sin(_time * 9.0)
-	# Blød glød: tre lag udad i stedet for én hård kasse.
+	# A soft glow: three layers outward instead of one hard box.
 	for i in 3:
 		var glow := VOLT
 		glow.a = 0.09 * pulse * (1.0 - float(i) * 0.28)
@@ -181,7 +181,7 @@ func _draw_combo() -> void:
 	draw_string(FONT_BRAND, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size, VOLT)
 
 
-## Fire pladser i bunden af panelet. Aktive power-ups fylder dem forfra.
+## Four slots along the bottom. Active power-ups fill them from the left.
 func _draw_dock() -> void:
 	var total_gap := DOCK_GAP * float(DOCK_SLOTS - 1)
 	var slot_w := (screen_size.x - DOCK_MARGIN * 2.0 - total_gap) / float(DOCK_SLOTS)
@@ -203,7 +203,7 @@ func _draw_dock_empty(box: Rect2) -> void:
 	draw_rect(box, idle)
 	var edge := Color("232330")
 	draw_rect(Rect2(box.position, Vector2(2.0, box.size.y)), edge)
-	# Svage streger, som en tom måler.
+	# Faint ticks, like an empty gauge.
 	edge.a = 0.6
 	for i in 3:
 		draw_rect(Rect2(box.position.x + 10.0 + float(i) * 7.0, box.get_center().y - 1.0, 3.0, 2.0), edge)
@@ -232,7 +232,7 @@ func _draw_dock_chip(box: Rect2, id: String) -> void:
 	draw_rect(Rect2(box.position.x, box.end.y - 2.0, box.size.x * bar, 2.0), color)
 
 
-## Bogstavafstand skal sættes i hånden, når man tegner direkte.
+## Letter spacing has to be done by hand when drawing text directly.
 func _tracked(font: Font, text: String, at: Vector2, size: int, color: Color, tracking: float) -> void:
 	var pen := at
 	for i in text.length():

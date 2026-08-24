@@ -431,7 +431,7 @@ Tone i al spiltekst: kort, tør, teknisk, som telemetri fra et fartøj. Aldrig u
 Officielle engelske navne:
 
 Design (dansk)	I spillet
-Bæltet	The Belt
+Bæltet	The Drift
 Isringen	The Ice Rings
 Solvinden	The Solar Wind
 Tågen	The Nebula
@@ -439,6 +439,9 @@ Hullet	The Core
 Afgang (level 1)	Liftoff
 Kapslen (level 2)	The Capsule
 Kæden (level 3)	The Chain
+Zone (teknisk begreb)	Universe (i spillet)
+
+Spillervendt omtales zonerne altid som universer: "Universe 1: The Drift". I kode, leveldata og designdokument hedder de fortsat zoner, og zone-slug'en i leveldata forbliver "baeltet". Navneændringer rører aldrig koden, kun strings-filen.
 
 Alle strenge samles i én fil (strings-resource) fra fase 3, selv om der kun er engelsk. Ingen hardcodede tekster i scripts eller scener.
 
@@ -454,7 +457,9 @@ Daily Orbit (efter lancering). Ét dagligt level genereret fra en dato-seed, ens
 
 Gyldne splinter (efter lancering). Sjældent fald fra en smadret klods, skal fanges med paddlen. Samlingen vises på konstellationskortet. Ingen gameplay-effekt.
 
-Sværhedsgrader. To: Normal og Drift. Drift: boldfart 80 %, paddle altid 132 px, ingen dårlige power-ups. Vælges pr. profil, ikke pr. level. Samme levels, samme stjerner.
+Sværhedsgrad. Én. Kurven ligger i leveldesignet (progressionstabellen i afsnit 10) og i boldens fartstigning. Ingen sværhedsvalg i menuen.
+
+Den stille hjælper. Fejler spilleren samme level 3 gange i træk, hæves andelen af gode power-ups i det level med 15 procentpoint. Usynligt for spilleren, nulstilles ved gennemførelse. Altid slået fra i Daily Orbit, hvor alle skal have identiske vilkår. Bygges i fase 3 sammen med level-loaderen. Plan B, hvis lanceringsdata viser tidligt frafald pga. sværhed: en Drift-tilstand (langsommere bold, bredere paddle, ingen dårlige power-ups) som opdatering.
 
 Multiplayer: bevidst udeladt i version 1.
 
@@ -477,8 +482,6 @@ RE-ENTRY: ét ekstra liv, fortsæt præcis hvor spillet stod. Gratis-version: mo
 RESTART FIELD: levelet forfra med 3 liv. Level-score nulstilles.
 Stjerner, zone-progression og gyldne splinter mistes aldrig ved død.
 Der findes ikke game over til hovedmenu, energi-systemer eller ventetid.
-
-
 17. Indstillinger
 
 Hele listen. Der tilføjes ikke flere uden beslutning:
@@ -489,8 +492,6 @@ Haptics (til/fra)
 CRT Mode (til/fra, fra som standard: scanlines, vignette, 1 px fringing)
 Left-handed UI (spejler knapper på skærme, ikke gameplay)
 Reset Progress (med bekræftelse)
-
-
 18. Optage-tilstand
 
 Skjult udvikler-feature, aldrig synlig for spillere. Aktiveres med en debug-genvej.
@@ -499,16 +500,34 @@ HUD kan slås fra.
 Scenarier kan trigges direkte: fyldt mur, kædereaktion, multiball, level clear.
 Formål: klip til TikTok/Reels/LinkedIn under hele udviklingen.
 Bygges billigt oven på feel_test-scenen fra fase 2.
-
 19. Monetisering (scope-beslutning)
 
-Model: gratis download med hele The Belt (12 levels).
+Model: gratis download med hele The Drift (12 levels).
 
 Interstitial-reklame kun mellem levels, efter hvert 3. level. Aldrig midt i spil.
 Rewarded video: frivillig, giver ekstra liv (Re-entry) eller garanteret god power-up.
 Én IAP: "Astro Ball Complete", 39 til 49 kr. Fjerner alle reklamer, åbner alle zoner, gør Re-entry gratis (1 pr. level).
 Ingen møntøkonomi, ingen energi, ingen gameplay-køb. Eventuelle senere småkøb er udelukkende kosmetiske (komethaler, CRT-temaer).
 
-Struktur: Universe 1 (The Belt) er gratis. Universe 2 til 5 åbnes med købet. Plan B, hvis spillet får stor trækkraft: prissætning pr. univers eller bundles. Zonerne er separate i leveldata, så skiftet er en App Store Connect-ændring, ikke en kodeændring. Beslutningen om plan B kræver data fra lanceringen, den tages ikke på forhånd.
+Struktur: Universe 1 (The Drift) er gratis. Universe 2 til 5 åbnes med købet. Plan B, hvis spillet får stor trækkraft: prissætning pr. univers eller bundles. Zonerne er separate i leveldata, så skiftet er en App Store Connect-ændring, ikke en kodeændring. Beslutningen om plan B kræver data fra lanceringen, den tages ikke på forhånd.
 
 Implementeres først efter fase 8. Intet reklame-SDK i projektet før da.
+
+20. Silhuet-reglen, Giant og lodret placering
+
+Silhuet-reglen. Hvert levels grid skal danne en silhuet, der kan navngives med ét ord (pilespids, kapsel, vinge, spiral). Levelnavnet må gerne pege på silhuetten. Levels designes silhuet først, mekanik derefter. Level 1 (pilespids) og 2 (kapsel) opfylder reglen. Level 3 justeres før fase 6, så silhuetten bliver tydelig uden at miste kæde-lektionen. Reglen gælder alle fremtidige levels.
+
+Ny power-up: Giant (tilføjes tabellen over gode i afsnit 7):
+
+Navn	Farve	Ikon	Effekt	Varighed
+Giant	Bone	Stor cirkel	Bold 200 % diameter, halen vokser med, smadrer Hærdet i ét slag	15 s
+
+Giant og Ildkugle kan ikke være aktive samtidig; senest opsamlede vinder.
+
+Lodret placering af muren (bundanker). Skærmen er 390x844 logisk. Reglerne:
+
+Murens nederste række ligger med underkant på murlinjen: 57 % nede af spilfeltet (under HUD). Rækker vokser opad fra linjen.
+Minimum 100 px himmel mellem HUD og øverste række, garanteret af maks 12 rækker.
+Faldzonen fra murlinje til paddle er ca. 300 px, svarende til ca. 1 sekunds reaktionstid ved starthastighed.
+Leveldata får valgfrit felt "gridAnchor" (px-offset fra standardlinjen, positiv = længere ned). Standard er 0.
+Implementeres i level-loaderen i fase 3. Finjusteres i fase

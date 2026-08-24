@@ -1,20 +1,20 @@
 class_name PowerupManager
 extends Node2D
 
-## Spawn-reglerne fra afsnit 7 og regnskabet over aktive power-ups.
+## The spawn rules from section 7 and the ledger of active power-ups.
 ##
-##   Maks 2 kapsler på skærmen.
-##   Aldrig Død i de første 5 levels.
-##   Aldrig to dårlige i træk.
-##   Efter tab af liv er næste power-up garanteret god.
+##   At most 2 capsules on screen.
+##   Never Death in the first 5 levels.
+##   Never two bad ones in a row.
+##   After a lost ball the next power-up is guaranteed good.
 ##
-## Reglerne er der, fordi tilfældighed uden hegn føles som uretfærdighed.
+## The rules exist because randomness without fences feels like unfairness.
 
 signal collected(id: String)
 signal expired(id: String)
 
 const MAX_ON_SCREEN := 2
-## Død og de andre hårde straffe holdes ude af de første fem levels.
+## Death and the other hard punishments stay out of the first five levels.
 const HARSH := ["death"]
 const HARSH_SAFE_LEVELS := 5
 
@@ -51,12 +51,12 @@ func reset_level() -> void:
 	_next_guaranteed_good = false
 
 
-## Efter tab af liv er næste power-up garanteret god.
+## After a lost ball the next power-up is guaranteed good.
 func guarantee_good() -> void:
 	_next_guaranteed_good = true
 
 
-## Klodsens egen chance afgør, om der overhovedet falder noget.
+## The brick's own chance decides whether anything drops at all.
 func roll_for(at: Vector2, chance: float) -> void:
 	if chance <= 0.0 or randf() > chance:
 		return
@@ -143,7 +143,7 @@ func _process(delta: float) -> void:
 func _apply(id: String) -> void:
 	var duration := float(Powerup.info(id)["duration"])
 	if duration > 0.0:
-		# Samler man den samme op igen, starter uret forfra.
+		# Catching the same one again restarts its clock.
 		_active[id] = duration
 	if Powerup.is_good(id):
 		_next_guaranteed_good = false

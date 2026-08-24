@@ -1,15 +1,15 @@
 class_name Arena
 extends Node2D
 
-## Lag 2: containment-feltet.
+## Layer 2: the containment field.
 ##
-## Rammen er 6 px i #232330 med en indre energilinje på 1 px i #3A3A50,
-## der pulserer i en 4-sekunders cyklus. Ved boldkontakt lyser et 40 px
-## segment op i Volt i 120 ms med en bølge, der løber 20 px til hver side.
-## To emittere i de øverste hjørner blinker, hver gang feltet rammes, så
-## spilleren ubevidst forstår, at rammen er projiceret.
+## The frame is 6 px of #232330 with a 1 px inner energy line in #3A3A50
+## pulsing on a four second cycle. On contact a 40 px segment lights up
+## in Volt for 120 ms, with a wave running 20 px out to either side.
+## Two emitters in the top corners blink on every hit, so the player
+## understands without being told that the frame is projected.
 ##
-## Bunden er åben. Det er kanten af feltet, og under den er der frit fald.
+## The bottom is open. That is the edge of the field, and below it is a fall.
 
 const VOID := Color("07070C")
 const FRAME := Color("232330")
@@ -18,8 +18,8 @@ const VOLT := Color("D6FF3D")
 const EMBER := Color("FF4D2E")
 
 const SCREEN := Vector2(390.0, 844.0)
-## HUD'en fylder toppen. Rammen starter under den, så klodserne kommer
-## længere ned på en skærm, der er dobbelt så høj som den er bred.
+## The HUD fills the top. The frame starts below it, which brings the
+## bricks down within reach on a screen twice as tall as it is wide.
 const HUD_HEIGHT := 140.0
 const WALL := 6.0
 
@@ -36,7 +36,7 @@ const EMBER_LINE_Y := SCREEN.y - 4.0
 
 const CELEBRATE_TIME := 0.9
 
-## Nederste kant af feltet. Under den er der frit fald.
+## Bottom edge of the field. Below it is a fall.
 var death_y := SCREEN.y
 
 var _walls: Array[Dictionary] = []
@@ -79,7 +79,7 @@ func inner_rect() -> Rect2:
 	return Rect2(WALL, HUD_HEIGHT + WALL, SCREEN.x - WALL * 2.0, SCREEN.y - HUD_HEIGHT - WALL)
 
 
-## Bolden ramte feltet. Segmentet lyser, emitterne blinker.
+## The ball hit the field. The segment lights, the emitters blink.
 func register_hit(pos: Vector2) -> void:
 	var index := _nearest_wall(pos)
 	var wall: Dictionary = _walls[index]
@@ -88,12 +88,12 @@ func register_hit(pos: Vector2) -> void:
 	_emitter_blink = 1.0
 
 
-## 0 til 1. Ember-linjen brænder kraftigere, jo tættere bolden er på kanten.
+## 0 to 1. The Ember line burns harder the closer the ball is to the edge.
 func set_danger(level: float) -> void:
 	_danger = clampf(level, 0.0, 1.0)
 
 
-## Level clear: rammen lyser hele vejen rundt.
+## Field cleared: the frame lights all the way round.
 func celebrate() -> void:
 	_celebrate = CELEBRATE_TIME
 
@@ -144,7 +144,7 @@ static func _distance_to_segment(p: Vector2, a: Vector2, b: Vector2) -> float:
 	return p.distance_to(a + ab * t)
 
 
-# --- Tegning -----------------------------------------------------------
+# --- Drawing -----------------------------------------------------------
 
 func _draw() -> void:
 	_draw_frame()
@@ -183,7 +183,7 @@ func _draw_hits() -> void:
 		var inward: Vector2 = wall["inward"]
 		var f := 1.0 - float(hit["t"]) / HIT_TIME
 		var s: float = hit["s"]
-		# Bølgen løber udad, mens kernen fader.
+		# The wave runs outward while the core fades.
 		var wave_pos := HIT_WAVE + HIT_WAVE * (1.0 - f)
 
 		for i in range(int(HIT_SEGMENT) + 1):
@@ -247,7 +247,7 @@ func _draw_emitters() -> void:
 func _draw_ember_line() -> void:
 	var alpha := 0.12
 	if _danger > 0.0:
-		# 150 ms til at redde den. Blinket bliver hurtigere og hårdere.
+		# 150 ms to save it. The blink gets faster and harder.
 		var blink := 0.5 + 0.5 * sin(_time * TAU * (6.0 + 8.0 * _danger))
 		alpha = 0.12 + 0.88 * _danger * blink
 	var c := EMBER

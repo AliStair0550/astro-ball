@@ -1,11 +1,11 @@
 class_name Effects
 extends Node2D
 
-## Lag 5: partikler, shockwaves, lysglimt og score-tal.
+## Layer 5: particles, shockwaves, flashes and score numbers.
 ##
-## Reglen fra afsnit 6: ingen effekt varer over 400 ms, og partikler er
-## altid firkantede eller rektangulære, aldrig runde. Samme sprog som
-## klodserne, så splinterne ser ud som stumper af det, der lige gik i stykker.
+## The rule from section 6: no effect lasts longer than 400 ms, and
+## particles are always square or rectangular, never round. The same
+## language as the bricks, so a shard looks like a piece of what broke.
 
 const BONE := Color("F2EFE6")
 const VOLT := Color("D6FF3D")
@@ -32,27 +32,42 @@ var _combo: Dictionary = {}
 var _font: Font = FONT_SCORE
 
 
-# --- Klodser -----------------------------------------------------------
+# --- Bricks ------------------------------------------------------------
 
-## 5 til 8 splinter i klodsens farve, 40 til 90 px, roterer, falder med
-## tyngde, væk efter 350 ms.
-func brick_smashed(rect: Rect2, color: Color, count: int, glass := false) -> void:
+## 5 to 8 shards in the brick's colour, 40 to 90 px/s, spinning, pulled
+## down by gravity, gone after 350 ms.
+func brick_smashed(rect: Rect2, color: Color, count: int, glass := false,
+		impact := Vector2.INF) -> void:
 	var center := rect.get_center()
+	# Shards fly away from where the ball actually hit. Without that they
+	# spray evenly and the hit loses its direction.
+	var away := Vector2.ZERO
+	if impact != Vector2.INF and impact.distance_to(center) > 0.5:
+		away = (center - impact).normalized()
+
+	# Three tones of the same material: the face, the top line and the
+	# bottom line. A single flat colour reads as confetti.
+	var tones := [color, color.lightened(0.2), color.darkened(0.3)]
+
 	for i in count:
 		var angle := randf() * TAU
+		var dir := Vector2(cos(angle), sin(angle))
+		if away != Vector2.ZERO:
+			dir = (dir * 0.55 + away).normalized()
 		var speed := randf_range(40.0, 90.0)
+		var size := Vector2(randf_range(2.0, 5.0), randf_range(2.0, 3.0))
 		if glass:
-			# Skår i vakuum: lettere, svæver længere, næsten ingen tyngde.
+			# Ice in vacuum: lighter, drifts longer, almost no gravity.
 			speed = randf_range(30.0, 70.0)
+			size = Vector2(randf_range(1.0, 2.0), randf_range(3.0, 7.0))
 		_bits.append({
 			"kind": "splinter",
 			"pos": center + Vector2(randf_range(-rect.size.x, rect.size.x), randf_range(-rect.size.y, rect.size.y)) * 0.4,
-			"vel": Vector2(cos(angle), sin(angle)) * speed,
+			"vel": dir * speed,
 			"rot": randf() * TAU,
 			"spin": randf_range(-9.0, 9.0),
-			"size": Vector2(randf_range(1.0, 2.0), randf_range(3.0, 7.0)) if glass
-				else Vector2(randf_range(2.0, 5.0), randf_range(2.0, 4.0)),
-			"color": color,
+			"size": size,
+			"color": tones[i % tones.size()],
 			"gravity": 60.0 if glass else GRAVITY,
 			"t": 0.0,
 			"life": SHARD_LIFE if glass else SPLINTER_LIFE,
@@ -60,12 +75,21 @@ func brick_smashed(rect: Rect2, color: Color, count: int, glass := false) -> voi
 	_flashes.append({"rect": rect, "color": Color.WHITE, "t": 0.0, "life": 0.017})
 
 
-## Hærdet tager skade: 3 gnister, ingen splinter.
+## Live shard count. The feel test and the debug overlay read it.
+func shard_count() -> int:
+	var n := 0
+	for bit in _bits:
+		if bit["kind"] == "splinter":
+			n += 1
+	return n
+
+
+## Hardened takes damage: 3 sparks, no shards.
 func brick_damaged(at: Vector2, color: Color) -> void:
 	sparks(at, Vector2.UP, 3, color.lightened(0.4))
 
 
-## Sprængklodsen: hvid flash over 3x3 felt, shockwave-ring til 80 px.
+## The blast brick: a white flash over 3x3 cells, a ring out to 80 px.
 func blast(rect: Rect2, area: Rect2) -> void:
 	_flashes.append({"rect": area, "color": Color.WHITE, "t": 0.0, "life": 0.034})
 	shockwave(rect.get_center(), 80.0, EMBER)
@@ -94,7 +118,7 @@ func sparks(at: Vector2, dir: Vector2, count: int, color: Color) -> void:
 
 func score_popup(at: Vector2, amount: int) -> void:
 	_texts.append({
-		"text": str(amount),
+		"text": "+%d" % amount,
 		"pos": at,
 		"color": BONE,
 		"size": 11,
@@ -104,12 +128,12 @@ func score_popup(at: Vector2, amount: int) -> void:
 	})
 
 
-## Kombo 5, 10, 20: tallet stort midt på skærmen, 100 ms skalering, fader.
+## Combo 5, 10, 20: the number large in the middle, 100 ms of scale, fade.
 func combo(value: int) -> void:
 	_combo = {"value": value, "t": 0.0, "life": COMBO_LIFE}
 
 
-## Kometen splintrer i 20 stykker ved feltkanten og suges nedad.
+## The comet shatters into 20 pieces at the edge and is pulled down.
 func ball_lost(at: Vector2) -> void:
 	for i in 20:
 		var angle := randf_range(-PI, 0.0)
@@ -121,7 +145,7 @@ func ball_lost(at: Vector2) -> void:
 			"spin": randf_range(-12.0, 12.0),
 			"size": Vector2(randf_range(1.0, 3.0), randf_range(1.0, 3.0)),
 			"color": VOLT if i % 3 else BONE,
-			# Suget nedad er kraftigere end almindelig tyngde.
+			# The pull down is stronger than ordinary gravity.
 			"gravity": 1500.0,
 			"t": 0.0,
 			"life": 0.4,
@@ -148,7 +172,7 @@ func clear_all() -> void:
 	_combo = {}
 
 
-# --- Opdatering --------------------------------------------------------
+# --- Update ------------------------------------------------------------
 
 func _process(delta: float) -> void:
 	var i := _bits.size() - 1
@@ -227,7 +251,7 @@ func _draw() -> void:
 
 		if not _combo.is_empty():
 			var f := float(_combo["t"]) / float(_combo["life"])
-			# 100 ms skalering, så fader.
+			# 100 ms of scale, then it fades.
 			var grow := ease(minf(f / 0.25, 1.0), 0.3)
 			var size := int(lerpf(20.0, 46.0, grow))
 			var c := VOLT
@@ -252,7 +276,7 @@ func _draw_rotated_rect(at: Vector2, size: Vector2, rotation: float, color: Colo
 
 
 func _draw_square_ring(at: Vector2, radius: float, color: Color) -> void:
-	# Firkantet ring. Runde ringe hører ikke til i det her formsprog.
+	# A square ring. Round rings do not belong in this language.
 	var t := 2.0
 	draw_rect(Rect2(at.x - radius, at.y - radius, radius * 2.0, t), color)
 	draw_rect(Rect2(at.x - radius, at.y + radius - t, radius * 2.0, t), color)

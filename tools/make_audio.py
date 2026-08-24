@@ -22,7 +22,7 @@ RATE = 44100
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "audio")
 
 
-# --- byggeklodser ------------------------------------------------------
+# --- building blocks ---------------------------------------------------
 
 def frames(seconds):
     return int(RATE * seconds)
@@ -43,7 +43,7 @@ def add(buf, offset_s, other, gain=1.0):
 
 
 def env_exp(n, tau, attack_s=0.001):
-    """Hurtig attack, eksponentielt fald. Det er sådan et slag lyder."""
+    """Fast attack, exponential decay. That is what a hit sounds like."""
     out = []
     a = max(1, frames(attack_s))
     for i in range(n):
@@ -83,7 +83,7 @@ def noise(seconds, rng):
 
 
 def lowpass(sig, cutoff):
-    """Enkel en-pols. Nok til at tage kanten af støj."""
+    """A simple one-pole. Enough to take the edge off noise."""
     a = 1.0 - math.exp(-2.0 * math.pi * cutoff / RATE)
     y = 0.0
     out = []
@@ -154,17 +154,17 @@ def write(name, buf, peak=0.85, fade_out_s=0.004):
 # --- lydene ------------------------------------------------------------
 
 def make_brick(rng):
-    """Klodsen der gaar i stykker. Toer, kort, med en tone der kan
-    transponeres op med komboen i spillet."""
-    buf = silence(0.14)
-    add(buf, 0.0, hit(0.13, 640.0, 0.028, "tri", 0.88), 0.85)
-    add(buf, 0.0, hit(0.06, 1280.0, 0.010, "sine"), 0.25)
-    add(buf, 0.0, click(0.02, rng, 6000.0, 0.003), 0.5)
-    write("brick", buf)
+    """The brick breaking. A click, 45 ms, nothing more. Short enough
+    that ten of them in a row read as ten hits and not as a smear."""
+    buf = silence(0.045)
+    add(buf, 0.0, hit(0.045, 660.0, 0.009, "tri", 0.86), 0.85)
+    add(buf, 0.0, hit(0.030, 1320.0, 0.005, "sine"), 0.30)
+    add(buf, 0.0, click(0.012, rng, 6500.0, 0.0022), 0.55)
+    write("brick", buf, fade_out_s=0.003)
 
 
 def make_brick_hard(rng):
-    """Haerdet tager skade: metallisk klik, ingen splinter i lyden."""
+    """Hardened takes damage: a metallic click, no shards in the sound."""
     buf = silence(0.16)
     for f, tau, g in ((1180.0, 0.020, 0.6), (1837.0, 0.014, 0.4), (2670.0, 0.009, 0.3)):
         add(buf, 0.0, hit(0.15, f, tau, "sine"), g)
@@ -173,7 +173,7 @@ def make_brick_hard(rng):
 
 
 def make_blast(rng):
-    """Spraengklodsen. Dyb, kort, med et sug nedad."""
+    """The blast brick. Deep, short, with a pull downward."""
     buf = silence(0.7)
     add(buf, 0.0, apply_env(osc(0.5, 150.0, 38.0, "sine"), env_exp(frames(0.5), 0.16)), 1.0)
     body = sweep_lowpass(noise(0.5, rng), 3200.0, 180.0)
@@ -298,7 +298,7 @@ def make_ui():
 
 
 def make_launch(rng):
-    """Bolden slippes. Et lille skub."""
+    """The ball is released. A small push."""
     buf = silence(0.22)
     add(buf, 0.0, apply_env(osc(0.18, 180.0, 700.0, "tri"), env_exp(frames(0.18), 0.06)), 0.55)
     add(buf, 0.0, click(0.02, rng, 6000.0, 0.004), 0.3)
@@ -311,7 +311,7 @@ def make_drone():
     loop_s = 8.0
     n = frames(loop_s)
     buf = [0.0] * n
-    # 440, 441, 660 og 880 hele svingninger paa 8 sekunder.
+    # 440, 441, 660 and 880 whole cycles across 8 seconds.
     for cycles, gain in ((440, 0.55), (441, 0.5), (660, 0.16), (880, 0.07)):
         f = cycles / loop_s
         for i in range(n):

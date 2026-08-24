@@ -1,20 +1,20 @@
 class_name Background
 extends Node2D
 
-## Lag 1: baggrunden. Alt tegnes proceduralt, ingen billedfiler.
+## Layer 1: the background. Drawn procedurally, no image files.
 ##
-## Den skal blive ved med at være rum. Ingen genstande, der stjæler
-## opmærksomhed fra klodserne, kun stjerner, støv og et par
-## asteroide-silhuetter, der driver forbi.
+## It has to keep being space. No objects that pull attention off the
+## bricks, only stars, dust and a couple of asteroid silhouettes
+## drifting past.
 ##
-## Tre lag med hver sin parallax:
-##   Bagerst  stjernefelt og et fjernt lysvask, ingen parallax
-##   Midten   drivende asteroider, 3 px
-##   Forrest  støv og småsten, 8 px
+## Three layers, each with its own parallax:
+##   Back   star field and a distant wash of light, no parallax
+##   Middle drifting asteroids, 3 px
+##   Front  dust and grit, 8 px
 ##
-## Zonen giver farven. Hvert level i zonen får sin egen anelse af
-## temperatur, så banerne ikke ligner hinanden, uden at nogen af dem
-## holder op med at være rummet.
+## The zone gives the colour. Each level in it gets its own hint of
+## temperature, so the fields do not look alike, without any of them
+## ceasing to be space.
 
 const VOID := Color("07070C")
 const ASTEROID := Color("12121A")
@@ -30,7 +30,7 @@ const FLASH_TIME := 0.3
 const SHOOTING_STAR_MIN := 40.0
 const SHOOTING_STAR_MAX := 70.0
 
-## Én stemning per level i zonen. Kun temperatur og tæthed skifter.
+## One mood per level in the zone. Only temperature and density change.
 const MOODS := [
 	{"star": Color("C8C8D4"), "wash": Color("1B2A46"), "strength": 0.30, "rocks": 3, "dust": 8},
 	{"star": Color("BFD4E4"), "wash": Color("15303C"), "strength": 0.34, "rocks": 2, "dust": 6},
@@ -44,7 +44,7 @@ var _small_star_indices: PackedInt32Array = []
 var _asteroids: Array[Dictionary] = []
 var _dust: Array[Dictionary] = []
 
-## To twinkle-pladser. Aldrig mere end 2 små stjerner flimrer ad gangen.
+## Two twinkle slots. Never more than 2 small stars flicker at once.
 var _twinkle := [
 	{"index": -1, "t": 0.0, "duration": 1.0, "wait": 0.4},
 	{"index": -1, "t": 0.0, "duration": 1.0, "wait": 1.9},
@@ -57,7 +57,7 @@ var _mood: Dictionary = MOODS[0]
 var _focus_x := 195.0
 var _time := 0.0
 
-## Reaktioner fra afsnit 2.
+## The reactions from section 2.
 var _dim := 0.0
 var _blitz := 0.0
 var _glint := 0.0
@@ -69,7 +69,7 @@ func _ready() -> void:
 	_shooting_wait = randf_range(SHOOTING_STAR_MIN, SHOOTING_STAR_MAX)
 
 
-## Hvert level i zonen får sin egen anelse af temperatur.
+## Each level in the zone gets its own hint of temperature.
 func set_level_mood(level_number: int) -> void:
 	_mood = MOODS[posmod(level_number - 1, MOODS.size())]
 	_build()
@@ -78,16 +78,16 @@ func set_level_mood(level_number: int) -> void:
 func _build() -> void:
 	_stars.clear()
 	_small_star_indices.clear()
-	# Stjernefeltet bygges om ved hvert level. Flimre-pladserne peger på
-	# indekser i det gamle felt og skal slippe dem, ellers læser de uden
-	# for arrayet, næste gang feltet bliver kortere.
+	# The star field is rebuilt every level. The twinkle slots hold
+	# indices into the old one and must let go, or they read past the
+	# end of the array the next time the field gets shorter.
 	for slot in _twinkle:
 		slot["index"] = -1
 		slot["wait"] = randf_range(0.3, 2.0)
 	var star_color: Color = _mood["star"]
 	var count := randi_range(STAR_COUNT_MIN, STAR_COUNT_MAX)
 	for i in count:
-		# Tre størrelser. De små er langt de fleste, som på en rigtig himmel.
+		# Three sizes. The small ones dominate, as in a real sky.
 		var roll := randf()
 		var size := 1
 		if roll > 0.86:
@@ -115,9 +115,9 @@ func _build() -> void:
 		_asteroids.append({
 			"pos": Vector2(randf_range(60.0, screen_size.x - 60.0), randf_range(200.0, screen_size.y - 120.0)),
 			"rot": randf() * TAU,
-			# Umærkeligt. En hel omgang tager over ti minutter.
+			# Imperceptible. A full turn takes over ten minutes.
 			"rot_speed": randf_range(-0.010, 0.010),
-			# 1 px per 2 sekunder.
+			# 1 px every 2 seconds.
 			"drift": Vector2(randf_range(-0.5, 0.5), -0.5).normalized() * 0.5,
 			"shape": _rock_shape(randf_range(6.0, 12.0)),
 		})
@@ -140,28 +140,28 @@ func _rock_shape(radius: float) -> PackedVector2Array:
 	return points
 
 
-## Arenaen fodrer baggrunden med paddlens x, så parallaxen har noget at følge.
+## The game feeds the paddle's x in, so the parallax has something to follow.
 func set_focus_x(x: float) -> void:
 	_focus_x = x
 
 
-## Ved tab af liv dimmer stjernefeltet til 50 procent i 800 ms.
+## On a lost ball the star field dims to 50 per cent for 800 ms.
 func dim() -> void:
 	_dim = 1.0
 
 
-## Ved level clear tændes alle stjerner 100 procent i ét frame.
+## On field cleared every star goes to full for a single frame.
 func blitz() -> void:
 	_blitz = 1.0
 
 
-## Pulse-kernen sender et kort lysglimt gennem det fjerne lys.
+## The Pulse core sends a short glint through the distant light.
 func field_glint() -> void:
 	_glint = 1.0
 
 
-## Kombo 5+ giver flere stjerneskud. Kombo 10+ får asteroiderne til at
-## drive mærkbart hurtigere. Rummet mærker, at det går godt.
+## Combo 5+ brings more shooting stars. Combo 10+ makes the asteroids
+## drift noticeably faster. Space notices that it is going well.
 func set_intensity(combo: int) -> void:
 	_combo = combo
 
@@ -176,7 +176,7 @@ func _shooting_interval() -> float:
 	return randf_range(SHOOTING_STAR_MIN, SHOOTING_STAR_MAX)
 
 
-## Bolden ramte noget: de nærmeste stjerner blinker svagt op i 300 ms.
+## The ball hit something: the nearest stars blink up for 300 ms.
 func flash_near(world_pos: Vector2, count := 5, color := Color.WHITE) -> void:
 	var order: Array[int] = []
 	for i in _stars.size():
@@ -202,7 +202,7 @@ func _process(delta: float) -> void:
 	if _dim > 0.0:
 		_dim = maxf(0.0, _dim - delta / 0.8)
 	if _blitz > 0.0:
-		# Ét frame, ikke en fade. Det er en blitz, ikke et lys der tændes.
+		# One frame, not a fade. It is a flash, not a light coming on.
 		_blitz = 0.0 if _blitz < 1.0 else 0.999
 	if _glint > 0.0:
 		_glint = maxf(0.0, _glint - delta / 0.35)
@@ -240,7 +240,7 @@ func _update_twinkle(delta: float) -> void:
 			slot["index"] = -1
 			slot["wait"] = randf_range(0.4, 2.2)
 		else:
-			# Op og ned igen, aldrig et hårdt blink.
+			# Up and down again, never a hard blink.
 			star["twinkle"] = sin(f * PI) * 0.45
 
 
@@ -254,7 +254,7 @@ func _update_shooting_star(delta: float) -> void:
 	_shooting_wait -= delta
 	if _shooting_wait > 0.0:
 		return
-	# Krydser et hjørne, ikke midten af skærmen.
+	# Crosses a corner, not the middle of the screen.
 	var corner := randi() % 4
 	var w := screen_size.x
 	var h := screen_size.y
@@ -282,7 +282,7 @@ func _update_shooting_star(delta: float) -> void:
 
 
 func _draw() -> void:
-	# Lidt større end skærmen, så screen shake aldrig afslører kanten.
+	# A little larger than the screen, so shake never reveals the edge.
 	draw_rect(Rect2(-16.0, -16.0, screen_size.x + 32.0, screen_size.y + 32.0), VOID)
 
 	_draw_wash()
@@ -294,8 +294,8 @@ func _draw() -> void:
 	_draw_dust(Vector2(-n * PARALLAX_FRONT, 0.0))
 
 
-## Fjernt lys nede fra venstre. Ikke en genstand, bare en anelse farve i
-## rummet, som skifter fra level til level.
+## Distant light from the lower left. Not an object, just a hint of
+## colour in the room, changing from level to level.
 func _draw_wash() -> void:
 	var color: Color = _mood["wash"]
 	var strength := float(_mood["strength"]) * (1.0 - _dim * 0.6) + _glint * 0.25
@@ -319,14 +319,16 @@ func _draw_stars() -> void:
 		var color := star_color
 		var flash: float = star["flash"]
 		if flash > 0.0:
+			# Section 2: the nearest stars blink up in the brick colour
+			# at opacity 0.15. The room answers, it does not shout.
 			color = star_color.lerp(star["flash_color"], flash)
-			alpha = clampf(alpha + flash * 0.5, 0.0, 1.0)
+			alpha = clampf(alpha + flash * 0.15, 0.0, 1.0)
 		alpha *= dim_factor
 		if _blitz > 0.0:
 			color = Color.WHITE
 			alpha = 1.0
 		color.a = alpha
-		# Firkantede. Samme sprog som partiklerne.
+		# Square. The same language as the particles.
 		draw_rect(Rect2(star["pos"].floor(), Vector2(size, size)), color)
 
 

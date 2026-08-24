@@ -1,25 +1,25 @@
 class_name Paddle
 extends Node2D
 
-## Lag 4: deflektorskjoldet.
+## Layer 4: the deflector shield.
 ##
-## Standard 88 x 10 px med tre synlige segmenter: to endestykker i Bone og
-## et midterstykke med et 8 px Volt-felt. Volt-feltet er sweet spot.
-## Bred bliver til fem segmenter med to sweet spots, Smal til ét segment
-## uden sweet spot. Bredden er ikke bare et tal, den er en anden paddle.
+## 88 x 10 px with three visible segments: two Bone end caps and a middle
+## piece holding an 8 px Volt field. That field is the sweet spot.
+## Wide becomes five segments with two sweet spots, Narrow one segment
+## with none. The width is not a number, it is a different paddle.
 ##
-## Styring i fase 1 og 2 er musens x. Touch kommer i fase 4.
+## Control is the mouse x for now. Touch arrives in phase 4.
 
 signal laser_fired(from: Vector2)
 
 const BONE := Color("F2EFE6")
-## Endestykkernes krop er en tone mørkere end Bone, så bevelen har noget
-## at lyse op fra. Et helt hvidt stykke metal har ingen form.
+## The end caps sit a shade below Bone so the bevel has something to
+## light up from. A pure white piece of metal has no shape.
 const CAP := Color("C4C1B7")
 const VOLT := Color("D6FF3D")
 const EMBER := Color("FF4D2E")
-## Midterstykket er koldt metal mod Bone-endestykkerne. Kontrasten er
-## det, der gør skjoldet til et stykke isenkram og ikke en streg.
+## The middle is cold metal against Bone caps. That contrast is what
+## makes the shield a piece of hardware and not a line.
 const MID := Color("575C6B")
 const SEAM := Color("15151E")
 const ICE := Color("4DD8FF")
@@ -39,7 +39,7 @@ const TRAIL_SPEED := 180.0
 const LASER_SPEED := 760.0
 const LASER_COOLDOWN := 0.22
 
-## Ydre grænser fra arenaen. min_x og max_x udledes af bredden.
+## Outer bounds from the arena. min_x and max_x follow the width.
 var bounds_min := 0.0
 var bounds_max := 390.0
 var min_x := 0.0
@@ -47,9 +47,9 @@ var max_x := 390.0
 
 var width := WIDTH_NORMAL
 var laser := false
-## Slukkes, mens en skærm er oppe.
+## Off while a screen is up.
 var input_enabled := true
-## Bremses af Tung i senere levels. 1.0 = følger musen præcist.
+## Slowed by Heavy in later levels. 1.0 tracks the mouse exactly.
 var follow_speed := 1.0
 
 var _squash := GameFeel.Squash.new()
@@ -103,7 +103,7 @@ func world_rect() -> Rect2:
 	return Rect2(position.x - half_width(), top_y(), width, HEIGHT)
 
 
-## Antal synlige segmenter: 1 ved Smal, 3 ved Normal, 5 ved Bred.
+## Visible segments: 1 when Narrow, 3 when normal, 5 when Wide.
 func segment_count() -> int:
 	if width <= WIDTH_NARROW + 0.01:
 		return 1
@@ -112,7 +112,7 @@ func segment_count() -> int:
 	return 3
 
 
-## Sweet spot-centre i lokale koordinater. Smal har ingen.
+## Sweet spot centres in local coordinates. Narrow has none.
 func sweet_offsets() -> Array[float]:
 	match segment_count():
 		1:
@@ -135,7 +135,7 @@ func has_sweet_spot() -> bool:
 	return not sweet_offsets().is_empty()
 
 
-# --- Styring -----------------------------------------------------------
+# --- Control -----------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
 	if not input_enabled:
@@ -173,7 +173,7 @@ func fire_laser() -> void:
 		laser_fired.emit(muzzle)
 
 
-## Aktive laserstråler i verdenskoordinater. Spillet tester dem mod gridet.
+## Live laser bolts in world coordinates. The game tests them against the grid.
 func laser_bolts() -> Array[Dictionary]:
 	return _bolts
 
@@ -182,7 +182,7 @@ func clear_bolts() -> void:
 	_bolts.clear()
 
 
-# --- Reaktioner --------------------------------------------------------
+# --- Reactions ---------------------------------------------------------
 
 func on_ball_hit(hit_x: float) -> void:
 	_squash.trigger()
@@ -193,7 +193,7 @@ func on_ball_hit(hit_x: float) -> void:
 		_right_light = 1.0
 
 
-## Kapslen imploderer til paddlen, og paddlen blinker i kapslens farve.
+## The capsule implodes into the paddle, which blinks in its colour.
 func on_powerup_caught(color: Color) -> void:
 	_catch_flash = 1.0
 	_catch_color = color
@@ -222,14 +222,14 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
-# --- Tegning -----------------------------------------------------------
+# --- Drawing -----------------------------------------------------------
 
 func _draw() -> void:
 	_draw_bolts()
 	_draw_motion_trail()
 
 	var h := HEIGHT * _scale_y
-	# Bunden står fast, så skjoldet presses ned mod sin egen linje.
+	# The bottom stays put, so the shield presses down onto its own line.
 	var top := HEIGHT * 0.5 - h
 	var hw := half_width()
 
@@ -251,8 +251,8 @@ func _cap_color(light: float) -> Color:
 	return CAP.lerp(Color.WHITE, light)
 
 
-## Skjoldet er projiceret. Feltet over kanten er det, bolden rammer,
-## og den svage skygge nedenunder er det, der holder den oppe.
+## The shield is projected. The field above the edge is what the ball
+## strikes, and the faint shadow below is what holds it up.
 func _draw_projection(top: float, h: float, hw: float) -> void:
 	var field := VOLT
 	for i in 3:
@@ -263,9 +263,9 @@ func _draw_projection(top: float, h: float, hw: float) -> void:
 	draw_rect(Rect2(-hw + 2.0, top + h, width - 4.0, 2.0), shadow)
 
 
-## Skjoldet i spans: endestykker, midterstykker og sweet spots.
-## De tegnes med samme skygge, så hele skjoldet er ét stykke rundt metal
-## og ikke fem flade klodser ved siden af hinanden.
+## The shield in spans: caps, middles and sweet spots. They share one
+## shading curve, so the whole thing reads as a single round piece of
+## metal and not five flat blocks in a row.
 func _spans() -> Array[Dictionary]:
 	var hw := half_width()
 	var half_sweet := SWEET_WIDTH * 0.5
@@ -293,7 +293,7 @@ func _spans() -> Array[Dictionary]:
 	return out
 
 
-## Hjørnerne rundes ved at trække rækkerne ind i toppen og bunden.
+## Corners are rounded by pulling the top and bottom rows inward.
 static func _row_inset(row: int, rows: int) -> float:
 	if row == 0 or row == rows - 1:
 		return 2.0
@@ -302,8 +302,8 @@ static func _row_inset(row: int, rows: int) -> float:
 	return 0.0
 
 
-## Cylinderens lys: lysest lidt over midten, mørkest i bunden. Det er
-## den kurve, der gør en flad stribe til et rundt stykke metal.
+## The cylinder's light: brightest just above centre, darkest at the
+## bottom. That curve is what turns a flat strip into a tube.
 static func _shade_at(t: float) -> float:
 	return cos((t - 0.30) * PI * 1.08)
 
@@ -313,11 +313,11 @@ func _draw_body(top: float, h: float, hw: float) -> void:
 	var row_h := h / float(rows)
 	var spans := _spans()
 
-	# Glød omkring sweet spots, under kroppen så den ikke vasker den ud.
+	# Glow around the sweet spots, under the body so it does not wash it out.
 	for span in spans:
 		if not span["sweet"]:
 			continue
-		# Gløden skal hugge om feltet, ikke ligge som en firkant bagved.
+		# The glow hugs the field instead of sitting behind it as a box.
 		var glow := VOLT
 		for i in 3:
 			glow.a = 0.16 - float(i) * 0.05
@@ -325,13 +325,13 @@ func _draw_body(top: float, h: float, hw: float) -> void:
 			draw_rect(Rect2(float(span["x0"]) - pad, top - pad * 0.35,
 				float(span["x1"]) - float(span["x0"]) + pad * 2.0, h + pad * 0.7), glow)
 
-	# Mørk kontur hele vejen rundt om silhuetten.
+	# A dark outline all the way round the silhouette.
 	var outline := Color("0A0A12")
 	for r in rows:
 		var inset := _row_inset(r, rows)
 		draw_rect(Rect2(-hw - 1.0 + inset, top + float(r) * row_h, width + 2.0 - inset * 2.0, row_h + 0.5), outline)
 
-	# Kroppen, række for række.
+	# The body, row by row.
 	for r in rows:
 		var t := (float(r) + 0.5) / float(rows)
 		var shade := _shade_at(t)
@@ -347,7 +347,7 @@ func _draw_body(top: float, h: float, hw: float) -> void:
 			var c := base.lightened(shade * 0.6) if shade > 0.0 else base.darkened(-shade * 0.62)
 			draw_rect(Rect2(x0, y, x1 - x0, row_h + 0.5), c)
 
-	# Glansstriben. Ét smalt bånd højt oppe, som lyset i et rør.
+	# The specular. One narrow band high up, like light on a tube.
 	var spec_row := maxi(int(float(rows) * 0.18), 1)
 	var spec := Color.WHITE
 	spec.a = 0.30
@@ -355,7 +355,7 @@ func _draw_body(top: float, h: float, hw: float) -> void:
 	spec.a = 0.12
 	draw_rect(Rect2(-hw + 2.0, top + float(spec_row + 1) * row_h, width - 4.0, maxf(row_h, 1.0)), spec)
 
-	# Samlinger mellem segmenterne.
+	# Seams between the segments.
 	for seam_x in _seam_positions():
 		var seam := SEAM
 		seam.a = 0.9
@@ -364,7 +364,7 @@ func _draw_body(top: float, h: float, hw: float) -> void:
 		chrome.a = 0.20
 		draw_rect(Rect2(seam_x, top + 1.0, 1.0, h - 2.0), chrome)
 
-	# Vandrende lys i sweet spottet, så feltet ser ladet ud.
+	# A travelling light in the sweet spot, so the field looks charged.
 	for span in spans:
 		if not span["sweet"]:
 			continue
@@ -376,7 +376,7 @@ func _draw_body(top: float, h: float, hw: float) -> void:
 		draw_rect(Rect2(clampf(x0 + travel, x0, x0 + w - 1.0), top + 1.0, 1.0, maxf(h - 2.0, 1.0)), sparkle)
 
 
-## Endestykkerne lyser op i 100 ms, når bolden rammer dem.
+## The end caps light up for 100 ms when the ball strikes them.
 func _draw_end_glow(top: float, h: float, hw: float) -> void:
 	if _left_light > 0.0:
 		var gl := Color.WHITE
@@ -414,7 +414,7 @@ func _seam_positions() -> Array[float]:
 
 
 func _draw_laser_tubes(top: float, h: float, hw: float) -> void:
-	# To Ember-rør på endestykkerne. Mundingen gløder, når de er ladet.
+	# Two Ember tubes on the caps. The muzzle glows when they are charged.
 	var ready_glow := 1.0 - clampf(_laser_cooldown / LASER_COOLDOWN, 0.0, 1.0)
 	for side: float in [-1.0, 1.0]:
 		var x := side * (hw - CAP_WIDTH * 0.5) - 2.0

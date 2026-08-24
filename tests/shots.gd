@@ -1,15 +1,15 @@
 extends Node
 
-## Værktøj, ikke test. Sætter spillet i en bestemt tilstand lige før hver
-## tegning og gemmer et PNG til user://, så det visuelle kan efterses
-## uden at sidde og spille efter det rigtige øjeblik.
+## A tool, not a test. Puts the game into a known state just before each
+## draw and saves a PNG to user://, so the visuals can be inspected
+## without playing for the right moment.
 
 var game: Game
 var frames := 0
 var index := 0
 var names := [
 	"01_title", "02_settings", "03_level_intro", "04_level1",
-	"05_level3", "06_effects", "07_wide_laser", "08_game_over", "09_crt",
+	"05_level3", "06_effects", "07_wide_laser", "08_signal_lost", "09_crt",
 ]
 
 
@@ -92,10 +92,12 @@ func _process(_delta: float) -> void:
 					ball._trail[i] = ball.global_position + Vector2(-2.0 * i, 5.0 * i)
 		7:
 			game.score = 45500
-			game.screens.final_score = 45500
+			game.run_bricks = 168
+			game.best_combo = 14
+			game.run_time = 252.0
 			game.screens.high_score = 41200
+			game._set_state(Game.State.SIGNAL_LOST)
 			game.screens.new_record = true
-			game._set_state(Game.State.GAME_OVER)
 			game.screens._fade = 1.0
 		8:
 			game._set_state(Game.State.PLAYING)
@@ -111,14 +113,14 @@ func _process(_delta: float) -> void:
 
 func _capture() -> void:
 	if frames > 2400:
-		push_error("shots: gav op ved billede %d" % index)
+		push_error("shots: gave up at image %d" % index)
 		get_tree().quit(1)
 		return
 	if frames < 7 or index >= names.size():
 		return
 	var img := get_viewport().get_texture().get_image()
 	img.save_png("user://%s.png" % names[index])
-	print("gemte %s (frame %d)" % [names[index], frames])
+	print("saved %s (frame %d)" % [names[index], frames])
 	index += 1
 	if index >= names.size():
 		get_node("/root/GameSettings").crt = false

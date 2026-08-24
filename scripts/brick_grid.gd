@@ -1,12 +1,12 @@
 class_name BrickGrid
 extends Node2D
 
-## Lag 3: gridet af klodser.
+## Layer 3: the grid of bricks.
 ##
-## 13 kolonner, klodser på 24x16 px med 2 px afstand, som afsnit 3
-## foreskriver. Hele gridet tegnes i ét _draw, og kollisionen slår kun op
-## i de celler, boldens bevægelse faktisk rører. Med 140 klodser er det
-## forskellen på fem opslag og fem hundrede.
+## 13 columns of 24x16 px bricks with 2 px spacing, as section 3 lays
+## it out. The whole grid draws in one _draw, and collision only looks
+## in the cells the ball's motion actually touches. With 140 bricks that
+## is the difference between five lookups and five hundred.
 
 signal brick_damaged(brick: Brick)
 signal brick_destroyed(brick: Brick, by_chain: bool)
@@ -17,17 +17,17 @@ signal cleared()
 const COLUMNS := 13
 const SPACING := 2.0
 const PITCH := Vector2(Brick.SIZE.x + SPACING, Brick.SIZE.y + SPACING)
-## Gridet er centreret vandret. Lodret ligger det så langt nede, som
-## luften over det tillader: der skal stadig være plads til at komme op
-## bag muren, for det er dér DX-Ball-øjeblikket bor.
+## Centred horizontally. Vertically it sits as low as the air above it
+## allows: there must still be room to get up behind the wall, because
+## that is where the DX-Ball moment lives.
 const ORIGIN := Vector2(27.0, 230.0)
 
-## Kæden skal kunne ses, ikke bare høres.
+## The chain has to be seen, not only heard.
 const CHAIN_DELAY := 0.04
 const CLEAR_POP_DELAY := 0.09
 
-## Spiral med uret fra øverste venstre hjørne. Rækkefølgen er hele
-## pointen med kædereaktionen: den skal læses som en bevægelse.
+## A clockwise spiral from the top left. The order is the whole point of
+## the chain reaction: it should read as a movement.
 const NEIGHBOUR_SPIRAL := [
 	Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1),
 	Vector2i(1, 0), Vector2i(1, 1), Vector2i(0, 1),
@@ -73,12 +73,12 @@ func brick_at(col: int, row: int) -> Brick:
 	return _bricks[i]
 
 
-## Nederste kant af gridet. Bruges til at holde power-ups fri af klodserne.
+## Bottom edge of the grid. Keeps power-ups clear of the bricks.
 func bottom_y() -> float:
 	return ORIGIN.y + float(rows) * PITCH.y
 
 
-## Klodser, hvis rektangel overlapper det givne område. Broad phase.
+## Bricks whose rect overlaps the given area. Broad phase.
 func bricks_in(area: Rect2) -> Array[Brick]:
 	var found: Array[Brick] = []
 	var first_col := int(floor((area.position.x - ORIGIN.x) / PITCH.x)) - 1
@@ -109,9 +109,9 @@ func live_bricks() -> Array[Brick]:
 	return out
 
 
-# --- Skade -------------------------------------------------------------
+# --- Damage ------------------------------------------------------------
 
-## Slår en klods. Returnerer true, hvis den blev smadret.
+## Hits a brick. Returns true if it broke.
 func hit(brick: Brick, damage := 1, by_chain := false) -> bool:
 	if brick == null or not brick.alive:
 		return false
@@ -133,7 +133,7 @@ func _destroy(brick: Brick, by_chain: bool) -> void:
 	_check_cleared()
 
 
-## Sprængklodsen tager de 8 naboer med, én ad gangen.
+## The blast brick takes its 8 neighbours, one at a time.
 func _queue_chain(brick: Brick) -> void:
 	var step := 0
 	for offset in NEIGHBOUR_SPIRAL:
@@ -144,7 +144,7 @@ func _queue_chain(brick: Brick) -> void:
 		_pending.append({"brick": neighbour, "delay": CHAIN_DELAY * float(step)})
 
 
-## Zap smadrer klodserne ved siden af den ramte.
+## Zap breaks the bricks beside the one that was hit.
 func zap_neighbours(brick: Brick) -> void:
 	for offset in [Vector2i(-1, 0), Vector2i(1, 0)]:
 		var neighbour := brick_at(brick.col + offset.x, brick.row + offset.y)
@@ -152,7 +152,7 @@ func zap_neighbours(brick: Brick) -> void:
 			_pending.append({"brick": neighbour, "delay": CHAIN_DELAY})
 
 
-## Skjulte klodser viser sig, når en nabo smadres.
+## Hidden bricks show themselves when a neighbour breaks.
 func _reveal_neighbours(brick: Brick) -> void:
 	for offset in NEIGHBOUR_SPIRAL:
 		var neighbour := brick_at(brick.col + offset.x, brick.row + offset.y)
@@ -167,7 +167,7 @@ func _check_cleared() -> void:
 	if remaining_breakable() > 0:
 		return
 	_clear_emitted = true
-	# Alle Sten-kerner eksploderer i rækkefølge.
+	# Every Stone core goes off in sequence.
 	var step := 0
 	for brick in _bricks:
 		if brick != null and brick.alive and brick.type == Brick.Type.STONE:
@@ -176,7 +176,7 @@ func _check_cleared() -> void:
 	cleared.emit()
 
 
-# --- Opdatering --------------------------------------------------------
+# --- Update ------------------------------------------------------------
 
 func _process(delta: float) -> void:
 	_time += delta
@@ -204,7 +204,7 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
-## Sprængklodser gløder, når bolden er tæt på.
+## Blast bricks glow when the ball is near.
 func update_proximity(ball_positions: Array[Vector2]) -> void:
 	for entry in _bricks:
 		var brick: Brick = entry

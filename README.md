@@ -17,18 +17,42 @@ level 1 til 3 ikke kalder på.
 
 ### Skærme
 
-Spillet åbner på en titelskærm over det bare stjernefelt. Derfra går det
-gennem indstillinger, en level-intro der siger LEVEL og banens navn, selve
-banen, level clear og game over med rekord og genstart. Alt, spilleren
-læser, er på engelsk.
+Spillet åbner på en titelskærm over det bare stjernefelt. Alt, spilleren
+læser, er på engelsk, i den tørre telemetri-tone fra afsnit 14. Kode,
+kommentarer og filnavne er også engelske. Kun designdokumentet er dansk.
 
 | Skærm | Indhold |
 |---|---|
 | Titel | ASTRO BALL, PLAY, SETTINGS, rekord |
-| Indstillinger | lyd til og fra, lydstyrke, CRT-tilstand, screen shake |
+| Indstillinger | Sound, Music, Haptics, CRT Mode, Left-handed UI, Reset Progress |
 | Level-intro | LEVEL n og banens navn, klik for at begynde |
-| Level clear | FIELD CLEARED og score |
-| Game over | GAME OVER, score, NEW RECORD, PLAY AGAIN og MENU |
+| Field cleared | FIELD CLEARED og score |
+| Signal lost | telemetri-opgørelse, RE-ENTRY og RESTART FIELD |
+
+Afsnit 16 er fulgt til punkt og prikke: der findes ingen vej fra døden
+til en hovedmenu. SIGNAL LOST er sort med stjernefeltet på 20 procent,
+viser bricks cleared, best combo, time og score, og giver to veje videre.
+RE-ENTRY koster ét liv og fortsætter præcis hvor spillet stod, én gang
+pr. bane. RESTART FIELD bygger banen op igen med tre liv og nulstiller
+banens score.
+
+### Følelsen af at smadre en klods
+
+Punkt 2 i byggerækkefølgen har sin egen scene, `scenes/feel_test.tscn`.
+Kør den med F6.
+
+| Tast | Tilstand |
+|---|---|
+| 1 | én Volt-klods, respawner 500 ms efter den ryger |
+| 2 | en mur, 11 bred og 6 rækker |
+| 3 | samme mur med bolden fastlåst på 520 px/s |
+| R | nulstil tælleren |
+
+Effektpakken pr. klods: hvidt glimt i ét frame, 5 til 8 splinter i tre
+toner af klodsens egen farve der flyver væk fra kontaktpunktet, score-tal
+der stiger 20 px, de nærmeste stjerner der blinker ved opacity 0.15,
+16 ms hitstop og et 45 ms klik der stiger en halvtone pr. kombotrin.
+Intet screen shake. Det er reserveret til sprængklodser.
 
 ### Lyd
 
@@ -52,7 +76,8 @@ Alle tre er bevidste og lette at rulle tilbage.
 | Boldens grundfart | 320 px/s | 360, 360, 380 pr. level | Dokumentets forventede leveltider (45 til 70 sekunder for level 1) kan ikke nås på et 698 px højt felt ved 320 px/s. Farten står i hver levelfil og kan ændres uden at røre kode. |
 | Langsom i level 1 til 3 | Level 1 og 2 havde den | Fjernet | En bremse er en straf, når banen er let. Langsom hører til, når det bliver svært. Ildkugle, Laser og Multi fylder pladsen. |
 | Den fjerne planet | Lag 2 havde en planet i nederste hjørne | Fjernet | Den lå, hvor paddlen arbejder, og læste som en cirkel frem for en verden. Baggrunden holder sig til stjerner, støv og et fjernt lysvask, der skifter farve fra bane til bane. |
-| Sprogets side | Dokumentet er på dansk | Alt, spilleren læser, er på engelsk | Banenavne, menuer og power-up-navne. Kodens kommentarer følger stadig dokumentet. |
+| Lydens form | Syntetiseret i kode ved opstart | Syntetiseret af `tools/make_audio.py` og lagt i repoet | Samme idé, ingen uigennemsigtige aktiver: hver WAV kan regenereres fra scriptet. Forskellen er, at spillet ikke bruger et sekund på at regne bølgeformer ud, hver gang det starter på en telefon. |
+| Klodsen som node | `scenes/brick.tscn` pr. klods | `brick.gd` er data, gridet tegner dem alle i ét `_draw` | 140 klodser bliver ikke til 140 noder. Anatomi, skadestadier og kollision er uændrede. |
 
 - **Motor:** Godot 4.7 (standard, ikke .NET)
 - **Viewport:** 390 x 844 logisk, iPhone portræt, `canvas_items` med aspect `keep`
@@ -153,7 +178,8 @@ Tre suiter, alle headless:
 | Suite | Hvad den dækker |
 |---|---|
 | `mechanics` | gridet, klodserne, level-validering, power-up-reglerne, boldens sweep |
-| `lifecycle` | liv, game over, level-progression, fartstigning, score |
+| `brick_feel` | refleksion på alle fire flader og hjørner ved 320 og 520 px/s, 10 000 gennemløb uden tunnelering, splinterantal, oprydning inden 400 ms, pitch-loft |
+| `lifecycle` | liv, SIGNAL LOST, RE-ENTRY, level-progression, fartstigning, score, indstillinger |
 | `play` | autopilot spiller alle tre levels igennem og tjekker invarianter hver frame |
 
 `tests/shots.tscn` er ikke en test, men et værktøj: det sætter spillet i

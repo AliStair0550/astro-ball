@@ -1,16 +1,16 @@
 class_name Audio
 extends Node
 
-## Lyden.
+## The sound.
 ##
-## Afsnit 12: alle lyde har en kort, mørk rumklang, som om feltet er et
-## stort kammer. Selve samplerne er tørre. Klangen lægges på i en bus, så
-## alt sidder i det samme rum i stedet for at have hver sin bagte klang.
-## Det er den billigste vej til at føle sig inde i rummet i stedet for
-## foran en skærm.
+## Section 12: every sound carries a short, dark reverb, as if the field
+## were a large chamber. The samples themselves are dry. The reverb sits
+## on a bus, so everything shares one room instead of baking its own.
+## It is the cheapest way to feel inside space rather than in front of
+## a screen.
 ##
-## Under spil er der ingen musik, kun en dyb, næsten uhørlig drone, der
-## stiger en anelse i intensitet med komboen.
+## There is no music during play, only a deep, nearly inaudible drone
+## that rises a little with the combo.
 
 const BANK := {
 	"brick": "res://assets/audio/brick.wav",
@@ -34,7 +34,7 @@ const BANK := {
 
 const DRONE_PATH := "res://assets/audio/drone.wav"
 const VOICES := 14
-## Klods-klik stiger i tonehøjde med komboen, maks en oktav.
+## The brick click rises with the combo, one octave at most.
 const MAX_COMBO_SEMITONES := 12.0
 
 var _streams: Dictionary = {}
@@ -55,7 +55,7 @@ func _ready() -> void:
 
 	for i in VOICES:
 		var player := AudioStreamPlayer.new()
-		player.bus = "SFX"
+		player.bus = "Space"
 		add_child(player)
 		_voices.append(player)
 
@@ -74,22 +74,24 @@ func _ready() -> void:
 
 
 func _build_buses() -> void:
-	# SFX: kammeret. Stort rum, kraftig dæmpning, så klangen er mørk.
+	# Space: the chamber every sound sits in. A large metal room, dark
+	# and short. The samples themselves are dry.
 	_sfx_bus = AudioServer.bus_count
 	AudioServer.add_bus(_sfx_bus)
-	AudioServer.set_bus_name(_sfx_bus, "SFX")
+	AudioServer.set_bus_name(_sfx_bus, "Space")
 	AudioServer.set_bus_send(_sfx_bus, "Master")
 	var reverb := AudioEffectReverb.new()
-	reverb.room_size = 0.72
-	reverb.damping = 0.68
-	reverb.spread = 0.85
-	reverb.predelay_msec = 14.0
-	reverb.predelay_feedback = 0.25
-	reverb.wet = 0.30
-	reverb.dry = 0.92
+	reverb.room_size = 0.62
+	reverb.damping = 0.28
+	reverb.spread = 0.8
+	reverb.predelay_msec = 12.0
+	reverb.predelay_feedback = 0.2
+	# 0.15 wet. More than that and the chamber turns into a bathroom.
+	reverb.wet = 0.15
+	reverb.dry = 1.0
 	AudioServer.add_bus_effect(_sfx_bus, reverb)
 
-	# Dronen: samme rum, men bag et filter, så den ligger under alt andet.
+	# The drone: same room, but behind a filter so it sits under everything.
 	_drone_bus = AudioServer.bus_count
 	AudioServer.add_bus(_drone_bus)
 	AudioServer.set_bus_name(_drone_bus, "Drone")
@@ -112,16 +114,15 @@ func _settings() -> Node:
 
 func _apply_settings() -> void:
 	var s := _settings()
-	var on := true
-	var vol := 0.8
+	var sound := true
+	var music := true
 	if s:
-		on = s.sound_on
-		vol = s.volume
-	var db := linear_to_db(clampf(vol, 0.0001, 1.0))
-	AudioServer.set_bus_mute(_sfx_bus, not on)
-	AudioServer.set_bus_mute(_drone_bus, not on)
-	AudioServer.set_bus_volume_db(_sfx_bus, db)
-	AudioServer.set_bus_volume_db(_drone_bus, db - 4.0)
+		sound = bool(s.sound)
+		music = bool(s.music)
+	AudioServer.set_bus_mute(_sfx_bus, not sound)
+	AudioServer.set_bus_mute(_drone_bus, not music)
+	AudioServer.set_bus_volume_db(_sfx_bus, 0.0)
+	AudioServer.set_bus_volume_db(_drone_bus, -4.0)
 
 
 ## Spiller en lyd. pitch er en faktor, ikke halvtoner.
@@ -135,12 +136,18 @@ func play(id: String, pitch := 1.0, volume_db := 0.0) -> void:
 	player.play()
 
 
-## Klodsens klik stiger i tonehøjde med komboen og nulstilles ved
-## paddle-ramt. Det er den enkleste måde at gøre en lang tur oppe bag
-## muren til noget, man kan høre.
-func play_brick(combo: int, id := "brick", volume_db := 0.0) -> void:
+## One semitone per combo step, capped at an octave. Kept separate from
+## playback so the cap can be checked without listening to it.
+static func combo_pitch(combo: int) -> float:
 	var semitones := minf(float(maxi(combo - 1, 0)), MAX_COMBO_SEMITONES)
-	play(id, pow(2.0, semitones / 12.0), volume_db)
+	return pow(2.0, semitones / 12.0)
+
+
+## The brick click rises in pitch with the combo and resets when the ball
+## touches the paddle. It is the cheapest way to make a long run up
+## behind the wall into something you can hear.
+func play_brick(combo: int, id := "brick", volume_db := 0.0) -> void:
+	play(id, combo_pitch(combo), volume_db)
 
 
 func _pick_voice() -> AudioStreamPlayer:
@@ -154,13 +161,17 @@ func _pick_voice() -> AudioStreamPlayer:
 	return fallback
 
 
-## Stopper alt med det samme. Bruges ved nedlukning og af testene, så
-## motoren ikke lukker ned oven i en lyd, der stadig kører.
+## Stops everything at once. Used at shutdown and by the tests, so the
+## engine never closes on top of a sound that is still running.
 func stop_all() -> void:
 	for voice in _voices:
 		voice.stop()
+		# Dropping the stream releases the playback the audio server is
+		# still holding. Stopping alone does not.
+		voice.stream = null
 	if _drone:
 		_drone.stop()
+		_drone.stream = null
 	_drone_level = 0.0
 	_drone_target = 0.0
 
@@ -175,7 +186,7 @@ func stop_drone() -> void:
 	_drone_target = 0.0
 
 
-## Dronen stiger en anelse med komboen. En anelse, ikke mere.
+## The drone rises a little with the combo. A little, no more.
 func set_drone_intensity(combo: int) -> void:
 	_drone_target = 1.0 + clampf(float(combo) / 20.0, 0.0, 1.0) * 0.85
 

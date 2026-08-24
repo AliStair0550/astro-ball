@@ -1,17 +1,17 @@
 class_name Powerup
 extends Node2D
 
-## Lag 4: power-up-kapslen.
+## Layer 4: the power-up capsule.
 ##
-## 20x12 px, falder med 140 px/s. Afrundet rektangel i kapslens farve,
-## hvidt roterende ikon, 6 px glød. Gode har lys kant. Dårlige har mørk
-## kant og en zigzag, så man kan se på 20 px afstand, om man vil have den.
+## 20x12 px, falling at 140 px/s. A rounded rectangle in the capsule's
+## colour, a white rotating icon, a 6 px glow. Good ones have a light
+## edge. Bad ones a dark edge and a zigzag, readable at 20 px.
 ##
-## Version 1 af Bæltet bruger de ni power-ups, som level 1 til 3 kalder på.
-## Resten kommer i punkt 8 af byggerækkefølgen.
+## Version 1 of The Belt uses the nine power-ups levels 1 to 3 call for.
+## The rest arrive at point 8 of the build order.
 ##
-## Navnene er dem, spilleren læser i docken og over paddlen, så de er på
-## engelsk. Designdokumentets danske navne står i tabellen i afsnit 7.
+## These names are what the player reads in the dock and above the
+## paddle. The design document's Danish names live in section 7.
 
 signal collected(id: String)
 
@@ -72,7 +72,7 @@ var kill_y := 900.0
 
 var _angle := 0.0
 var _time := 0.0
-## Sat af manageren, når kapslen er samlet op: den imploderer mod paddlen.
+## Set by the manager on pickup: the capsule implodes into the paddle.
 var _implode := 0.0
 var _implode_target := Vector2.ZERO
 
@@ -95,7 +95,7 @@ func rect() -> Rect2:
 	return Rect2(position - SIZE * 0.5, SIZE)
 
 
-## Kapslen imploderer til paddlen i stedet for bare at forsvinde.
+## The capsule implodes into the paddle instead of simply vanishing.
 func implode_to(target: Vector2) -> void:
 	_implode_target = target
 	_implode = 0.0001
@@ -123,20 +123,20 @@ func _draw() -> void:
 	var scale_factor := 1.0 - _implode * 0.7
 	var half := SIZE * 0.5 * scale_factor
 
-	# 6 px glød.
+	# A 6 px glow.
 	var glow := color
 	glow.a = 0.18 * (1.0 - _implode)
 	draw_rect(Rect2(-half - Vector2(6.0, 6.0), (half + Vector2(6.0, 6.0)) * 2.0), glow)
 	glow.a = 0.28 * (1.0 - _implode)
 	draw_rect(Rect2(-half - Vector2(3.0, 3.0), (half + Vector2(3.0, 3.0)) * 2.0), glow)
 
-	# Afrundet rektangel: to rektangler forskudt 1 px giver hjørnet.
+	# Rounded rectangle: two rects offset by 1 px make the corner.
 	var body := color
 	body.a = 1.0 - _implode * 0.5
 	draw_rect(Rect2(-half + Vector2(1.0, 0.0), Vector2(half.x * 2.0 - 2.0, half.y * 2.0)), body)
 	draw_rect(Rect2(-half + Vector2(0.0, 1.0), Vector2(half.x * 2.0, half.y * 2.0 - 2.0)), body)
 
-	# Kanten fortæller, om man vil have den.
+	# The edge tells you whether you want it.
 	var edge := color.lightened(0.55) if good else color.darkened(0.6)
 	edge.a = body.a
 	draw_rect(Rect2(-half + Vector2(1.0, 0.0), Vector2(half.x * 2.0 - 2.0, 1.0)), edge)
@@ -166,8 +166,8 @@ func _draw_zigzag(half: Vector2, edge: Color) -> void:
 		draw_polyline(points, edge, 1.0)
 
 
-## Tegner ikonet på et vilkårligt lærred. HUD-docken bruger den samme
-## tegning som kapslen, så et ikon altid betyder det samme.
+## Draws the icon onto any canvas. The HUD dock uses the same drawing
+## as the capsule, so an icon always means the same thing.
 static func draw_icon_into(ci: CanvasItem, icon: String, at: Vector2, icon_scale: float, ink: Color) -> void:
 	ci.draw_set_transform(at, 0.0, Vector2.ONE * icon_scale)
 	_icon_shapes(ci, icon, ink)

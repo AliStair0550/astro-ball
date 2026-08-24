@@ -1,16 +1,16 @@
 class_name GameFeel
 extends Node
 
-## Genbrugelig game feel-værktøjskasse.
+## The reusable game feel toolbox.
 ##
-## Fase 1 bruger kun screen shake (2 px / 60 ms ved vægramt).
-## Hitstop er implementeret, men kaldes med 0 og aktiveres i fase 2,
-## når klodser og sprængklodser kommer til.
+## Screen shake is 2 px over 60 ms on a wall hit. Hitstop is 16 ms on a
+## brick and 60 ms on a blast: long enough to feel, short enough that
+## nobody notices it as a pause.
 ##
-## Squash er en lille hjælpeklasse, som paddlen bruger nu, og som
-## klodser og power-up-kapsler kan genbruge senere.
+## Squash is a small helper the paddle uses now and bricks and capsules
+## can reuse later.
 
-## Kameraet, der forskydes ved shake. Sættes fra scenen.
+## The camera the shake offsets. Wired from the scene.
 @export var camera_path: NodePath
 
 var _camera: Camera2D
@@ -24,25 +24,25 @@ var _hitstop_left := 0.0
 
 func _ready() -> void:
 	_camera = get_node_or_null(camera_path) as Camera2D
-	# Kør efter alt andet, så kameraforskydningen er frisk i samme frame.
+	# Run after everything else, so the offset is fresh in the same frame.
 	process_priority = 100
 
 
-## Sandt, mens spillet er frosset. Bold og paddle springer deres
-## opdatering over, mens dette er sandt.
+## True while the game is frozen. The ball and paddle skip their update
+## while it is.
 func is_frozen() -> bool:
 	return _hitstop_left > 0.0
 
 
-## Frys spillet i N sekunder. Fase 1 kalder altid med 0.
+## Freeze the game for N seconds.
 func hitstop(seconds: float) -> void:
 	if seconds <= 0.0:
 		return
 	_hitstop_left = maxf(_hitstop_left, seconds)
 
 
-## Ryst kameraet. Amplitude i px, varighed i sekunder.
-## Et kraftigere shake overskriver et svagere. Et svagere forlænger ikke.
+## Shake the camera. Amplitude in px, duration in seconds.
+## A stronger shake overrides a weaker one. A weaker one does not extend it.
 func shake(amplitude: float, seconds: float) -> void:
 	if amplitude <= 0.0 or seconds <= 0.0:
 		return
@@ -71,18 +71,18 @@ func _process(delta: float) -> void:
 		_camera.offset = Vector2.ZERO
 
 
-## Squash og stretch som en lille tilstandsmaskine.
+## Squash and stretch as a small state machine.
 ##
-## Brug: kald trigger() ved kontakt, og gang højden med update(delta)
-## i _process. Returnerer 1.0, når den er i hvile.
+## Call trigger() on contact and multiply the height by update(delta)
+## in _process. Returns 1.0 at rest.
 class Squash extends RefCounted:
-	## Hvor sammenpresset, den bliver. 0.9 = 90 % højde.
+	## How far it compresses. 0.9 is 90 per cent height.
 	var squash_to := 0.9
-	## Tid ind i sammenpresningen.
+	## Time going in.
 	var squash_time := 0.08
-	## Tid tilbage til hvile, inklusive overshoot.
+	## Time back to rest, overshoot included.
 	var release_time := 0.16
-	## Hvor meget den skyder over 1.0 på vej tilbage.
+	## How far it overshoots 1.0 on the way back.
 	var overshoot := 1.06
 
 	var _t := -1.0
@@ -98,11 +98,11 @@ class Squash extends RefCounted:
 			return 1.0
 		_t += delta
 		if _t < squash_time:
-			# Hurtigt ind.
+			# Fast in.
 			return lerpf(1.0, squash_to, ease(_t / squash_time, 0.35))
 		var r := (_t - squash_time) / release_time
 		if r >= 1.0:
 			_t = -1.0
 			return 1.0
-		# Tilbage med et lille overshoot på midten af udturen.
+		# Back out with a small overshoot halfway.
 		return lerpf(squash_to, 1.0, r) + sin(r * PI) * (overshoot - 1.0)

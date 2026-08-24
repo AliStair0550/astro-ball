@@ -1,20 +1,21 @@
 class_name Brick
 extends RefCounted
 
-## Lag 3: én klods.
+## Layer 3: one brick.
 ##
-## Klodsen er data, ikke en node. Hele gridet tegnes af brick_grid.gd i ét
-## _draw-kald, så 140 klodser ikke bliver til 140 nodes.
+## A brick is data, not a node. The whole grid is drawn by brick_grid.gd
+## in a single _draw, so 140 bricks do not become 140 nodes.
 ##
-## Anatomien fra afsnit 3 har fem elementer, og alle fem er altid til stede:
-##   1 toplinje, 1 px, +20 % lum
-##   2 base, materialefarven, flad
-##   3 indre tekstur, 2 til 3 px, opacity 0.12
-##   4 kernelys, 6x3 px øverst til venstre
-##   5 bundlinje, 1 px, -30 % lum
+## The anatomy from section 3 has five elements, and all five are always
+## present:
+##   1 top line, 1 px, +20 per cent luminance
+##   2 base, the material colour, flat
+##   3 inner texture, 2 to 3 px, opacity 0.12
+##   4 core light, 6x3 px, top left
+##   5 bottom line, 1 px, -30 per cent luminance
 ##
-## Kernelyset er fiktionens lys: den fjerne sol rammer feltet oppefra og
-## til venstre. Samme lysretning i alle fem zoner.
+## The core light is the fiction's light: the distant sun strikes the
+## field from above and to the left. Same direction in all five zones.
 
 enum Type { VOLT, ICE, PULSE, FLARE, HARDENED, STONE, BLAST, GLASS, SPARK, HIDDEN }
 
@@ -33,7 +34,7 @@ const SYMBOLS := {
 	"?": Type.HIDDEN,
 }
 
-## hits = -1 betyder uknuselig.
+## hits = -1 means unbreakable. The Danish names from section 3 are kept
 const DATA := {
 	Type.VOLT: {
 		"name": "Volt", "color": Color("D6FF3D"), "hits": 1, "score": 100,
@@ -52,7 +53,7 @@ const DATA := {
 		"powerup": 0.20, "shards": 6,
 	},
 	Type.HARDENED: {
-		"name": "Hærdet", "color": Color("888780"), "hits": 3, "score": 300,
+		"name": "Hardened", "color": Color("888780"), "hits": 3, "score": 300,
 		"powerup": 0.0, "shards": 8,
 	},
 	Type.STONE: {
@@ -60,7 +61,7 @@ const DATA := {
 		"powerup": 0.0, "shards": 0,
 	},
 	Type.BLAST: {
-		"name": "Sprængklods", "color": Color("FF4D2E"), "hits": 1, "score": 100,
+		"name": "Blast", "color": Color("FF4D2E"), "hits": 1, "score": 100,
 		"powerup": 0.0, "shards": 8,
 	},
 	Type.GLASS: {
@@ -72,7 +73,7 @@ const DATA := {
 		"powerup": 1.0, "shards": 7,
 	},
 	Type.HIDDEN: {
-		"name": "Skjult", "color": Color("F2EFE6"), "hits": 1, "score": 100,
+		"name": "Hidden", "color": Color("F2EFE6"), "hits": 1, "score": 100,
 		"powerup": 0.0, "shards": 6,
 	},
 }
@@ -84,16 +85,16 @@ var rect := Rect2()
 
 var hits_left := 1
 var alive := true
-## Skjulte klodser er usynlige, indtil en nabo smadres.
+## Hidden bricks are invisible until a neighbour breaks.
 var revealed := true
 
-## Kort hvidt glimt ved kontakt, ét frame.
+## A short white flash on contact, one frame.
 var flash := 0.0
-## Hærdet ryster 2 px, når den tager skade.
+## Hardened shakes 2 px when it takes damage.
 var shake := 0.0
-## Sprængklodsen gløder, når bolden er tæt på.
+## The blast brick glows when the ball is near.
 var proximity := 0.0
-## Fast pr. klods, så revner og tekstur ikke flimrer mellem frames.
+## Fixed per brick, so cracks and texture do not flicker between frames.
 var seed_value := 0
 
 
@@ -127,7 +128,7 @@ func is_breakable() -> bool:
 	return DATA[type]["hits"] > 0
 
 
-## Glas lader bolden gå igennem. Klodsen smadres alligevel.
+## Glass lets the ball through. The brick breaks all the same.
 func lets_ball_pass() -> bool:
 	return type == Type.GLASS
 
@@ -136,7 +137,7 @@ func counts_toward_clear() -> bool:
 	return is_breakable()
 
 
-## Returnerer true, hvis klodsen blev smadret af dette slag.
+## Returns true if this hit broke the brick.
 func take_hit(damage := 1) -> bool:
 	flash = 1.0
 	if not is_breakable():
@@ -149,7 +150,7 @@ func take_hit(damage := 1) -> bool:
 	return false
 
 
-## 0 = uskadt, 1 = ramt én gang, 2 = ramt to gange.
+## 0 = untouched, 1 = hit once, 2 = hit twice.
 func damage_stage() -> int:
 	var total: int = DATA[type]["hits"]
 	if total <= 1:
@@ -158,13 +159,13 @@ func damage_stage() -> int:
 
 
 func _rand(salt: int) -> float:
-	# Deterministisk støj pr. klods. Samme revner hver frame.
+	# Deterministic noise per brick. The same cracks every frame.
 	var n := (seed_value + salt * 374761393) & 0x7FFFFFFF
 	n = (n ^ (n >> 13)) * 1274126177
 	return float((n ^ (n >> 16)) & 0xFFFF) / 65535.0
 
 
-# --- Tegning -----------------------------------------------------------
+# --- Drawing -----------------------------------------------------------
 
 func draw_into(ci: CanvasItem, time: float, blind := false) -> void:
 	if not alive:
@@ -174,7 +175,7 @@ func draw_into(ci: CanvasItem, time: float, blind := false) -> void:
 	var r := rect
 
 	if type == Type.HIDDEN and not revealed:
-		# Svag silhuet, 5 % opacity, der flimrer hvert 4. sekund.
+		# A faint silhouette at 5 per cent, flickering every 4 seconds.
 		var ghost := base
 		var blink := 1.0 if fposmod(time + _rand(3) * 4.0, 4.0) > 3.85 else 0.0
 		ghost.a = 0.05 + blink * 0.10
@@ -185,7 +186,7 @@ func draw_into(ci: CanvasItem, time: float, blind := false) -> void:
 		r.position.x += (_rand(11) - 0.5) * 4.0 * shake
 
 	if blind:
-		# Blind-tilstanden i senere levels viser kun kanterne.
+		# Blind mode in later levels shows only the edges.
 		var edge := base
 		edge.a = 0.55
 		ci.draw_rect(r, edge, false, 1.0)
@@ -199,17 +200,17 @@ func draw_into(ci: CanvasItem, time: float, blind := false) -> void:
 		body.a = 0.4
 	ci.draw_rect(r, body)
 
-	# 3. Indre tekstur.
+	# 3. Inner texture.
 	_draw_texture(ci, r, base)
 
-	# 1. Toplinje. Sten har ingen, den ser død ud.
+	# 1. Top line. Stone has none. It should look dead.
 	if type != Type.STONE:
 		ci.draw_rect(Rect2(r.position, Vector2(r.size.x, 1.0)), base.lightened(0.2))
 
-	# 5. Bundlinje.
+	# 5. Bottom line.
 	ci.draw_rect(Rect2(r.position + Vector2(0.0, r.size.y - 1.0), Vector2(r.size.x, 1.0)), base.darkened(0.3))
 
-	# 4. Kernelys. Slukker, så snart klodsen har taget skade.
+	# 4. Core light. It goes out the moment the brick takes damage.
 	if stage == 0 and type != Type.STONE:
 		_draw_core_light(ci, r, base, time)
 
@@ -219,7 +220,7 @@ func draw_into(ci: CanvasItem, time: float, blind := false) -> void:
 		_draw_cracks(ci, r, stage)
 	if stage >= 2:
 		_draw_missing_pieces(ci, r)
-		# Flimrer én gang i sekundet.
+		# Flickers once a second.
 		if fposmod(time + _rand(7), 1.0) > 0.92:
 			var f := Color.WHITE
 			f.a = 0.18
@@ -236,17 +237,17 @@ func _draw_texture(ci: CanvasItem, r: Rect2, base: Color) -> void:
 	grain.a = 0.12
 	match type:
 		Type.ICE, Type.GLASS:
-			# Svag diagonal frost.
+			# A faint diagonal frost.
 			for i in 5:
 				var x := r.position.x + 2.0 + float(i) * 5.0
 				ci.draw_line(Vector2(x, r.end.y - 2.0), Vector2(x + 5.0, r.position.y + 2.0), grain, 1.0)
 		Type.FLARE:
-			# Varm, lille gnist-tekstur.
+			# A warm little spark texture.
 			for i in 6:
 				var p := r.position + Vector2(2.0 + _rand(20 + i) * 20.0, 2.0 + _rand(40 + i) * 12.0)
 				ci.draw_rect(Rect2(p.floor(), Vector2(2.0, 2.0)), grain)
 		Type.HARDENED:
-			# Mørk klippe med metalnitter i hjørnerne.
+			# Dark rock with metal rivets in the corners.
 			for i in 7:
 				var p := r.position + Vector2(2.0 + _rand(60 + i) * 20.0, 3.0 + _rand(80 + i) * 10.0)
 				ci.draw_rect(Rect2(p.floor(), Vector2(3.0, 2.0)), grain)
@@ -255,14 +256,14 @@ func _draw_texture(ci: CanvasItem, r: Rect2, base: Color) -> void:
 					Vector2(2.0, r.size.y - 4.0), Vector2(r.size.x - 4.0, r.size.y - 4.0)]:
 				ci.draw_rect(Rect2(r.position + corner, Vector2(2.0, 2.0)), rivet)
 		Type.STONE:
-			# Asteroidekerne. Mat, tung, uden liv.
+			# Asteroid core. Matte, heavy, lifeless.
 			var pit := base.darkened(0.45)
 			pit.a = 0.35
 			for i in 8:
 				var p := r.position + Vector2(1.0 + _rand(100 + i) * 21.0, 1.0 + _rand(120 + i) * 13.0)
 				ci.draw_rect(Rect2(p.floor(), Vector2(3.0, 2.0)), pit)
 		Type.BLAST:
-			# Ustabil malm med en mørk kerne.
+			# Unstable ore around a dark core.
 			var core := Color("2A0A05")
 			core.a = 0.75 - proximity * 0.5
 			ci.draw_rect(Rect2(r.position + Vector2(8.0, 5.0), Vector2(8.0, 6.0)), core)
@@ -280,7 +281,7 @@ func _draw_core_light(ci: CanvasItem, r: Rect2, base: Color, time: float) -> voi
 	var light := base.lightened(0.45)
 	light.a = 0.9
 	if type == Type.PULSE:
-		# Kernelyset pulserer langsomt.
+		# The core light pulses slowly.
 		light.a = 0.45 + 0.45 * (0.5 + 0.5 * sin(time * 2.2 + _rand(9) * TAU))
 	ci.draw_rect(Rect2(r.position + Vector2(2.0, 2.0), Vector2(6.0, 3.0)), light)
 
@@ -288,7 +289,7 @@ func _draw_core_light(ci: CanvasItem, r: Rect2, base: Color, time: float) -> voi
 func _draw_signature(ci: CanvasItem, r: Rect2, _base: Color, time: float) -> void:
 	if type != Type.SPARK:
 		return
-	# Hvid kant, der roterer rundt om klodsen.
+	# A white edge rotating around the brick.
 	var perimeter := 2.0 * (r.size.x + r.size.y)
 	var head := fposmod(time * 46.0, perimeter)
 	var white := Color.WHITE
@@ -317,7 +318,7 @@ static func _perimeter_point(r: Rect2, d: float) -> Vector2:
 func _draw_cracks(ci: CanvasItem, r: Rect2, stage: int) -> void:
 	var dark := Color("07070C")
 	dark.a = 0.85
-	# Stadie 1: to revner fra kanten. Stadie 2: de krydser midten.
+	# Stage 1: two cracks from the edge. Stage 2: they cross the middle.
 	var reach := 0.45 if stage == 1 else 1.0
 	var mid := r.position + r.size * 0.5
 	for i in 2:
@@ -332,7 +333,7 @@ func _draw_cracks(ci: CanvasItem, r: Rect2, stage: int) -> void:
 
 
 func _draw_missing_pieces(ci: CanvasItem, r: Rect2) -> void:
-	# Tre små stykker mangler i kanten.
+	# Three small pieces missing from the edge.
 	var hole := Color("07070C")
 	for i in 3:
 		var along := _rand(260 + i)

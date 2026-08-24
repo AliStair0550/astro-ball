@@ -1,18 +1,18 @@
 class_name Ball
 extends CharacterBody2D
 
-## Lag 4: kometen.
+## Layer 4: the comet.
 ##
-## Egen kollision. Ingen RigidBody, ingen move_and_slide. Hver fysik-tick
-## sveeper en cirkel mod rammens tre inderflader, paddlens tre yderflader
-## og de klodser, bevægelsen faktisk rører. Refleksionen er manuel, så
-## farten kan holdes konstant.
+## Its own collision. No RigidBody, no move_and_slide. Every physics tick
+## sweeps a circle against the frame's three inner faces, the paddle's
+## three outer faces and the bricks the motion actually touches. The
+## reflection is manual, which is what keeps the speed constant.
 ##
-## Udgangsvinklen fra paddlen bestemmes af rammepunktet:
-##   yderste kant 25 grader fra vandret, midte 80 grader, lineært imellem.
-## De midterste 8 px er sweet spot: 88 grader og 10 % fart, der aftager
-## over 2 sekunder. Bolden går aldrig under 20 grader fra vandret,
-## heller ikke efter en vægrefleksion.
+## The exit angle off the paddle comes from where it was struck:
+##   outer edge 25 degrees from horizontal, middle 80, linear between.
+## The middle 8 px are the sweet spot: 88 degrees and 10 per cent speed,
+## decaying over 2 seconds. The ball never goes below 20 degrees from
+## horizontal, not even after a wall bounce.
 
 signal wall_hit(pos: Vector2, normal: Vector2)
 signal paddle_hit(pos: Vector2, exit_angle_deg: float, sweet: bool)
@@ -30,7 +30,7 @@ const FLARE := Color("FF9F1C")
 
 const RADIUS := 4.0
 const BASE_SPEED := 320.0
-## Farten stiger 4 procent per 10 klodser og stopper her.
+## Speed rises 4 per cent per 10 bricks and stops here.
 const MAX_SPEED := 520.0
 const SPEED_STEP := 1.04
 const SPEED_STEP_BRICKS := 10
@@ -57,20 +57,20 @@ var game_feel: GameFeel
 var effects: Effects
 
 var stuck := true
-## Slukkes, mens en skærm er oppe, så et klik på en knap ikke også
-## sender bolden afsted.
+## Off while a screen is up, so a click on a button does not also
+## launch the ball.
 var input_enabled := true
-## Frosset ved level clear: bolden holder sin retning og fart, men
-## bevæger sig ikke. Så er tilstanden stadig sand, når HUD og debug
-## kigger på den.
+## Frozen on field cleared: the ball keeps its direction and speed but
+## does not move, so its state is still true when the HUD and the debug
+## overlay read it.
 var frozen := false
-## Stiger 4 procent per 10 klodser, styret af spillet.
+## Rises 4 per cent per 10 bricks, driven by the game.
 var speed_base := BASE_SPEED:
 	set(value):
 		speed_base = value
 		_renormalize()
-## Langsom sætter den til 0.7, Hurtig til 1.4. Farten rettes med det
-## samme, så bolden aldrig hænger en frame bagud efter en power-up.
+## Slow sets it to 0.7, Fast to 1.4. The speed is corrected at once, so
+## the ball never lags a frame behind a power-up.
 var speed_scale := 1.0:
 	set(value):
 		speed_scale = value
@@ -88,7 +88,7 @@ func _ready() -> void:
 	_fill_trail()
 
 
-## Retter farten uden at røre retningen.
+## Corrects the speed without touching the direction.
 func _renormalize() -> void:
 	if velocity.length() > 0.0001:
 		velocity = velocity.normalized() * current_speed()
@@ -149,7 +149,7 @@ func launch() -> void:
 	launched.emit()
 
 
-## Bruges af Multi: en ny bold sendes ud i en ny retning med samme fart.
+## Used by Multi: a new ball leaves in a new direction at the same speed.
 func launch_at(angle_deg: float) -> void:
 	stuck = false
 	var a := deg_to_rad(angle_deg)
@@ -302,8 +302,8 @@ func _bounce_off_paddle() -> void:
 	paddle_hit.emit(global_position, angle_deg, sweet)
 
 
-## Aldrig fladere end 20 grader. En bold, der triller vandret langs
-## rammen, er den eneste måde at gøre spillet kedeligt på.
+## Never flatter than 20 degrees. A ball rolling sideways along the
+## frame is the one way to make this game boring.
 func _enforce_min_angle(v: Vector2) -> Vector2:
 	var speed := v.length()
 	if speed < 0.0001:
@@ -349,9 +349,9 @@ static func _sweep_circle_rect(p0: Vector2, d: Vector2, r: float, rect: Rect2) -
 	return best
 
 
-## Cirkel med radius r flyttes fra p0 med vektoren d mod segmentet a-b.
-## Returnerer {"hit": bool, "t": float, "normal": Vector2}, hvor t er
-## andelen af d frem til kontakt.
+## A circle of radius r moves from p0 along d against the segment a-b.
+## Returns {"hit": bool, "t": float, "normal": Vector2}, where t is the
+## fraction of d travelled before contact.
 static func _sweep_circle_segment(p0: Vector2, d: Vector2, r: float, a: Vector2, b: Vector2) -> Dictionary:
 	var seg := b - a
 	var seg_len := seg.length()
@@ -412,7 +412,7 @@ static func _sweep_circle_point(p0: Vector2, d: Vector2, r: float, c: Vector2) -
 	return {"hit": true, "t": t, "normal": (p0 + d * t - c).normalized()}
 
 
-# --- Tegning -----------------------------------------------------------
+# --- Drawing -----------------------------------------------------------
 
 func _process(delta: float) -> void:
 	if look() == Look.FIREBALL and not stuck:
@@ -432,7 +432,7 @@ func _draw() -> void:
 			draw_circle(Vector2.ZERO, RADIUS - 2.0, EMBER)
 		Look.SLOW:
 			_draw_tail(4, ICE, ICE, 4.2, 0.5)
-			# Svag frostring.
+			# A faint ring of frost.
 			draw_arc(Vector2.ZERO, RADIUS + 2.5, 0.0, TAU, 20, Color(ICE, 0.35), 1.0, true)
 			draw_circle(Vector2.ZERO, RADIUS, ICE)
 			draw_circle(Vector2.ZERO, RADIUS - 2.0, BONE)
@@ -459,7 +459,7 @@ func _draw_tail(links: int, near: Color, far: Color, start_size: float, start_al
 		draw_circle(to_local(_trail[i]), lerpf(start_size, 0.8, f), c)
 
 
-## Hurtig tegner en streg i stedet for cirkler.
+## Fast draws a streak instead of circles.
 func _draw_streak(links: int, color: Color) -> void:
 	var count := mini(links, _trail.size() - 1)
 	if count < 2:
