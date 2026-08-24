@@ -77,6 +77,18 @@ const CATALOG := {
 		"name": "Fast", "color": SLATE, "kind": Kind.BAD,
 		"duration": 15.0, "icon": "arrows_up",
 	},
+	"blind": {
+		"name": "Blind", "color": SLATE, "kind": Kind.BAD,
+		"duration": 10.0, "icon": "closed_eye",
+	},
+	"invert": {
+		"name": "Invert", "color": SLATE, "kind": Kind.BAD,
+		"duration": 8.0, "icon": "mirror",
+	},
+	"heavy": {
+		"name": "Heavy", "color": SLATE, "kind": Kind.BAD,
+		"duration": 12.0, "icon": "anchor",
+	},
 }
 
 var id := "wide"
@@ -253,6 +265,21 @@ static func _icon_shapes(ci: CanvasItem, icon: String, ink: Color) -> void:
 			_bar(ci, Vector2(-4.0, -1.0), Vector2(8.0, 2.0), ink)
 			_bar(ci, Vector2(-3.0, 1.0), Vector2(6.0, 1.0), ink)
 			_bar(ci, Vector2(-1.0, 2.0), Vector2(2.0, 2.0), ink)
+		"closed_eye":
+			# A shut lid with three lashes. An open eye would read as
+			# the opposite of what it does.
+			ci.draw_line(Vector2(-5.0, 0.0), Vector2(5.0, 0.0), ink, 1.6)
+			for x in [-3.0, 0.0, 3.0]:
+				ci.draw_line(Vector2(x, 1.0), Vector2(x * 1.3, 4.0), ink, 1.2)
+		"mirror":
+			# Two arrows past each other, with the line they cross.
+			_bar(ci, Vector2(-0.5, -5.0), Vector2(1.0, 10.0), ink)
+			_arrow(ci, Vector2(-5.0, -2.5), Vector2(-1.0, 0.0), ink)
+			_arrow(ci, Vector2(5.0, 2.5), Vector2(1.0, 0.0), ink)
+		"anchor":
+			_bar(ci, Vector2(-0.8, -4.0), Vector2(1.6, 8.0), ink)
+			_bar(ci, Vector2(-3.0, -2.5), Vector2(6.0, 1.4), ink)
+			ci.draw_arc(Vector2(0.0, 2.0), 4.0, 0.15 * PI, 0.85 * PI, 16, ink, 1.6, true)
 		"big_circle":
 			# A ring, not a disc: a filled circle at this size reads as a
 			# blob, and the icon has to survive being 10 px wide.

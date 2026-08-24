@@ -35,12 +35,24 @@ gridAnchor      valgfrit px-offset i leveldata, positivt = længere ned
 Level-loaderen afviser et anker, der æder himlen eller fører muren
 forbi murlinjen.
 
+### Klodserne
+
+Sprængklodserne ligger ved siden af hinanden, saa en kaede loeber.
+Maalt paa den bedste placering i hver bane: level 1 tager 45 procent af
+feltet i ét slag, level 2 21 procent, level 3 38 procent. Tallene er
+testet, saa en omtegning ikke kan goere en bane tam ubemaerket.
+
+Fem negative power-ups: Smal, Hurtig, Tung, Blind og Omvendt. Andelen
+stiger gennem banerne, 8 til 25 procent. Doed er ude, som afsnit 7
+kraever i de foerste fem levels.
+
 ### Stjerner og progression
 
 Afsnit 15 giver tre stjerner pr. level: gennemført, gennemført under
 parTime, gennemført uden at miste bolden. De er uafhængige, så den
 tredje kan tjenes uden den anden, og de lægges sammen på tværs af
-forsøg i stedet for at blive erstattet. Gemmes i `user://progress.json`.
+forsøg i stedet for at blive erstattet. Gemmes i `user://progress.json`, og vises paa FIELD CLEARED, én ad
+gangen med en tone hver.
 
 Den stille hjælper: tre fejl i træk på samme bane flytter 15
 procentpoint fra de dårlige power-ups til de gode. Intet på skærmen,

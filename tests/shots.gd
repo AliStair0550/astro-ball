@@ -9,7 +9,7 @@ var frames := 0
 var index := 0
 var names := [
 	"01_title", "02_settings", "03_level_intro", "04_level1",
-	"05_level3", "06_effects", "07_wide_laser", "08_signal_lost", "09_crt",
+	"05_level3", "06_effects", "07_wide_laser", "08_signal_lost", "09_crt", "10_field_cleared", "11_title_settling",
 ]
 
 
@@ -111,6 +111,19 @@ func _process(_delta: float) -> void:
 			game._set_state(Game.State.SIGNAL_LOST)
 			game.screens.new_record = true
 			game.screens._fade = 1.0
+		9:
+			game.score = 18400
+			game.screens.stars_earned = 0b101
+			game.screens.stars_total = 0b111
+			game.screens.par_time = 60.0
+			game.screens.level_time = 44.0
+			game._set_state(Game.State.LEVEL_CLEAR)
+			game.screens._fade = 1.0
+			game.screens._time = 2.4
+		10:
+			game._set_state(Game.State.TITLE)
+			game.screens._fade = 1.0
+			game.screens._time = 0.30
 		8:
 			game._set_state(Game.State.PLAYING)
 			get_node("/root/GameSettings").crt = true

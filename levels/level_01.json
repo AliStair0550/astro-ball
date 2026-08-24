@@ -5,9 +5,9 @@
   "grid": [
     ".............",
     ".VVVVVVVVVVV.",
-    ".IIIIIIIIIII.",
-    "..FFEFFFEFF..",
-    "...PPPEPPP...",
+    ".IIIEEEEEIII.",
+    "..FFFFFFFFF..",
+    "...PPPPPPP...",
     "....VVVVV....",
     ".....III.....",
     "......X......"
@@ -15,12 +15,13 @@
   "ballSpeed": 360,
   "gridAnchor": 0,
   "powerups": {
-    "multi": 25,
-    "fireball": 25,
+    "multi": 22,
+    "fireball": 22,
     "wide": 15,
     "laser": 15,
     "life": 10,
-    "giant": 10
+    "giant": 8,
+    "narrow": 8
   },
   "forcedFirstPowerup": "wide",
   "parTime": 60

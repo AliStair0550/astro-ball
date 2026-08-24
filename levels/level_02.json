@@ -5,24 +5,26 @@
   "grid": [
     ".S.........S.",
     ".VVVVVVVVVVV.",
-    ".VFFFFEFFFFV.",
+    ".VFFFFFFFFFV.",
     ".V.........V.",
     ".V.IIIIIII.V.",
     ".V.I.....I.V.",
-    ".V.I.PPP.I.V.",
+    ".V.I.PEP.I.V.",
     ".V.I.....I.V.",
     ".V.IIIIIII.V.",
-    ".VVVVVVVVVVV."
+    ".VVVEEEEEVVV."
   ],
   "ballSpeed": 360,
   "gridAnchor": 0,
   "powerups": {
-    "multi": 25,
-    "fireball": 20,
-    "laser": 20,
-    "wide": 15,
+    "multi": 20,
+    "fireball": 18,
+    "laser": 16,
+    "wide": 12,
     "giant": 10,
-    "narrow": 10
+    "narrow": 10,
+    "heavy": 8,
+    "fast": 6
   },
   "forcedFirstPowerup": null,
   "parTime": 110

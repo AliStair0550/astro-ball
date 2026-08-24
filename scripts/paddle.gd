@@ -53,8 +53,11 @@ var input_enabled := true
 ## moment a real touch arrives the mouse stops driving, so a trackpad on
 ## a hybrid device cannot fight the thumb.
 var follow_mouse := true
-## Slowed by Heavy in later levels. 1.0 tracks the mouse exactly.
+## Heavy drags it to 0.6. 1.0 tracks the finger exactly.
 var follow_speed := 1.0
+## Invert mirrors the steering. Never the ball, never the field: only
+## which way your thumb means.
+var inverted := false
 
 var _squash := GameFeel.Squash.new()
 var _scale_y := 1.0
@@ -95,7 +98,10 @@ func _apply_bounds() -> void:
 func nudge(delta_x: float) -> void:
 	if not input_enabled:
 		return
-	position.x = clampf(position.x + delta_x, min_x, max_x)
+	var move := delta_x * follow_speed
+	if inverted:
+		move = -move
+	position.x = clampf(position.x + move, min_x, max_x)
 
 
 func half_width() -> float:
@@ -159,7 +165,10 @@ func _physics_process(delta: float) -> void:
 		if _prev_positions.size() > 2:
 			_prev_positions.resize(2)
 		return
-	var target := clampf(get_global_mouse_position().x, min_x, max_x)
+	var mouse_x := get_global_mouse_position().x
+	if inverted:
+		mouse_x = Arena.SCREEN.x - mouse_x
+	var target := clampf(mouse_x, min_x, max_x)
 	if follow_speed < 1.0:
 		target = lerpf(position.x, target, clampf(follow_speed * delta * 18.0, 0.0, 1.0))
 	_velocity_x = (target - position.x) / maxf(delta, 0.0001)

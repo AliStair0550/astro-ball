@@ -151,10 +151,41 @@ func _test_loader_fixtures() -> void:
 		ok(joined.contains("E"), "%s has blast bricks" % path)
 		ok(not joined.contains("H"), "%s has no Hardened yet" % path)
 
-	# Section 9: no bad drops in level 1.
+	# Section 9 gave level 1 no bad drops at all. It has one now, at a
+	# weight low enough to teach the dark edge and the zigzag without
+	# punishing anyone for learning: you have to meet the category before
+	# level 2 uses it against you.
+	var bad_share := 0.0
 	for id in one["powerups"]:
-		ok(Powerup.is_good(str(id)), "level 1 drop '%s' is a good one" % str(id))
+		if not Powerup.is_good(str(id)):
+			bad_share += float(one["powerups"][id])
+	ok(bad_share > 0.0, "level 1 teaches that a drop can be bad")
+	ok(bad_share <= 10.0, "but only just: %.0f %% of drops" % bad_share)
 	ok(one["powerups"].has("giant"), "level 1 can drop Giant")
+
+	# And the punishments spread out rather than arriving all at once.
+	var previous := 0.0
+	for path in LevelLoader.level_paths():
+		var d: Dictionary = LevelLoader.load_level(path)["data"]
+		var share := 0.0
+		var kinds := 0
+		for id in d.get("powerups", {}):
+			if not Powerup.is_good(str(id)):
+				share += float(d["powerups"][id])
+				kinds += 1
+		ok(share >= previous - 0.01, "%s is no gentler than the level before it" % path)
+		previous = share
+	ok(previous >= 25.0, "by level 3 a quarter of the drops can hurt (%.0f %%)" % previous)
+
+	# Every punishment in section 7 except Death is reachable somewhere.
+	var seen := {}
+	for path in LevelLoader.level_paths():
+		var d: Dictionary = LevelLoader.load_level(path)["data"]
+		for id in d.get("powerups", {}):
+			seen[str(id)] = true
+	for id in ["narrow", "fast", "heavy", "blind", "invert"]:
+		ok(seen.has(id), "the punishment '%s' is reachable" % id)
+	ok(not seen.has("death"), "and Death is not, section 7 keeps it out of the first five")
 
 
 # --- Section 20, the bottom anchor --------------------------------------

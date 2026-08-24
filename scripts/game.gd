@@ -14,7 +14,7 @@ const START_LIVES := LevelState.START_LIVES
 const MAX_BALLS := 6
 const BALL_LOST_PAUSE := 0.5
 const LEVEL_INTRO_PAUSE := 2.2
-const LEVEL_CLEAR_PAUSE := 2.4
+const LEVEL_CLEAR_PAUSE := 3.6
 
 ## Hitstop. 16 ms on a brick, 60 on a blast. It is what gives the blast
 ## brick its weight.
@@ -82,6 +82,9 @@ var continue_gate := ContinueGate.new()
 var _last_impact := Vector2.INF
 var _state_timer := 0.0
 var _debug := false
+## Stars still waiting to be heard landing on the clear screen.
+var _star_sounds := 0
+var _star_sound_timer := 0.0
 
 
 func _ready() -> void:
@@ -144,6 +147,7 @@ func _set_state(new_state: State) -> void:
 		State.LEVEL_CLEAR:
 			overlay = Screens.Screen.LEVEL_CLEAR
 			_state_timer = LEVEL_CLEAR_PAUSE
+			_star_sound_timer = 0.0
 		State.SIGNAL_LOST:
 			overlay = Screens.Screen.SIGNAL_LOST
 		State.BALL_LOST:
@@ -486,8 +490,17 @@ func _on_level_cleared() -> void:
 	# ball. Independent, and merged with what earlier attempts earned.
 	var level_id := int(level_data.get("id", 1))
 	var par := float(level_data.get("parTime", 0))
-	GameProgress.record_clear(level_id, run.stars(par), run.level_time)
+	var earned := run.stars(par)
+	var had := GameProgress.stars_for(level_id)
+	GameProgress.record_clear(level_id, earned, run.level_time)
 	GameProgress.submit_score(run.score)
+	# Only what this run actually added is celebrated. A star you already
+	# had does not land twice.
+	screens.stars_earned = earned & ~had
+	screens.stars_total = GameProgress.stars_for(level_id)
+	screens.level_time = run.level_time
+	screens.par_time = par
+	_star_sounds = screens.stars_earned
 	arena.celebrate()
 	background.blitz()
 	audio.play("level_clear")
@@ -563,6 +576,12 @@ func _sync_powerup_state() -> void:
 		width = Paddle.WIDTH_NARROW
 	paddle.set_width(width)
 	paddle.laser = active.has("laser")
+	# Section 7's three remaining punishments. Each takes away something
+	# different: what you can see, which way you mean, and how fast the
+	# shield answers.
+	grid.blind = active.has("blind")
+	paddle.inverted = active.has("invert")
+	paddle.follow_speed = 0.6 if active.has("heavy") else 1.0
 
 	var scale := 1.0
 	if active.has("slow"):
@@ -627,6 +646,16 @@ func _process(delta: float) -> void:
 	for ball in _balls:
 		positions.append(ball.global_position)
 	grid.update_proximity(positions)
+
+	if state == State.LEVEL_CLEAR and _star_sounds != 0:
+		_star_sound_timer += delta
+		var due := 0.9
+		for bit in [1, 2, 4]:
+			if _star_sounds & bit and _star_sound_timer > due:
+				_star_sounds &= ~bit
+				audio.play("combo", 1.0 + 0.18 * float([1, 2, 4].find(bit)), -3.0)
+				break
+			due += 0.45
 
 	if _state_timer > 0.0:
 		_state_timer = maxf(0.0, _state_timer - delta)

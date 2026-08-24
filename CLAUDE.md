@@ -658,3 +658,41 @@ Kapslerne
 34x22 px, ikke 20x12, og med power-uppens navn under sig. På en telefon
 skal en kapsel kunne læses tværs over feltet, ikke først når den er
 fanget.
+
+Klodserne, målt
+
+Sprængklodserne ligger nu ved siden af hinanden i stedet for spredt.
+Det er forskellen på en pæn effekt og et øjeblik: en kæde skal løbe.
+Målt med den bedste placering i hver bane:
+
+- Level 1, kæden i Ice-rækken: 21 af 47 klodser i ét slag, 45 procent.
+  Den ligger højt oppe, så den er belønningen for at arbejde sig op
+  forbi spidsen.
+- Level 2, kæden i bunden af den ydre skal plus én i kernen: 14 af 68,
+  21 procent. Kapslen modstår store kæder af natur, fordi den er tynde
+  skaller med luft imellem. Det er dens karakter, ikke en mangel.
+- Level 3, fem sprængklodser i vingeknoglen: 18 af 48, 38 procent. Ét
+  slag løber hele spændvidden. Banens navn, tegnet.
+
+Tallene står i tests/phase3.gd, så en omtegning ikke kan gøre en bane
+tam uden at nogen opdager det.
+
+De negative power-ups
+
+Blind, Omvendt og Tung fra afsnit 7 er bygget. Sammen med Smal og
+Hurtig giver det fem forskellige straffe, og de tager hver sin ting:
+hvad du kan se, hvilken vej du mener, og hvor hurtigt skjoldet svarer.
+Død bliver ude, som afsnit 7 kræver i de første fem levels.
+
+Andelen af dårlige stiger gennem de tre baner: 8, 24 og 25 procent.
+Level 1 har én, mod afsnit 9's "ingen dårlige". Man skal møde
+kategorien og lære den mørke kant og zigzagen at kende, før level 2
+bruger den imod en.
+
+Stjernerne skal ses tjent
+
+Stjernerne blev regnet ud og gemt, men spilleren så dem aldrig lande.
+De vises nu på FIELD CLEARED, én ad gangen med en halv sekunds
+mellemrum, med en tone hver. En stjerne man allerede havde, sidder
+stille i grå. At få tre på én gang og få det at vide i ét frame er ikke
+den samme følelse som at se den tredje lande.

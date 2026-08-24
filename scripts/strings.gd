@@ -72,9 +72,14 @@ const TABLE := {
 	# --- Level intro -----------------------------------------------------
 	"LEVEL_NUMBER": "LEVEL %d",
 	"HINT_BEGIN": "CLICK TO BEGIN",
+	"HINT_CONTINUE": "CLICK TO CONTINUE",
 
 	# --- Field cleared ---------------------------------------------------
 	"FIELD_CLEARED": "FIELD CLEARED",
+	"STAR_CLEARED": "CLEARED",
+	"STAR_UNDER_PAR": "UNDER PAR",
+	"STAR_NO_LOSS": "NO BALL LOST",
+	"PAR_TIME": "PAR %s",
 	"LEVEL_AND_NAME": "LEVEL %d · %s",
 
 	# --- Signal lost, section 16 -----------------------------------------

@@ -36,6 +36,15 @@ var final_score := 0
 var high_score := 0
 var new_record := false
 ## Telemetry for the SIGNAL LOST readout.
+## Section 15. Which stars this run earned, and which the level has in
+## total once merged. Shown on FIELD CLEARED, one at a time, because
+## earning three at once and being told so in a single frame is not the
+## same feeling as watching the third one land.
+var stars_earned := 0
+var stars_total := 0
+var level_time := 0.0
+var par_time := 0.0
+
 var bricks_cleared := 0
 var best_combo := 0
 var run_time := 0.0
@@ -212,7 +221,9 @@ func _draw() -> void:
 			_draw_curtain(0.62)
 			_draw_level_intro()
 		Screen.LEVEL_CLEAR:
-			_draw_curtain(0.5)
+			# Heavier than it was. The readout is the point here, and a
+			# thin curtain let the field argue with it.
+			_draw_curtain(0.78)
 			_draw_level_clear()
 		Screen.SIGNAL_LOST:
 			# Section 16: the star field drops to 20 per cent behind it.
@@ -230,12 +241,24 @@ func _draw_curtain(strength: float) -> void:
 	draw_rect(Rect2(-20.0, -20.0, screen_size.x + 40.0, screen_size.y + 40.0), c)
 
 
+## The name arrives rather than simply being there. Two lines rising a
+## beat apart, then the rule drawing itself, then the tagline. Under a
+## second in total, and it is the difference between a screen and an
+## opening.
 func _draw_title() -> void:
 	var cx := screen_size.x * 0.5
-	_centered(FONT_BRAND, Strings.text("BRAND_LINE_1"), cx, 268.0, 52, PULSE, 3.0, true)
-	_centered(FONT_BRAND, Strings.text("BRAND_LINE_2"), cx, 326.0, 52, PULSE, 3.0, true)
-	_rule(cx, 348.0, 150.0, PULSE, 0.55)
-	_centered(FONT_UI, Strings.text("TAGLINE"), cx, 378.0, 11, SLATE, 2.4, false)
+
+	var line_1 := ease(clampf(_time / 0.35, 0.0, 1.0), 0.35)
+	var line_2 := ease(clampf((_time - 0.12) / 0.35, 0.0, 1.0), 0.35)
+	var rule_in := ease(clampf((_time - 0.34) / 0.30, 0.0, 1.0), 0.4)
+	var tag_in := ease(clampf((_time - 0.50) / 0.35, 0.0, 1.0), 0.4)
+
+	_centered(FONT_BRAND, Strings.text("BRAND_LINE_1"), cx,
+		268.0 + (1.0 - line_1) * 22.0, 52, Color(PULSE, line_1), 3.0, true)
+	_centered(FONT_BRAND, Strings.text("BRAND_LINE_2"), cx,
+		326.0 + (1.0 - line_2) * 22.0, 52, Color(PULSE, line_2), 3.0, true)
+	_rule(cx, 348.0, 150.0 * rule_in, PULSE, 0.55 * rule_in)
+	_centered(FONT_UI, Strings.text("TAGLINE"), cx, 378.0, 11, Color(SLATE, tag_in), 2.4, false)
 
 	var p := _progress()
 	if p and int(p.high_score) > 0:
@@ -276,10 +299,83 @@ func _draw_level_intro() -> void:
 
 func _draw_level_clear() -> void:
 	var cx := screen_size.x * 0.5
-	_centered(FONT_BRAND, Strings.text("FIELD_CLEARED"), cx, 400.0, 26, VOLT, 2.6, true)
-	_rule(cx, 420.0, 130.0, VOLT, 0.6)
-	_centered(FONT_UI, Strings.fmt("LEVEL_AND_NAME", [level_number, level_title.to_upper()]), cx, 448.0, 10, SLATE, 2.0, false)
-	_centered(FONT_SCORE, HUD.group_digits(final_score), cx, 496.0, 26, BONE, 0.0, false)
+	_centered(FONT_BRAND, Strings.text("FIELD_CLEARED"), cx, 330.0, 26, VOLT, 2.6, true)
+	_rule(cx, 350.0, 130.0, VOLT, 0.6)
+	_centered(FONT_UI, Strings.fmt("LEVEL_AND_NAME", [level_number, level_title.to_upper()]),
+		cx, 376.0, 10, SLATE, 2.0, false)
+
+	# The score climbs rather than appearing. A number that arrives all
+	# at once is information; a number that climbs is a reward.
+	var climb := ease(clampf(_time / 0.9, 0.0, 1.0), 0.4)
+	_centered(FONT_SCORE, HUD.group_digits(int(round(float(final_score) * climb))),
+		cx, 424.0, 28, BONE, 0.0, false)
+
+	# The three stars land one at a time, half a second apart.
+	var rows := [
+		[GameProgressBits.CLEARED, "STAR_CLEARED", ""],
+		[GameProgressBits.UNDER_PAR, "STAR_UNDER_PAR", Strings.fmt("PAR_TIME", [format_time(par_time)])],
+		[GameProgressBits.NO_LOSS, "STAR_NO_LOSS", ""],
+	]
+	var y := 486.0
+	for i in rows.size():
+		var bit: int = rows[i][0]
+		var earned := (stars_earned & bit) != 0
+		var had := (stars_total & bit) != 0 and not earned
+		var landed := _time > 0.9 + float(i) * 0.45
+		var pop := clampf((_time - (0.9 + float(i) * 0.45)) / 0.25, 0.0, 1.0)
+
+		var mark := Vector2(cx - 92.0, y + float(i) * 34.0)
+		_draw_star(mark, earned and landed, had, pop)
+
+		var label_color := SLATE
+		if earned and landed:
+			label_color = VOLT
+		elif had:
+			label_color = Color("55545C")
+		_tracked(FONT_UI, Strings.text(str(rows[i][1])),
+			Vector2(cx - 72.0, y + float(i) * 34.0 + 4.0), 10, label_color, 1.6)
+		if not str(rows[i][2]).is_empty():
+			var note_w := _tracked_width(FONT_UI, str(rows[i][2]), 8, 1.2)
+			_tracked(FONT_UI, str(rows[i][2]),
+				Vector2(cx + 92.0 - note_w, y + float(i) * 34.0 + 4.0), 8, Color("55545C"), 1.2)
+
+	if _time > 2.3:
+		_centered(FONT_UI, Strings.text("HINT_CONTINUE"), cx, 640.0, 9,
+			Color(SLATE, 0.4 + 0.6 * sin(_time * 4.0)), 2.0, false)
+
+
+## A diamond, the same shape the HUD uses. Earned lands with a flash,
+## already-had sits quietly, unearned is an empty outline.
+func _draw_star(at: Vector2, earned: bool, had: bool, pop: float) -> void:
+	var size := 9.0
+	if earned:
+		size = lerpf(20.0, 9.0, ease(pop, 0.3))
+		var glow := VOLT
+		for i in 3:
+			glow.a = (0.30 - float(i) * 0.08) * (1.0 - pop * 0.6)
+			var pad := size + 4.0 + float(i) * 5.0
+			draw_colored_polygon(_diamond(at, pad), glow)
+	elif had:
+		size = 8.0
+	var color := VOLT if earned else (Color("4A4A58") if had else Color("22222C"))
+	draw_colored_polygon(_diamond(at, size), color)
+	if not earned and not had:
+		draw_polyline(_diamond(at, size) + PackedVector2Array([at + Vector2(0.0, -size)]),
+			Color("35354200"), 1.0)
+
+
+static func _diamond(at: Vector2, size: float) -> PackedVector2Array:
+	return PackedVector2Array([
+		at + Vector2(0.0, -size), at + Vector2(size, 0.0),
+		at + Vector2(0.0, size), at + Vector2(-size, 0.0),
+	])
+
+
+## The star bits, mirrored so the screens do not need the autoload.
+class GameProgressBits:
+	const CLEARED := 1
+	const UNDER_PAR := 2
+	const NO_LOSS := 4
 
 
 ## Section 16. A readout, not a verdict. Telemetry from a vessel that
@@ -289,23 +385,31 @@ func _draw_signal_lost() -> void:
 	_centered(FONT_BRAND, Strings.text("SIGNAL_LOST"), cx, 296.0, 33, EMBER, 3.0, true)
 	_rule(cx, 318.0, 150.0, EMBER, 0.6)
 
+	# Each line arrives in turn, and the two counters climb to their
+	# figure. A readout that lands all at once is a receipt.
+	var reveal := func(index: int) -> float:
+		return ease(clampf((_time - 0.25 - float(index) * 0.18) / 0.4, 0.0, 1.0), 0.4)
 	var rows := [
-		[Strings.text("STAT_BRICKS"), str(bricks_cleared)],
-		[Strings.text("STAT_COMBO"), str(best_combo)],
-		[Strings.text("STAT_TIME"), format_time(run_time)],
-		[Strings.text("STAT_SCORE"), HUD.group_digits(final_score)],
+		[Strings.text("STAT_BRICKS"), str(int(round(float(bricks_cleared) * reveal.call(0)))), reveal.call(0)],
+		[Strings.text("STAT_COMBO"), str(best_combo), reveal.call(1)],
+		[Strings.text("STAT_TIME"), format_time(run_time), reveal.call(2)],
+		[Strings.text("STAT_SCORE"), HUD.group_digits(int(round(float(final_score) * reveal.call(3)))), reveal.call(3)],
 	]
 	var left := cx - 120.0
 	var right := cx + 120.0
 	var y := 374.0
 	for row in rows:
-		_tracked(FONT_UI, str(row[0]), Vector2(left, y), 10, SLATE, 1.8)
+		var fade := float(row[2])
+		if fade <= 0.01:
+			y += 30.0
+			continue
+		_tracked(FONT_UI, str(row[0]), Vector2(left, y), 10, Color(SLATE, fade), 1.8)
 		var value := str(row[1])
 		var vw := _tracked_width(FONT_SCORE, value, 14, 0.0)
-		_tracked(FONT_SCORE, value, Vector2(right - vw, y), 14, BONE, 0.0)
+		_tracked(FONT_SCORE, value, Vector2(right - vw, y), 14, Color(BONE, fade), 0.0)
 		var line := EDGE
-		line.a = 0.5
-		draw_rect(Rect2(left, y + 6.0, right - left, 1.0), line)
+		line.a = 0.5 * fade
+		draw_rect(Rect2(left, y + 6.0, (right - left) * fade, 1.0), line)
 		y += 30.0
 
 	# The ghost line. Your own best, sitting quietly next to this run.
