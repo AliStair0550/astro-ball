@@ -59,6 +59,7 @@ func _run() -> void:
 	_test_level_progression()
 	_test_level_clear_freeze()
 	_test_scoring()
+	_test_every_level_survives_a_loss()
 	_test_screen_presses()
 	_test_pause()
 	_test_settings()
@@ -69,6 +70,42 @@ func _run() -> void:
 	print("--- LIFECYCLE: %d checks, %d failures ---" % [checks, fails])
 	await _teardown()
 	get_tree().quit(1 if fails > 0 else 0)
+
+
+## Phase 5's definition of done: GAME OVER works on every level, not
+## just the one it was written against. Each level is loaded, lost,
+## continued and restarted, and the field has to come back whole.
+func _test_every_level_survives_a_loss() -> void:
+	for index in game.level_paths.size():
+		var name := "level %d" % (index + 1)
+		game.run.start_run()
+		game._load_level(index)
+		game._begin_level()
+		var bricks := game.grid.remaining_breakable()
+		ok(bricks >= 20, "%s builds a field (%d bricks)" % [name, bricks])
+
+		# Three lives, three losses.
+		for life in 3:
+			_kill_all_balls()
+			if game.state == Game.State.BALL_LOST:
+				_skip_pause()
+		eq(game.state, Game.State.SIGNAL_LOST, "%s ends in GAME OVER" % name)
+		eq(game.lives, 0, "%s has no lives left" % name)
+
+		# Continue puts the same field back with a ball on the paddle.
+		game._on_screen_action("re_entry")
+		eq(game.state, Game.State.PLAYING, "%s continues" % name)
+		eq(game.grid.remaining_breakable(), bricks, "%s keeps its field" % name)
+		eq(game._balls.size(), 1, "%s gets one ball back" % name)
+		ok(game._balls[0].stuck, "%s waits for the player to fire it" % name)
+
+		# And a restart is the field from the beginning with three lives.
+		game._on_screen_action("restart")
+		eq(game.state, Game.State.LEVEL_INTRO, "%s restarts into its intro" % name)
+		eq(game.lives, Game.START_LIVES, "%s restarts with three lives" % name)
+		game._begin_level()
+		eq(game.grid.remaining_breakable(), bricks, "%s is built again" % name)
+	game._set_state(Game.State.TITLE)
 
 
 ## One press, on the thing under the finger.

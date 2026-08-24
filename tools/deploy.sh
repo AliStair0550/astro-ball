@@ -26,7 +26,7 @@ SCHEME="AstroBall"
 CONFIG="Debug"
 EXPORT_MODE="--export-debug"
 INSTALL=1
-MIN_FREE_GB=4
+MIN_FREE_GB="${MIN_FREE_GB:-4}"
 
 for arg in "$@"; do
   case "$arg" in
@@ -111,6 +111,19 @@ if [ "$INSTALL" = "1" ]; then
   [ -n "${DEVICE_ID:-}" ] && DEST="id=$DEVICE_ID"
 fi
 
+# Godot writes CODE_SIGN_IDENTITY="Apple Distribution" into the release
+# configuration, and the project is signed automatically for development.
+# Xcode calls that a conflict and refuses before it compiles anything.
+#
+# A release build on this machine is a check that the code compiles and
+# packs in release configuration, not a submission: it is signed with the
+# development certificate. A real App Store build needs a distribution
+# certificate, which is an account matter, not a code one.
+SIGN_ARGS=()
+if [ "$CONFIG" = "Release" ]; then
+  SIGN_ARGS=(CODE_SIGN_IDENTITY="Apple Development" CODE_SIGN_STYLE=Automatic)
+fi
+
 xcodebuild \
   -project "$BUILD/$SCHEME.xcodeproj" \
   -scheme "$SCHEME" \
@@ -118,6 +131,7 @@ xcodebuild \
   -destination "$DEST" \
   -derivedDataPath "$DERIVED" \
   -allowProvisioningUpdates \
+  "${SIGN_ARGS[@]}" \
   build 2>&1 | tail -25
 [ "${PIPESTATUS[0]}" -eq 0 ] || fail "The build failed. The lines above are Xcode's, not ours."
 
