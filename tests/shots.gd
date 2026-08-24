@@ -10,7 +10,7 @@ var index := 0
 var names := [
 	"01_title", "02_settings", "03_level_intro", "04_level1",
 	"05_level3", "06_effects", "07_wide_laser", "08_signal_lost", "09_crt", "10_field_cleared", "11_title_settling",
-	"12_capsules", "13_the_fuse", "14_the_core", "15_chart", "16_chart_done",
+	"12_capsules", "13_the_fuse", "14_the_core", "15_chart", "16_chart_done", "17_paused",
 ]
 
 
@@ -196,6 +196,16 @@ func _process(_delta: float) -> void:
 			game.star_map.focus = 11
 			game.star_map._fade = 1.0
 			game.star_map.reveal = 1.0
+		16:
+			get_node("/root/GameProgress").reset()
+			game._load_level(6)
+			game._set_state(Game.State.PLAYING)
+			game.score = 7300
+			game._refresh_hud()
+			game.hud.displayed_score = 7300.0
+			game.powerups._active = {"magnet": 12.0, "wide": 6.5}
+			game._on_screen_action("pause")
+			game.screens._fade = 1.0
 		13:
 			game._load_level(11)
 			game._set_state(Game.State.PLAYING)

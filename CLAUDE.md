@@ -822,3 +822,32 @@ mellem PLAY og level 1.
 **Zonen ender på kortet.** Før løb level 12 rundt til level 1, hvilket
 ikke sagde noget. Nu åbnes kortet med tom himmel, og konstellationen
 tegner sig selv, én linje ad gangen, med en tone til hver.
+
+---
+
+## Pause, som dokumentet ikke har
+
+Afsnit 16 beskriver, hvad der sker, når man dør, og afsnit 17 lukker
+listen over indstillinger. Ingen af dem nævner en pause, og indtil nu var
+den eneste vej ud af en bane at tabe tre liv med vilje. På en telefon er
+det ikke en regel, det er en fælde: der kommer et opkald, eller man har
+valgt den forkerte bane.
+
+Skærmen hedder HOLDING, ikke PAUSED. Telemetri, som afsnit 14 kræver.
+
+- **Knappen bor i panelet.** Dock-rækken har fire pladser og ender nu i en
+  kontrol. Feltet er der, hvor man spiller; panelet er der, hvor tallene
+  bor, og en knap hører til hos tallene. Rækkevidden er 46 px og vokser
+  opad, aldrig ned i feltet.
+- **Panelet er ikke feltet.** Et tryk, der begynder over murlinjen,
+  styrer ikke og affyrer ikke bolden. Det var en fejl i sig selv: en
+  tommelfinger på vej mod pauseknappen sendte bolden af sted.
+- **Skærmen dækker ikke banen.** Gardinet er lettere end indstillingernes,
+  og feltet står bagved. Til gengæld har oplysningerne deres eget mørke
+  felt, for lille tekst oven på klodser er tekst, man skal arbejde for.
+- **RESUME er den første knap.** En pause er ikke en menu, man mente at
+  åbne. Derefter RESTART FIELD, STAR CHART og SETTINGS.
+- **Indstillinger fra en pause vender tilbage til pausen**, ikke til
+  titlen. Ellers har pausen spist ens spil.
+- **Mister appen fokus, holder banen.** Et opkald, en notifikation, en
+  swipe. Bolden falder ikke, mens man er et andet sted.

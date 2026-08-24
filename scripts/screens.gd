@@ -9,7 +9,7 @@ extends Node2D
 
 signal action(name: String)
 
-enum Screen { NONE, TITLE, SETTINGS, LEVEL_INTRO, LEVEL_CLEAR, SIGNAL_LOST }
+enum Screen { NONE, TITLE, SETTINGS, PAUSED, LEVEL_INTRO, LEVEL_CLEAR, SIGNAL_LOST }
 
 const FONT_BRAND := preload("res://assets/fonts/Unbounded-900.ttf")
 const FONT_DISPLAY := preload("res://assets/fonts/Unbounded-700.ttf")
@@ -141,6 +141,13 @@ func _layout() -> void:
 				Strings.text("SET_RESET_ARMED") if _reset_armed else Strings.text("SET_RESET"),
 				Vector2(cx, y + step * 5.0), w, EMBER if _reset_armed else SLATE)
 			_add_button("back", Strings.text("BTN_BACK"), Vector2(cx, y + step * 6.4), Vector2(180.0, 42.0), SLATE)
+		Screen.PAUSED:
+			# Three ways on, and the first is always the way back into
+			# the field: a pause screen is not a menu you meant to open.
+			_add_button("resume", Strings.text("BTN_RESUME"), Vector2(cx, 470.0), Vector2(240.0, 52.0), VOLT)
+			_add_button("restart", Strings.text("BTN_RESTART_FIELD"), Vector2(cx, 534.0), Vector2(240.0, 44.0), SLATE)
+			_add_button("chart", Strings.text("BTN_CHART"), Vector2(cx, 588.0), Vector2(240.0, 44.0), ICE)
+			_add_button("settings", Strings.text("BTN_SETTINGS"), Vector2(cx, 642.0), Vector2(240.0, 44.0), PULSE)
 		Screen.SIGNAL_LOST:
 			# Two ways on. There is no way back to a main menu from here.
 			var order := ["re_entry", "restart"]
@@ -240,6 +247,11 @@ func _draw() -> void:
 		Screen.SETTINGS:
 			_draw_curtain(0.9)
 			_draw_settings()
+		Screen.PAUSED:
+			# Lighter than the settings curtain. The field is still
+			# yours, and it should still be there behind the words.
+			_draw_curtain(0.7)
+			_draw_paused()
 		Screen.LEVEL_INTRO:
 			_draw_curtain(0.62)
 			_draw_level_intro()
@@ -303,6 +315,26 @@ func _draw_settings() -> void:
 	if _reset_armed:
 		note = Strings.text("NOTE_RESET")
 	_centered(FONT_UI, note, cx, 640.0, 8, EMBER if _reset_armed else SLATE, 1.4, false)
+
+
+func _draw_paused() -> void:
+	var cx := screen_size.x * 0.5
+	# The field stays visible on purpose, so the readout needs ground of
+	# its own. Small text over bricks is text you have to work at.
+	var panel := Color("0B0B12")
+	panel.a = 0.9
+	var box := Rect2(20.0, 318.0, screen_size.x - 40.0, 132.0)
+	draw_rect(box, panel)
+	var edge := VOLT
+	edge.a = 0.25
+	draw_rect(Rect2(box.position, Vector2(box.size.x, 1.0)), edge)
+	draw_rect(Rect2(Vector2(box.position.x, box.end.y - 1.0), Vector2(box.size.x, 1.0)), edge)
+	_centered(FONT_BRAND, Strings.text("PAUSED"), cx, 360.0, 30, BONE, 3.0, true)
+	_rule(cx, 382.0, 120.0, VOLT, 0.5)
+	_centered(FONT_UI, Strings.fmt("HUD_LEVEL_LINE",
+		[Strings.universe_short(zone_slug), level_number, level_title.to_upper()]),
+		cx, 406.0, 9, SLATE, 1.6, false)
+	_centered(FONT_SCORE, HUD.group_digits(final_score), cx, 434.0, 20, VOLT, 1.0, false)
 
 
 func _draw_level_intro() -> void:

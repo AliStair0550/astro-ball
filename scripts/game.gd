@@ -8,7 +8,7 @@ extends Node2D
 ## do not know what a level is, and the background only knows that
 ## something happened somewhere. It all meets here.
 
-enum State { TITLE, SETTINGS, STAR_MAP, LEVEL_INTRO, PLAYING, BALL_LOST, LEVEL_CLEAR, SIGNAL_LOST }
+enum State { TITLE, SETTINGS, STAR_MAP, PAUSED, LEVEL_INTRO, PLAYING, BALL_LOST, LEVEL_CLEAR, SIGNAL_LOST }
 
 const START_LIVES := LevelState.START_LIVES
 const MAX_BALLS := 6
@@ -74,6 +74,8 @@ var level_paths: PackedStringArray
 ## Section 10, level 11. Set per level, and not cleared by a power-up
 ## running out: the field is blind because it is that field.
 var _level_blind := false
+## Whether SETTINGS was opened from a paused field or from the title.
+var _settings_from_pause := false
 
 var _balls: Array[Ball] = []
 ## Section 16 and 19: a re-entry is free in the paid version and costs a
@@ -148,6 +150,8 @@ func _set_state(new_state: State) -> void:
 			overlay = Screens.Screen.TITLE
 		State.SETTINGS:
 			overlay = Screens.Screen.SETTINGS
+		State.PAUSED:
+			overlay = Screens.Screen.PAUSED
 		State.LEVEL_INTRO:
 			overlay = Screens.Screen.LEVEL_INTRO
 			_state_timer = LEVEL_INTRO_PAUSE
@@ -187,6 +191,7 @@ func _set_state(new_state: State) -> void:
 
 	var interactive := state == State.PLAYING
 	touch.enabled = interactive
+	touch.dead_zone_top = Arena.HUD_HEIGHT
 	if not interactive:
 		# A finger that dismissed a screen must not also steer or launch.
 		touch.reset()
@@ -213,6 +218,9 @@ func _on_screen_action(name: String) -> void:
 		"chart":
 			audio.play("ui_select")
 			_open_chart(false)
+		"pause":
+			audio.play("ui_move", 0.8, -4.0)
+			_set_state(State.PAUSED)
 		"re_entry":
 			audio.play("ui_select")
 			continue_gate.request(_re_entries_used())
@@ -229,13 +237,23 @@ func _on_screen_action(name: String) -> void:
 			GameProgress.reset()
 		"settings":
 			audio.play("ui_select")
+			# Settings from a paused field must come back to the field,
+			# not to the title, or the pause has eaten the run.
+			_settings_from_pause = state == State.PAUSED
 			_set_state(State.SETTINGS)
+		"resume":
+			audio.play("ui_select")
+			_set_state(State.PLAYING)
 		"menu":
 			audio.play("ui_back")
 			_set_state(State.TITLE)
 		"back":
 			audio.play("ui_back")
-			_set_state(State.TITLE)
+			if _settings_from_pause:
+				_settings_from_pause = false
+				_set_state(State.PAUSED)
+			else:
+				_set_state(State.TITLE)
 		"skip":
 			if state == State.LEVEL_INTRO:
 				_begin_level()
@@ -333,7 +351,11 @@ func _on_map_action(name: String) -> void:
 			audio.play("combo", 0.9 + 0.03 * float(star_map._lines_drawn), -6.0)
 		"back":
 			audio.play("ui_back")
-			_set_state(State.TITLE)
+			if _settings_from_pause:
+				_settings_from_pause = false
+				_set_state(State.PAUSED)
+			else:
+				_set_state(State.TITLE)
 
 
 func _begin_level() -> void:
@@ -855,6 +877,32 @@ func _refresh_hud() -> void:
 	hud.best_score = GameProgress.high_score
 	hud.visible = state != State.TITLE and state != State.SETTINGS \
 		and state != State.SIGNAL_LOST and state != State.STAR_MAP
+
+
+## The pause control sits in the panel, above the field. TouchInput
+## ignores presses that start there, so this is the only thing listening.
+func _unhandled_input(event: InputEvent) -> void:
+	if state != State.PLAYING:
+		return
+	var point := Vector2.INF
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		point = event.position
+	elif event is InputEventScreenTouch and event.pressed:
+		point = event.position
+	if point == Vector2.INF or not hud.pause_touch_rect().has_point(point):
+		return
+	get_viewport().set_input_as_handled()
+	_on_screen_action("pause")
+
+
+## A phone call, a swipe up, a notification. Whatever took the screen,
+## the ball must not still be falling when it comes back.
+func _notification(what: int) -> void:
+	match what:
+		NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT, \
+		NOTIFICATION_APPLICATION_PAUSED:
+			if state == State.PLAYING:
+				_set_state(State.PAUSED)
 
 
 func _input(event: InputEvent) -> void:

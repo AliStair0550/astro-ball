@@ -35,6 +35,12 @@ gridAnchor      valgfrit px-offset i leveldata, positivt = længere ned
 Level-loaderen afviser et anker, der æder himlen eller fører muren
 forbi murlinjen.
 
+### Pause
+
+Dock-raekken ender i en pauseknap. Skaermen hedder HOLDING og har RESUME
+foerst, saa RESTART FIELD, STAR CHART og SETTINGS. Banen staar bagved.
+Mister appen fokus, holder banen af sig selv.
+
 ### Konstellationskortet
 
 Level-select er et stjernekort (afsnit 15). Tolv stjerner i form af en

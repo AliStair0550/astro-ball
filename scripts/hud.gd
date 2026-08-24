@@ -46,6 +46,13 @@ const DOCK_Y := 116.0
 const DOCK_HEIGHT := 26.0
 const DOCK_GAP := 6.0
 const DOCK_MARGIN := 10.0
+## The dock row ends in a control rather than a slot. A phone has no
+## other way out of a field, and a button that lives in the panel with
+## the score and the lives is a button the player can find.
+const PAUSE_W := 34.0
+## A finger is wider than the glyph. The reach goes up into the panel,
+## where there is nothing else to press.
+const PAUSE_TOUCH := 46.0
 
 var screen_size := Vector2(390.0, 844.0)
 
@@ -199,9 +206,23 @@ func _draw_combo(y: float) -> void:
 
 
 ## Four slots along the bottom. Active power-ups fill them from the left.
+## Where the pause control is drawn.
+func pause_rect() -> Rect2:
+	return Rect2(screen_size.x - DOCK_MARGIN - PAUSE_W, DOCK_Y, PAUSE_W, DOCK_HEIGHT)
+
+
+## Where a thumb may land on it.
+func pause_touch_rect() -> Rect2:
+	var box := pause_rect()
+	var grow_y := maxf(PAUSE_TOUCH - box.size.y, 0.0)
+	var grow_x := maxf(PAUSE_TOUCH - box.size.x, 0.0) * 0.5
+	# Downward would reach into the field, so the extra height goes up.
+	return Rect2(box.position - Vector2(grow_x, grow_y), box.size + Vector2(grow_x * 2.0, grow_y))
+
+
 func _draw_dock() -> void:
 	var total_gap := DOCK_GAP * float(DOCK_SLOTS - 1)
-	var slot_w := (screen_size.x - DOCK_MARGIN * 2.0 - total_gap) / float(DOCK_SLOTS)
+	var slot_w := (screen_size.x - DOCK_MARGIN * 2.0 - total_gap - PAUSE_W - DOCK_GAP) / float(DOCK_SLOTS)
 	var ids: Array[String] = []
 	for id in active:
 		if ids.size() < DOCK_SLOTS:
@@ -212,6 +233,23 @@ func _draw_dock() -> void:
 			_draw_dock_chip(box, ids[i])
 		else:
 			_draw_dock_empty(box)
+	_draw_pause()
+
+
+func _draw_pause() -> void:
+	var box := pause_rect()
+	var body := Color("15151F")
+	body.a = 0.9
+	draw_rect(box, body)
+	var edge := SLATE
+	edge.a = 0.45
+	draw_rect(Rect2(box.position, Vector2(box.size.x, 1.0)), edge)
+	draw_rect(Rect2(Vector2(box.position.x, box.end.y - 1.0), Vector2(box.size.x, 1.0)), edge)
+	var bar := BONE
+	bar.a = 0.75
+	var mid := box.get_center()
+	draw_rect(Rect2(mid + Vector2(-5.0, -6.0), Vector2(3.0, 12.0)), bar)
+	draw_rect(Rect2(mid + Vector2(2.0, -6.0), Vector2(3.0, 12.0)), bar)
 
 
 func _draw_dock_empty(box: Rect2) -> void:

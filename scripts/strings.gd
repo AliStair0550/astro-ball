@@ -51,6 +51,7 @@ const TABLE := {
 	"BTN_PLAY": "PLAY",
 	"BTN_CONTINUE": "CONTINUE",
 	"BTN_CHART": "STAR CHART",
+	"BTN_RESUME": "RESUME",
 	"BTN_SETTINGS": "SETTINGS",
 	"BTN_BACK": "BACK",
 	"BTN_RE_ENTRY": "RE-ENTRY",
@@ -75,6 +76,9 @@ const TABLE := {
 	"LEVEL_NUMBER": "LEVEL %d",
 	"HINT_BEGIN": "CLICK TO BEGIN",
 	"HINT_CONTINUE": "CLICK TO CONTINUE",
+
+	# --- Paused ----------------------------------------------------------
+	"PAUSED": "HOLDING",
 
 	# --- Star chart, section 15 ------------------------------------------
 	"MAP_TITLE": "STAR CHART",

@@ -56,6 +56,7 @@ func _run() -> void:
 	_test_level_progression()
 	_test_level_clear_freeze()
 	_test_scoring()
+	_test_pause()
 	_test_settings()
 	_test_audio_bank()
 	_test_english()
@@ -63,6 +64,78 @@ func _run() -> void:
 	print("--- LIFECYCLE: %d checks, %d failures ---" % [checks, fails])
 	await _teardown()
 	get_tree().quit(1 if fails > 0 else 0)
+
+
+## Section 16 has no way out of a field except dying. On a phone that is
+## not a rule, it is a trap: a call arrives, or the wrong field was
+## chosen, and the only exit is to lose three lives on purpose.
+func _test_pause() -> void:
+	game._start_new_game()
+	game._begin_level()
+	eq(game.state, Game.State.PLAYING, "a field is running")
+	var ball: Ball = game._balls[0]
+	ok(not ball.frozen, "and the ball is live")
+
+	# The control is in the panel, and a thumb can find it.
+	var reach := game.hud.pause_touch_rect()
+	ok(reach.size.x >= 44.0 and reach.size.y >= 44.0,
+		"the pause control is thumb sized (%.0f x %.0f)" % [reach.size.x, reach.size.y])
+	ok(reach.end.y <= Arena.HUD_HEIGHT + 0.01,
+		"and it never reaches down into the field (%.0f against %.0f)"
+		% [reach.end.y, Arena.HUD_HEIGHT])
+	ok(reach.end.x <= Arena.SCREEN.x, "nor off the side of the screen")
+
+	# A press on it holds the field.
+	var press := InputEventScreenTouch.new()
+	press.pressed = true
+	press.position = game.hud.pause_rect().get_center()
+	game._unhandled_input(press)
+	eq(game.state, Game.State.PAUSED, "a press on it holds the field")
+	ok(ball.frozen, "the ball stops where it was")
+	ok(not game.touch.enabled, "and the field stops listening")
+	ok(game.grid.visible, "the field stays visible behind the words")
+
+	# And the way back in is the first thing on the screen.
+	var ids := []
+	for button in game.screens._buttons:
+		ids.append(str(button["id"]))
+	eq(ids[0], "resume", "the way back into the field is the first button")
+	ok(ids.has("chart") and ids.has("restart"), "with a way out beside it")
+	game._on_screen_action("resume")
+	eq(game.state, Game.State.PLAYING, "and it goes back in")
+	ok(not ball.frozen, "with the ball live again")
+
+	# Settings from a held field comes back to the field, not the title.
+	game._on_screen_action("pause")
+	game._on_screen_action("settings")
+	eq(game.state, Game.State.SETTINGS, "settings opens from a held field")
+	game._on_screen_action("back")
+	eq(game.state, Game.State.PAUSED, "and comes back to it")
+	game._on_screen_action("back")
+	eq(game.state, Game.State.TITLE, "while settings from the title goes back to the title")
+
+	# Whatever takes the screen, the ball is not still falling.
+	game._start_new_game()
+	game._begin_level()
+	game._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	eq(game.state, Game.State.PAUSED, "losing focus holds the field")
+	game._on_screen_action("resume")
+	game._set_state(Game.State.TITLE)
+	game._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	eq(game.state, Game.State.TITLE, "and losing focus on the title does nothing")
+
+	# The panel is not the field: a press up there is not a launch.
+	var touch := game.touch
+	touch.reset()
+	touch.enabled = true
+	var launched := {"count": 0}
+	touch.tapped.connect(func() -> void: launched["count"] += 1)
+	touch._press(0, Vector2(360.0, 128.0))
+	touch._release(0)
+	eq(launched["count"], 0, "a press in the panel does not fire the ball")
+	touch._press(0, Vector2(195.0, 600.0))
+	touch._release(0)
+	eq(launched["count"], 1, "a press in the field still does")
 
 
 ## The game opens on the title screen, not in the middle of a field.

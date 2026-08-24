@@ -33,6 +33,10 @@ const ACCEL_TO := 2600.0
 
 ## Off while a screen is up, so a tap on a button does not also steer.
 var enabled := true
+## Presses that begin inside the panel are not steering and are not a
+## launch. The panel holds the pause control, and a thumb that reaches
+## for it must not fire the ball on the way.
+var dead_zone_top := 0.0
 ## True once the device has produced a real touch. The paddle stops
 ## following the mouse from that moment.
 var seen_touch := false
@@ -71,6 +75,8 @@ func _input(event: InputEvent) -> void:
 
 
 func _press(index: int, at: Vector2) -> void:
+	if at.y < dead_zone_top:
+		return
 	_fingers[index] = {
 		"start": at,
 		"started_ms": float(Time.get_ticks_msec()),
