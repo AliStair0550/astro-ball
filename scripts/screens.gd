@@ -58,6 +58,9 @@ var re_entry_costs_ad := false
 ## {"name", "note", "open", "levels", "cleared"}.
 var universes: Array[Dictionary] = []
 var _reset_armed := false
+## Once a finger has touched the screen, the mouse is a fiction Godot
+## keeps up for us, and following it lights up buttons nobody is over.
+var _touch_seen := false
 
 var _buttons: Array[Dictionary] = []
 var _hover := -1
@@ -121,19 +124,20 @@ func _layout() -> void:
 			_add_button("settings", Strings.text("BTN_SETTINGS"),
 				Vector2(cx, 582.0), Vector2(240.0, 46.0), PULSE)
 		Screen.UNIVERSES:
-			# One tile per universe, in order. The open one is a button;
-			# the rest are there to be seen, not pressed.
-			var y := 300.0
+			# One place per universe, down the path that runs inward
+			# through the system. The open one is a button; the rest are
+			# there to be seen, not pressed.
+			var y := 286.0
 			for i in universes.size():
 				var entry: Dictionary = universes[i]
 				var open := bool(entry.get("open", false))
 				var value := str(entry.get("note", ""))
 				_add_button("universe_%d" % (i + 1), str(entry.get("name", "")),
-					Vector2(cx, y + float(i) * 66.0), Vector2(300.0, 56.0),
-					VOLT if open else Color("3A3A48"),
+					Vector2(cx, y + float(i) * 76.0), Vector2(320.0, 66.0),
+					Cosmos.tint_of(i),
 					"%s · %s" % [Strings.fmt("UNIVERSE_NUMBER", [i + 1]), value], open)
 			_add_button("back", Strings.text("BTN_BACK"),
-				Vector2(cx, y + float(universes.size()) * 66.0 + 8.0), Vector2(180.0, 42.0), SLATE)
+				Vector2(cx, y + float(universes.size()) * 76.0 + 6.0), Vector2(180.0, 42.0), SLATE)
 		Screen.SETTINGS:
 			var s := _settings()
 			var y := 262.0
@@ -204,27 +208,42 @@ func _process(delta: float) -> void:
 	_time += delta
 	_fade = minf(1.0, _fade + delta * 7.0)
 
-	var mouse := get_viewport().get_mouse_position()
-	var was := _hover
-	_hover = -1
-	for i in _buttons.size():
-		if Rect2(_buttons[i]["rect"]).has_point(mouse):
-			_hover = i
-			break
-	if _hover != was and _hover >= 0:
-		action.emit("hover")
+	if not _touch_seen:
+		var mouse := get_viewport().get_mouse_position()
+		var was := _hover
+		_hover = button_at(mouse)
+		if _hover != was and _hover >= 0:
+			action.emit("hover")
 	queue_redraw()
 
 
+## Which button is under a point, or -1.
+func button_at(point: Vector2) -> int:
+	for i in _buttons.size():
+		if Rect2(_buttons[i]["rect"]).has_point(point):
+			return i
+	return -1
+
+
+## The press acts on where the finger landed, never on _hover.
+##
+## _hover is worked out once a frame from the mouse position, and on a
+## touch screen there is no mouse until a finger arrives. So the first
+## press of a screen found _hover still -1 and did nothing, and the
+## second one worked: every button needed pressing twice. Worse, after
+## coming back from settings _hover still held the button that had been
+## under the last press, so pressing START GAME opened settings again.
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
-	var pressed := false
+	var point := Vector2.INF
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		pressed = true
+		point = event.position
 	elif event is InputEventScreenTouch and event.pressed:
-		pressed = true
-	if not pressed:
+		point = event.position
+		_touch_seen = true
+		_hover = -1
+	if point == Vector2.INF:
 		return
 
 	if current == Screen.LEVEL_INTRO or current == Screen.LEVEL_CLEAR:
@@ -232,8 +251,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 
-	if _hover >= 0:
-		var id := str(_buttons[_hover]["id"])
+	var index := button_at(point)
+	if index >= 0:
+		_hover = index
+		var id := str(_buttons[index]["id"])
 		if id == "reset_progress" and not _reset_armed:
 			# Two presses. Erasing progress is not a thing you do by
 			# brushing past a button.
@@ -247,6 +268,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		action.emit(id)
 		get_viewport().set_input_as_handled()
 		_layout()
+		# The layout that follows belongs to a screen the finger has
+		# never been near, so nothing is under it until it moves again.
+		_hover = -1
 
 
 # --- Drawing -----------------------------------------------------------
@@ -257,7 +281,7 @@ func _draw() -> void:
 			_draw_curtain_in(0.82)
 			_draw_title()
 		Screen.UNIVERSES:
-			_draw_curtain(0.9)
+			_draw_curtain(0.78)
 			_draw_universes()
 		Screen.SETTINGS:
 			_draw_curtain(0.9)
@@ -343,50 +367,76 @@ func _draw_title() -> void:
 
 func _draw_universes() -> void:
 	var cx := screen_size.x * 0.5
+	# The wash of whichever place the finger is over, so the screen takes
+	# a temperature from what you are about to enter.
+	var focus := _hover
+	if focus >= 0 and focus < universes.size():
+		Cosmos.draw_wash(self, Vector2(cx, 200.0 + float(focus) * 76.0), 260.0,
+			Cosmos.tint_of(focus), 0.10)
 	_centered(FONT_BRAND, Strings.text("UNIVERSE_SELECT"), cx, 232.0, 19, PULSE, 2.2, true)
 	_rule(cx, 250.0, 130.0, PULSE, 0.45)
+
+	# The path inward. Section 1: you break through, zone by zone, toward
+	# the centre of the system, and the line says so before the names do.
+	var tiles: Array[Rect2] = []
+	for button in _buttons:
+		if str(button["id"]).begins_with("universe_"):
+			tiles.append(Rect2(button["rect"]))
+	if tiles.size() >= 2:
+		var x := tiles[0].position.x + 42.0
+		var top := tiles[0].get_center().y
+		var bottom := tiles[tiles.size() - 1].get_center().y
+		var path := Color("2A2A3A")
+		draw_line(Vector2(x, top), Vector2(x, bottom), path, 1.0)
 
 
 ## A universe is a place with a name and a line about where you are in
 ## it. The name gets the row; the line sits under it. Nothing shares a
 ## line with anything else, which is what went wrong when this borrowed
 ## the settings row and the two texts met in the middle.
+## A universe is a place. It gets its own sky, its own light, and a name
+## beside it. A row with a label on it is a filing system.
 func _draw_universe_tile(button: Dictionary, hovered: bool) -> void:
 	var rect := Rect2(button["rect"])
 	var tint: Color = button["tint"]
 	var open := bool(button.get("value_on", false))
+	var index := int(str(button["id"]).get_slice("_", 1)) - 1
+	var lit := 1.0 if open else 0.30
 
 	var bg := PANEL
-	bg.a = 0.95 if open else 0.7
+	bg.a = 0.88 if open else 0.55
 	draw_rect(rect, bg)
+	if open:
+		var wash := tint
+		wash.a = 0.05 + (0.05 if hovered else 0.0)
+		draw_rect(rect, wash)
 	if hovered and open:
 		var glow := tint
 		for i in 3:
-			glow.a = 0.10 - float(i) * 0.028
+			glow.a = 0.09 - float(i) * 0.026
 			draw_rect(rect.grow(2.0 + float(i) * 3.0), glow)
-		var fill := tint
-		fill.a = 0.14
-		draw_rect(rect, fill)
 	draw_rect(rect, tint if hovered and open else EDGE, false, 1.0)
-	# A lit spine on the open one, so the eye finds it without reading.
-	if open:
-		var spine := tint
-		spine.a = 0.9
-		draw_rect(Rect2(rect.position, Vector2(3.0, rect.size.y)), spine)
 
-	_tracked(FONT_DISPLAY, str(button["label"]), Vector2(rect.position.x + 16.0,
-		rect.get_center().y - 1.0), 15, BONE if open else SLATE, 2.0)
-	_tracked(FONT_UI, str(button["value"]), Vector2(rect.position.x + 16.0,
-		rect.get_center().y + 16.0), 8, VOLT if open else Color("4A4A58"), 1.8)
+	var body_at := Vector2(rect.position.x + 42.0, rect.get_center().y)
+	Cosmos.draw_body(self, index, body_at, 24.0, lit, _time + float(index) * 3.0)
+
+	var text_x := rect.position.x + 82.0
+	_tracked(FONT_DISPLAY, str(button["label"]),
+		Vector2(text_x, rect.get_center().y - 1.0), 15, BONE if open else SLATE, 2.0)
+	_tracked(FONT_UI, str(button["value"]),
+		Vector2(text_x, rect.get_center().y + 16.0), 8,
+		tint if open else Color("4A4A58"), 1.8)
 
 	# The way in, drawn rather than written.
 	if open:
 		var arrow := tint
-		arrow.a = 0.85 if hovered else 0.55
-		var at := Vector2(rect.end.x - 22.0, rect.get_center().y)
+		arrow.a = 0.9 if hovered else 0.6
+		var at := Vector2(rect.end.x - 20.0, rect.get_center().y)
+		var nudge := 2.0 * (1.0 if hovered else 0.0)
 		draw_colored_polygon(PackedVector2Array([
-			at + Vector2(-3.0, -7.0), at + Vector2(5.0, 0.0), at + Vector2(-3.0, 7.0),
-			at + Vector2(-6.0, 4.0), at + Vector2(-1.0, 0.0), at + Vector2(-6.0, -4.0),
+			at + Vector2(-3.0 + nudge, -7.0), at + Vector2(5.0 + nudge, 0.0),
+			at + Vector2(-3.0 + nudge, 7.0), at + Vector2(-6.0 + nudge, 4.0),
+			at + Vector2(-1.0 + nudge, 0.0), at + Vector2(-6.0 + nudge, -4.0),
 		]), arrow)
 
 

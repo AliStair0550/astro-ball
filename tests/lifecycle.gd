@@ -59,6 +59,7 @@ func _run() -> void:
 	_test_level_progression()
 	_test_level_clear_freeze()
 	_test_scoring()
+	_test_screen_presses()
 	_test_pause()
 	_test_settings()
 	_test_audio_bank()
@@ -68,6 +69,56 @@ func _run() -> void:
 	print("--- LIFECYCLE: %d checks, %d failures ---" % [checks, fails])
 	await _teardown()
 	get_tree().quit(1 if fails > 0 else 0)
+
+
+## One press, on the thing under the finger.
+##
+## Both of these shipped: every button needed pressing twice, and after
+## a trip into settings the title's START GAME opened settings again.
+## The press was acting on _hover, which is worked out once a frame from
+## the mouse position, and on a phone there is no mouse until a finger
+## has already arrived somewhere.
+func _test_screen_presses() -> void:
+	game._set_state(Game.State.TITLE)
+	eq(_press_button("play"), true, "START GAME is on the title")
+	eq(game.state, Game.State.UNIVERSES, "and one press is enough")
+
+	game._set_state(Game.State.TITLE)
+	_press_button("settings")
+	eq(game.state, Game.State.SETTINGS, "one press opens settings")
+	_press_button("back")
+	eq(game.state, Game.State.TITLE, "one press comes back")
+	_press_button("play")
+	eq(game.state, Game.State.UNIVERSES,
+		"and START GAME is still START GAME after a trip through settings")
+
+	# A press on nothing is a press on nothing, whatever was last hovered.
+	game._set_state(Game.State.TITLE)
+	_press_at(Vector2(20.0, 800.0))
+	eq(game.state, Game.State.TITLE, "a press on empty screen does nothing")
+
+	# The same again on the universe list, which is three presses deep.
+	game._set_state(Game.State.UNIVERSES)
+	_press_button("universe_1")
+	eq(game.state, Game.State.STAR_MAP, "one press enters a universe")
+	game._set_state(Game.State.TITLE)
+
+
+## Presses the button with this id where it actually sits. Returns false
+## if the screen does not have it.
+func _press_button(id: String) -> bool:
+	for button in game.screens._buttons:
+		if str(button["id"]) == id:
+			_press_at(Rect2(button["rect"]).get_center())
+			return true
+	return false
+
+
+func _press_at(point: Vector2) -> void:
+	var press := InputEventScreenTouch.new()
+	press.pressed = true
+	press.position = point
+	game.screens._unhandled_input(press)
 
 
 ## Section 16 has no way out of a field except dying. On a phone that is

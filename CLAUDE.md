@@ -987,3 +987,44 @@ den, og det er også en test. The Constellation blev tegnet om undervejs,
 så båndene rører hinanden: en kæde kan ikke springe over en tom række,
 og konstellationen er nu det, der bliver stående, i stedet for et lag
 for sig.
+
+---
+
+## To tryk, og den forkerte knap
+
+Begge dele var i den byggede app. Hver knap skulle trykkes to gange, og
+efter en tur i indstillingerne åbnede START GAME indstillingerne igen.
+
+Samme årsag: trykket handlede på `_hover`, som regnes ud én gang pr.
+frame ud fra musens position. På en telefon er der ingen mus, før en
+finger allerede er landet et sted. Første tryk fandt `_hover` = -1 og
+gjorde ingenting; andet tryk virkede. Og på vej tilbage fra
+indstillingerne stod `_hover` stadig på den knap, der havde været under
+det sidste tryk — som på titlen er der, hvor SETTINGS ligger.
+
+Trykket handler nu på, hvor fingeren landede. `_hover` er kun lys, og
+den følger kun musen, indtil en finger har bevist, at der ikke er nogen.
+To tests trykker på koordinater uden nogensinde at røre en mus.
+
+## Universerne er steder, ikke rækker
+
+Efter PLAY møder man fem himmellegemer i stedet for fem etiketter: et
+bælte af sten, der driver rundt om en mørk kerne; en verden med et
+ringplan; en korona med en protuberans stående ud fra sig; en violet sky
+med tre stjerner fanget indeni; og et hul med en skive af lys, der falder
+i. Alle fem er tegnet i kode (`scripts/cosmos.gd`), fordi alternativet er
+fem billedfiler, ingen kan rette.
+
+Linjen ned gennem dem er vejen indad, som afsnit 1 beskriver. De fire
+lukkede står med 30 procent lys: man skal kunne se, hvor spillet er på
+vej hen.
+
+Levellisten har fået universets egen farve bag sig, og ruten tegnes, som
+den flyves: en linje mellem to levels, når begge er klaret. Selve
+konstellationen venter stadig på, at hele universet er ryddet. En bane
+taget med alle tre stjerner får et kryds af lys — det er det eneste
+mærke på kortet, der siger perfekt.
+
+Navnet `Sky` var optaget af Godot selv, og den slags kollision viser sig
+som "Static function not found in base GDScriptNativeClass". Klassen
+hedder `Cosmos`.

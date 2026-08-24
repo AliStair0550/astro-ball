@@ -80,6 +80,7 @@ var _time := 0.0
 var _fade := 0.0
 var _hover := -1
 var _lines_drawn := 0
+var _touch_seen := false
 
 
 func _ready() -> void:
@@ -176,18 +177,19 @@ func _process(delta: float) -> void:
 			_lines_drawn = drawn
 			action.emit("line_drawn")
 
-	var mouse := get_viewport().get_mouse_position()
-	var was := _hover
-	_hover = -1
-	for i in _buttons.size():
-		if Rect2(_buttons[i]["rect"]).has_point(mouse):
-			_hover = i
-	var over := field_at(mouse)
-	if over >= 0 and over != focus:
-		focus = over
-		action.emit("hover")
-	if _hover != was and _hover >= 0:
-		action.emit("hover")
+	if not _touch_seen:
+		var mouse := get_viewport().get_mouse_position()
+		var was := _hover
+		_hover = -1
+		for i in _buttons.size():
+			if Rect2(_buttons[i]["rect"]).has_point(mouse):
+				_hover = i
+		var over := field_at(mouse)
+		if over >= 0 and over != focus:
+			focus = over
+			action.emit("hover")
+		if _hover != was and _hover >= 0:
+			action.emit("hover")
 	queue_redraw()
 
 
@@ -199,6 +201,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		point = event.position
 	elif event is InputEventScreenTouch and event.pressed:
 		point = event.position
+		_touch_seen = true
+		_hover = -1
 	else:
 		return
 
@@ -223,10 +227,19 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	var curtain := VOID
-	curtain.a = 0.88 * _fade
+	curtain.a = 0.80 * _fade
 	draw_rect(Rect2(Vector2.ZERO, screen_size), curtain)
 
+	# The universe's own colour, hanging behind its levels. Two clouds,
+	# drifting at different rates, so the sky is not a flat sheet.
+	var tint := Cosmos.tint_of(Strings.universe_index(zone_slug) - 1)
+	Cosmos.draw_wash(self, Vector2(screen_size.x * 0.30 + sin(_time * 0.11) * 12.0, 470.0),
+		250.0, tint, 0.10 * _fade)
+	Cosmos.draw_wash(self, Vector2(screen_size.x * 0.72 + cos(_time * 0.08) * 10.0, 300.0),
+		210.0, tint.lerp(PULSE, 0.5), 0.09 * _fade)
+
 	_draw_header()
+	_draw_route()
 	_draw_edges()
 	for i in mini(fields.size(), NODES.size()):
 		_draw_node(i)
@@ -236,12 +249,14 @@ func _draw() -> void:
 
 
 func _draw_header() -> void:
-	# The place, then the number of it. A player who came here through
-	# the universe list already knows where they are; the header confirms
-	# it rather than introducing a second name for the same thing.
-	_text(FONT_BRAND, Strings.zone_name(zone_slug), Vector2(screen_size.x * 0.5, 128.0), 24, PULSE, true)
-	_text(FONT_UI, Strings.fmt("UNIVERSE_NUMBER", [Strings.universe_index(zone_slug)]),
-		Vector2(screen_size.x * 0.5, 150.0), 9, SLATE, true)
+	# The place you pressed, still there, so the two screens are the same
+	# journey rather than two menus.
+	var index := Strings.universe_index(zone_slug) - 1
+	Cosmos.draw_body(self, index, Vector2(56.0, 138.0), 22.0, 1.0, _time)
+	_text(FONT_BRAND, Strings.zone_name(zone_slug), Vector2(screen_size.x * 0.5 + 20.0, 132.0),
+		23, PULSE, true)
+	_text(FONT_UI, Strings.fmt("UNIVERSE_NUMBER", [index + 1]),
+		Vector2(screen_size.x * 0.5 + 20.0, 154.0), 9, SLATE, true)
 
 	# The tally, so the chart is also the answer to "how far am I".
 	var stars := 0
@@ -254,6 +269,23 @@ func _draw_header() -> void:
 		var mark := ICE
 		mark.a = 0.55 + 0.35 * sin(_time * 2.0)
 		_text(FONT_UI, Strings.text("MAP_COMPLETE"), Vector2(screen_size.x * 0.5, 204.0), 9, mark, true)
+
+
+## The route, drawn as it is flown. A line appears between two levels
+## once both of them have fallen, so the chart fills in behind the
+## player. The figure itself still waits for the whole universe: this is
+## the flight path, not the constellation.
+func _draw_route() -> void:
+	if reveal >= 1.0:
+		return
+	for i in range(1, mini(fields.size(), NODES.size())):
+		if not bool(fields[i]["cleared"]) or not bool(fields[i - 1]["cleared"]):
+			continue
+		var line := Cosmos.tint_of(Strings.universe_index(zone_slug) - 1)
+		line.a = 0.10
+		draw_line(NODES[i - 1], NODES[i], line, 4.0)
+		line.a = 0.32
+		draw_line(NODES[i - 1], NODES[i], line, 1.0)
 
 
 func _draw_edges() -> void:
@@ -298,6 +330,15 @@ func _draw_node(index: int) -> void:
 		for ring in 3:
 			glow.a = (0.13 + 0.05 * float(stars)) / float(ring + 1)
 			_diamond(at, 9.0 + float(ring) * 5.0 + float(stars) * 2.0, glow)
+		# Three of three gets a cross of light. It is the only mark on
+		# the chart that says perfect, and it should be visible from the
+		# other side of the screen.
+		if stars >= 3:
+			var flare := VOLT
+			var reach := 15.0 + 2.0 * sin(_time * 1.7 + float(index))
+			flare.a = 0.5
+			draw_line(at - Vector2(reach, 0.0), at + Vector2(reach, 0.0), flare, 1.0)
+			draw_line(at - Vector2(0.0, reach), at + Vector2(0.0, reach), flare, 1.0)
 		_diamond(at, 6.0, VOLT if stars >= 3 else BONE)
 	else:
 		# Reached but not taken: an outline that breathes.
