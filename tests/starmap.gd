@@ -3,6 +3,8 @@ extends Node
 ## Section 15: the star chart. The layout has to survive a thumb, the
 ## figure has to be a figure, and the zone has to end on it.
 
+const SaveGuard := preload("res://tests/save_guard.gd")
+
 var game: Game
 var fails := 0
 var checks := 0
@@ -10,6 +12,7 @@ var checks := 0
 
 func _ready() -> void:
 	seed(1509)
+	SaveGuard.stash()
 	var scene: Node = load("res://scenes/game.tscn").instantiate()
 	add_child(scene)
 	game = scene as Game
@@ -38,6 +41,7 @@ func _run() -> void:
 	_test_strings()
 	await _test_flow()
 
+	SaveGuard.restore()
 	print("--- STAR MAP: %d checks, %d failures ---" % [checks, fails])
 	game.audio.stop_all()
 	await get_tree().create_timer(0.4).timeout

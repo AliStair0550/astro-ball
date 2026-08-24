@@ -2,6 +2,8 @@ extends Node
 
 ## The game's states: lives, signal lost, level progression, speed ramp.
 
+const SaveGuard := preload("res://tests/save_guard.gd")
+
 var game: Game
 var fails := 0
 var checks := 0
@@ -9,6 +11,7 @@ var checks := 0
 
 func _ready() -> void:
 	seed(11)
+	SaveGuard.stash()
 	var scene: Node = load("res://scenes/game.tscn").instantiate()
 	add_child(scene)
 	game = scene as Game
@@ -61,6 +64,7 @@ func _run() -> void:
 	_test_audio_bank()
 	_test_english()
 
+	SaveGuard.restore()
 	print("--- LIFECYCLE: %d checks, %d failures ---" % [checks, fails])
 	await _teardown()
 	get_tree().quit(1 if fails > 0 else 0)

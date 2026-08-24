@@ -851,3 +851,34 @@ Skærmen hedder HOLDING, ikke PAUSED. Telemetri, som afsnit 14 kræver.
   titlen. Ellers har pausen spist ens spil.
 - **Mister appen fokus, holder banen.** Et opkald, en notifikation, en
   swipe. Bolden falder ikke, mens man er et andet sted.
+
+---
+
+## Vejen ind
+
+Motorens egen opstartsskærm er et gråt kort med Godot-logoet på, og den
+sad mellem hjemmeskærmen og spillet. Nu er den malet i spillets egen
+void, uden billede, og iOS' launch screen har samme farve. Fra man
+trykker på ikonet til stjernefeltet er der én ubrudt mørk flade.
+
+Titlen kommer den anden vej end de andre skærme: gardinet starter massivt
+og letter til sin normale vægt, i stedet for at fange himlen på fuld
+styrke og dæmpe den. Navnet venter de første 220 ms, for der er intet at
+se gennem en massiv skærm.
+
+Indstillingerne står i `project.godot` og `export_presets.cfg`, som
+Godot-editoren skriver over fra sin hukommelse, når den lukker. Derfor
+tjekker både testene og `deploy.sh` dem: et logo, der stille kom tilbage,
+ville først vise sig på en telefon.
+
+## Testene spiste den gemte progression
+
+Suiterne deler `user://` med spillet. phase3 nulstiller, stjernekortet
+nulstiller, og autopiloten gennemfører tolv baner hver eneste kørsel. Én
+kørsel, og det, spilleren havde på maskinen, var væk. Ikke et crash, ikke
+et fejlet tjek: bare en gemt fil, der stille blev til testdata.
+
+`tests/save_guard.gd` lægger filen til side, kører suiten på en tom
+gemmefil, og lægger den tilbage bagefter. Suiten er samtidig blevet
+deterministisk: en maskine, hvor nogen har spillet, giver nu samme
+resultat som en frisk.

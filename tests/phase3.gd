@@ -3,6 +3,8 @@ extends Node
 ## Phase 3: the level system, the power-up rules, stars and progress,
 ## the quiet helper, Giant, and the strings file.
 
+const SaveGuard := preload("res://tests/save_guard.gd")
+
 var fails := 0
 var checks := 0
 var grid: BrickGrid
@@ -11,6 +13,7 @@ var progress: Node
 
 func _ready() -> void:
 	seed(90210)
+	SaveGuard.stash()
 	progress = get_node("/root/GameProgress")
 	grid = BrickGrid.new()
 	add_child(grid)
@@ -28,6 +31,7 @@ func _ready() -> void:
 	_test_review_regressions()
 	_test_continue_gate()
 
+	SaveGuard.restore()
 	print("--- PHASE 3: %d checks, %d failures ---" % [checks, fails])
 	for child in get_children():
 		child.free()

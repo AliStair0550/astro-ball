@@ -10,6 +10,8 @@ extends Node
 const SPEEDUP := 6.0
 const MAX_SECONDS := 2600.0
 
+const SaveGuard := preload("res://tests/save_guard.gd")
+
 var game: Game
 var frames := 0
 var errors: Array[String] = []
@@ -31,6 +33,7 @@ var done := false
 
 func _ready() -> void:
 	seed(99)
+	SaveGuard.stash()
 	Engine.time_scale = SPEEDUP
 	Engine.physics_ticks_per_second = int(60.0 * SPEEDUP)
 	Engine.max_physics_steps_per_frame = 16
@@ -171,6 +174,7 @@ func _report() -> void:
 	print("failures:          %d" % errors.size())
 	for e in errors:
 		print("   " + e)
+	SaveGuard.restore()
 	await _teardown()
 	get_tree().quit(1 if errors.size() > 0 else 0)
 

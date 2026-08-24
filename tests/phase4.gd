@@ -19,6 +19,7 @@ func _ready() -> void:
 	_test_touch_events()
 	_test_safe_area()
 	_test_haptics()
+	_test_launch()
 	print("--- PHASE 4: %d checks, %d failures ---" % [checks, fails])
 	for child in get_children():
 		child.free()
@@ -316,3 +317,47 @@ func _test_haptics() -> void:
 	settings.haptics = was
 	settings.save_settings()
 	feel.queue_free()
+
+
+## The way in. The engine's own boot screen is a grey card with a logo on
+## it, and it sits between the home screen and the game. These settings
+## paint it in the game's own void instead, and the title screen opens
+## out of that same darkness. The values are asserted because the Godot
+## editor rewrites project.godot from memory when it closes, and a
+## silently restored logo would only show up on a device.
+func _test_launch() -> void:
+	var void_color := Color("07070C")
+	ok(not bool(ProjectSettings.get_setting("application/boot_splash/show_image", true)),
+		"no engine logo on the way in")
+	var splash: Color = ProjectSettings.get_setting("application/boot_splash/bg_color", Color.BLACK)
+	ok(splash.is_equal_approx(void_color),
+		"the boot screen is the game's own void (%s)" % splash.to_html(false))
+	var clear: Color = ProjectSettings.get_setting("rendering/environment/defaults/default_clear_color", Color.BLACK)
+	ok(clear.is_equal_approx(void_color), "and so is the first thing the renderer paints")
+	ok(int(ProjectSettings.get_setting("application/boot_splash/minimum_display_time", 0)) == 0,
+		"nothing is held on screen on purpose")
+
+	# iOS shows its own launch screen before Godot gets a frame. It is
+	# generated at export time from the preset, so the preset has to
+	# agree with the two settings above or there is a seam.
+	var cfg := ConfigFile.new()
+	ok(cfg.load("res://export_presets.cfg") == OK, "the iOS preset is readable")
+	ok(bool(cfg.get_value("preset.0.options", "storyboard/use_custom_bg_color", false)),
+		"the iOS launch screen sets its own colour")
+	var story: Color = cfg.get_value("preset.0.options", "storyboard/custom_bg_color", Color.BLACK)
+	ok(story.is_equal_approx(void_color),
+		"and it is the same void as the rest (%s)" % story.to_html(false))
+	ok(str(cfg.get_value("preset.0.options", "storyboard/custom_image@2x", "")).is_empty(),
+		"with no image on it")
+
+	# And the first frame the player actually sees is that same darkness:
+	# the title's curtain starts solid and settles, rather than catching
+	# the sky at full brightness and dimming it.
+	var screens := Screens.new()
+	add_child(screens)
+	screens.show_screen(Screens.Screen.TITLE)
+	screens._fade = 0.0
+	ok(screens.curtain_alpha(0.82) >= 0.999, "the title opens solid")
+	screens._fade = 1.0
+	ok(absf(screens.curtain_alpha(0.82) - 0.82) < 0.001, "and settles to its normal weight")
+	screens.queue_free()

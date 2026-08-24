@@ -242,7 +242,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _draw() -> void:
 	match current:
 		Screen.TITLE:
-			_draw_curtain(0.82)
+			_draw_curtain_in(0.82)
 			_draw_title()
 		Screen.SETTINGS:
 			_draw_curtain(0.9)
@@ -276,6 +276,20 @@ func _draw_curtain(strength: float) -> void:
 	draw_rect(Rect2(-20.0, -20.0, screen_size.x + 40.0, screen_size.y + 40.0), c)
 
 
+## The title comes the other way: solid at first, settling to its normal
+## weight. The app opens on the same void the boot screen is painted in,
+## so there is no seam between the two, and the sky arrives rather than
+## being caught mid-dim.
+func _draw_curtain_in(strength: float) -> void:
+	var c := VOID
+	c.a = curtain_alpha(strength)
+	draw_rect(Rect2(-20.0, -20.0, screen_size.x + 40.0, screen_size.y + 40.0), c)
+
+
+func curtain_alpha(strength: float) -> float:
+	return lerpf(1.0, strength, _fade)
+
+
 ## The name arrives rather than simply being there. Two lines rising a
 ## beat apart, then the rule drawing itself, then the tagline. Under a
 ## second in total, and it is the difference between a screen and an
@@ -283,10 +297,13 @@ func _draw_curtain(strength: float) -> void:
 func _draw_title() -> void:
 	var cx := screen_size.x * 0.5
 
-	var line_1 := ease(clampf(_time / 0.35, 0.0, 1.0), 0.35)
-	var line_2 := ease(clampf((_time - 0.12) / 0.35, 0.0, 1.0), 0.35)
-	var rule_in := ease(clampf((_time - 0.34) / 0.30, 0.0, 1.0), 0.4)
-	var tag_in := ease(clampf((_time - 0.50) / 0.35, 0.0, 1.0), 0.4)
+	# The reveal takes the first quarter second. Nothing arrives during
+	# it, because nothing can be seen through a solid screen.
+	var t := _time - 0.22
+	var line_1 := ease(clampf(t / 0.35, 0.0, 1.0), 0.35)
+	var line_2 := ease(clampf((t - 0.12) / 0.35, 0.0, 1.0), 0.35)
+	var rule_in := ease(clampf((t - 0.34) / 0.30, 0.0, 1.0), 0.4)
+	var tag_in := ease(clampf((t - 0.50) / 0.35, 0.0, 1.0), 0.4)
 
 	_centered(FONT_BRAND, Strings.text("BRAND_LINE_1"), cx,
 		268.0 + (1.0 - line_1) * 22.0, 52, Color(PULSE, line_1), 3.0, true)

@@ -48,6 +48,20 @@ owns project.godot and export_presets.cfg, and it will write its own
 copy over anything this script changes, without saying so."
 fi
 
+# The editor rewrites both files from memory when it closes, so the
+# settings that make the launch seamless can be gone without anyone
+# touching them. Cheaper to check here than to see the engine's logo on
+# a phone.
+grep -q '^boot_splash/show_image=false' "$ROOT/project.godot" \
+  || fail "project.godot has the engine boot logo back on. The Godot editor
+rewrites this file from memory when it closes. Put it back:
+  boot_splash/show_image=false
+  boot_splash/bg_color=Color(0.027451, 0.027451, 0.047059, 1)"
+grep -q '^storyboard/use_custom_bg_color=true' "$ROOT/export_presets.cfg" \
+  || fail "export_presets.cfg has lost the iOS launch screen colour. Put back:
+  storyboard/use_custom_bg_color=true
+  storyboard/custom_bg_color=Color(0.027451, 0.027451, 0.047059, 1)"
+
 FREE_GB=$(df -g "$ROOT" | awk 'NR==2 {print $4}')
 if [ "${FREE_GB:-0}" -lt "$MIN_FREE_GB" ]; then
   fail "Only ${FREE_GB} GB free and a build needs about ${MIN_FREE_GB}. Free some up:

@@ -4,6 +4,8 @@ extends Node
 ## draw and saves a PNG to user://, so the visuals can be inspected
 ## without playing for the right moment.
 
+const SaveGuard := preload("res://tests/save_guard.gd")
+
 var game: Game
 var frames := 0
 var index := 0
@@ -16,6 +18,7 @@ var names := [
 
 func _ready() -> void:
 	seed(7)
+	SaveGuard.stash()
 	process_priority = 300
 	var scene: Node = load("res://scenes/game.tscn").instantiate()
 	add_child(scene)
@@ -122,9 +125,11 @@ func _process(_delta: float) -> void:
 			game.screens._fade = 1.0
 			game.screens._time = 2.4
 		10:
+			# Mid-reveal: the app has opened on solid void and the sky is
+			# on its way up, with the name arriving behind it.
 			game._set_state(Game.State.TITLE)
-			game.screens._fade = 1.0
-			game.screens._time = 0.30
+			game.screens._fade = 0.45
+			game.screens._time = 0.40
 		8:
 			game._set_state(Game.State.PLAYING)
 			get_node("/root/GameSettings").crt = true
@@ -234,4 +239,5 @@ func _capture() -> void:
 	if index >= names.size():
 		get_node("/root/GameSettings").crt = false
 		get_node("/root/GameSettings").save_settings()
+		SaveGuard.restore()
 		get_tree().quit()

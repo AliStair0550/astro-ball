@@ -16,6 +16,15 @@ run/main_scene="res://scenes/game.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://assets/icons/icon_1024.png"
 
+; No engine logo on the way in. The boot screen is painted in the same
+; void as the game's own sky, so launching is one continuous darkness
+; that the star field arrives out of, not a grey card with a logo on it.
+boot_splash/bg_color=Color(0.027451, 0.027451, 0.047059, 1)
+boot_splash/show_image=false
+boot_splash/fullsize=false
+boot_splash/use_filter=false
+boot_splash/minimum_display_time=0
+
 [autoload]
 
 GameSettings="*res://scripts/settings.gd"
