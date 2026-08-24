@@ -62,6 +62,15 @@ sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
 ---
 
+## 3b. Luk Godot, før noget redigeres udefra
+
+Editoren ejer `project.godot` og `export_presets.cfg`, så længe den
+kører. Ændrer nogen filerne på disken imens, skriver editoren dem tilbage
+fra sin egen hukommelse, og ændringerne er væk uden en fejlmeddelelse.
+Luk med ⌘Q, ikke bare vinduet.
+
+---
+
 ## 4. Eksportér fra Godot
 
 Projektet har allerede en iOS-preset. Den hedder **iOS** og peger på
@@ -92,6 +101,9 @@ Fra kommandolinjen, hvis du hellere vil:
 
 Første gang fejler den, hvis skabelonerne fra trin 1 mangler. Fejlteksten
 siger det direkte.
+
+Eksporten lægger omkring 430 MB i `build/ios/`. Den mappe er ignoreret af
+git: et eksporteret Xcode-projekt er output, ikke kildekode.
 
 ---
 
@@ -136,8 +148,17 @@ Kør så ⌘R igen.
 
 **"Cannot export project ... due to configuration errors:" uden noget efter kolonet**
 Kommandolinjen udskriver ikke selve fejlen. Åbn **Project → Export** i
-editoren i stedet: dialogen viser den med rødt nederst. Det er den
-hurtigste vej, og den er ofte et ikon eller et felt, presetten mangler.
+editoren: dialogen viser den med rødt nederst. De tre, der ramte os:
+
+- *Target platform requires 'ETC2/ASTC' texture compression.* Slås til i
+  `project.godot` som `textures/vram_compression/import_etc2_astc=true`,
+  eller med knappen **Show Project Setting** i selve fejlen. iOS
+  accepterer ikke andet.
+- *App Store Team ID not specified.* Se trin 3.
+- *Invalid Identifier: Identifier is missing.* Bundle-id'et er tomt.
+
+Sagde dialogen "mangler" om noget, du er sikker på at have skrevet ind,
+så læs 3b: editoren har overskrevet det.
 
 **"Export templates for this platform are missing"**
 Trin 1. Og tjek at skabelonernes version er præcis den samme som
