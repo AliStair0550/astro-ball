@@ -9,6 +9,9 @@ extends Node2D
 ##
 ## Version 1 af Bæltet bruger de ni power-ups, som level 1 til 3 kalder på.
 ## Resten kommer i punkt 8 af byggerækkefølgen.
+##
+## Navnene er dem, spilleren læser i docken og over paddlen, så de er på
+## engelsk. Designdokumentets danske navne står i tabellen i afsnit 7.
 
 signal collected(id: String)
 
@@ -27,7 +30,7 @@ const SLATE := Color("888780")
 
 const CATALOG := {
 	"wide": {
-		"name": "Bred", "color": VOLT, "kind": Kind.GOOD,
+		"name": "Wide", "color": VOLT, "kind": Kind.GOOD,
 		"duration": 20.0, "icon": "arrows_out",
 	},
 	"multi": {
@@ -35,7 +38,7 @@ const CATALOG := {
 		"duration": 0.0, "icon": "three_dots",
 	},
 	"fireball": {
-		"name": "Ildkugle", "color": EMBER, "kind": Kind.GOOD,
+		"name": "Fireball", "color": EMBER, "kind": Kind.GOOD,
 		"duration": 12.0, "icon": "flame",
 	},
 	"laser": {
@@ -43,11 +46,11 @@ const CATALOG := {
 		"duration": 15.0, "icon": "beams",
 	},
 	"slow": {
-		"name": "Langsom", "color": ICE, "kind": Kind.GOOD,
+		"name": "Slow", "color": ICE, "kind": Kind.GOOD,
 		"duration": 15.0, "icon": "turtle",
 	},
 	"life": {
-		"name": "Liv", "color": BONE, "kind": Kind.GOOD,
+		"name": "Life", "color": BONE, "kind": Kind.GOOD,
 		"duration": 0.0, "icon": "heart",
 	},
 	"zap": {
@@ -55,11 +58,11 @@ const CATALOG := {
 		"duration": 10.0, "icon": "bolt",
 	},
 	"narrow": {
-		"name": "Smal", "color": SLATE, "kind": Kind.BAD,
+		"name": "Narrow", "color": SLATE, "kind": Kind.BAD,
 		"duration": 20.0, "icon": "arrows_in",
 	},
 	"fast": {
-		"name": "Hurtig", "color": SLATE, "kind": Kind.BAD,
+		"name": "Fast", "color": SLATE, "kind": Kind.BAD,
 		"duration": 15.0, "icon": "arrows_up",
 	},
 }

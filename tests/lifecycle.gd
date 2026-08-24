@@ -49,22 +49,46 @@ func _skip_pause() -> void:
 
 
 func _run() -> void:
-	eq(game.lives, 3, "spillet starter med tre liv")
-	eq(game.state, Game.State.PLAYING, "starttilstand er PLAYING")
-	eq(game._balls.size(), 1, "én bold ved start")
-	ok(game._balls[0].stuck, "bolden starter klæbet til paddlen")
-	eq(int(game.level_data["id"]), 1, "første level er level 1")
-	eq(game.grid.remaining_breakable(), 47, "level 1 har 47 klodser")
-
+	_test_opening()
 	_test_speed_ramp()
 	_test_multiball_and_lives()
 	_test_game_over()
 	_test_level_progression()
 	_test_level_clear_freeze()
 	_test_scoring()
+	_test_settings()
+	_test_audio_bank()
+	_test_english()
 
 	print("--- LIVSCYKLUS: %d tjek, %d fejl ---" % [checks, fails])
+	await _teardown()
 	get_tree().quit(1 if fails > 0 else 0)
+
+
+## Spillet aabner paa titelskaermen, ikke midt i en bane.
+func _test_opening() -> void:
+	eq(game.state, Game.State.TITLE, "spillet aabner paa titelskaermen")
+	ok(game.screens.is_open(), "titelskaermen er synlig")
+	ok(not game._balls[0].input_enabled, "bolden kan ikke affyres bag en skaerm")
+	ok(not game.paddle.input_enabled, "paddlen staar stille bag en skaerm")
+
+	game._on_screen_action("settings")
+	eq(game.state, Game.State.SETTINGS, "SETTINGS aabner fra titlen")
+	game._on_screen_action("back")
+	eq(game.state, Game.State.TITLE, "BACK foerer tilbage til titlen")
+
+	game._on_screen_action("play")
+	eq(game.state, Game.State.LEVEL_INTRO, "PLAY foerer til level-introen")
+	eq(int(game.level_data["id"]), 1, "introen viser level 1")
+	eq(game.screens.level_title, "Departure", "introen viser banens navn")
+	eq(game.lives, 3, "spillet starter med tre liv")
+	eq(game.score, 0, "scoren starter paa nul")
+
+	game._on_screen_action("skip")
+	eq(game.state, Game.State.PLAYING, "et klik springer introen over")
+	ok(game._balls[0].input_enabled, "bolden kan affyres, naar banen koerer")
+	ok(game._balls[0].stuck, "bolden starter klaebet til paddlen")
+	eq(game.grid.remaining_breakable(), 47, "level 1 har 47 klodser")
 
 
 ## Afsnit 4: hastigheden stiger 4 procent per 10 klodser, maks 520.
@@ -131,27 +155,43 @@ func _test_game_over() -> void:
 	_kill_all_balls()
 	eq(game.lives, 0, "tredje tab")
 	eq(game.state, Game.State.GAME_OVER, "tilstand er GAME_OVER")
-	_skip_pause()
-	eq(game.score, 0, "scoren nulstilles efter game over")
-	eq(game.lives, 3, "livene nulstilles efter game over")
+	eq(game.screens.final_score, 5000, "game over viser den opnaaede score")
+	ok(not game.paddle.input_enabled, "styringen er slaaet fra paa game over")
+
+	game._on_screen_action("menu")
+	eq(game.state, Game.State.TITLE, "MENU foerer tilbage til titlen")
+
+	game._on_screen_action("restart")
+	eq(game.state, Game.State.LEVEL_INTRO, "PLAY AGAIN starter forfra paa level 1")
+	eq(game.score, 0, "scoren nulstilles")
+	eq(game.lives, 3, "livene nulstilles")
+	eq(int(game.level_data["id"]), 1, "og det er level 1 igen")
 	eq(game.grid.remaining_breakable(), 47, "levelet er bygget op igen")
+	game._begin_level()
 
 
 func _test_level_progression() -> void:
 	eq(int(game.level_data["id"]), 1, "tilbage på level 1")
 	game._next_level()
+	eq(game.state, Game.State.LEVEL_INTRO, "hvert nyt level starter med en intro")
 	eq(int(game.level_data["id"]), 2, "level 2 hentes")
+	eq(game.screens.level_title, "The Capsule", "introen viser level 2's navn")
 	eq(game.grid.remaining_breakable(), 68, "level 2 har 68 klodser")
 	eq(game.paddle.width, Paddle.WIDTH_NORMAL, "nyt level giver normal paddle")
 	eq(game._bricks_this_level, 0, "fartstigningen nulstilles ved nyt level")
+	game._begin_level()
 	game._next_level()
 	eq(int(game.level_data["id"]), 3, "level 3 hentes")
+	eq(game.screens.level_title, "The Chain", "introen viser level 3's navn")
 	eq(game.grid.remaining_breakable(), 53, "level 3 har 53 klodser")
+	game._begin_level()
 	game._next_level()
-	eq(int(game.level_data["id"]), 1, "efter level 3 starter Bæltet forfra")
+	eq(int(game.level_data["id"]), 1, "efter level 3 starter zonen forfra")
+	game._begin_level()
 
 
 func _test_level_clear_freeze() -> void:
+	game._set_state(Game.State.PLAYING)
 	game._balls[0].launch()
 	var speed_before := game._balls[0].velocity.length()
 	game._on_level_cleared()
@@ -174,3 +214,71 @@ func _test_scoring() -> void:
 	eq(HUD.group_digits(999), "999", "tre cifre står alene")
 	eq(HUD.group_digits(1000), "1 000", "fire cifre får mellemrum")
 	eq(HUD.group_digits(1234567), "1 234 567", "syv cifre får to mellemrum")
+
+
+## Indstillinger skal overleve et genstart.
+func _test_settings() -> void:
+	var s := get_node("/root/GameSettings")
+	var was_crt: bool = s.crt
+	var was_volume: float = s.volume
+	s.crt = not was_crt
+	s.volume = 0.42
+	s.save_settings()
+	s.crt = was_crt
+	s.volume = was_volume
+	s.load_settings()
+	eq(s.crt, not was_crt, "CRT-valget bliver gemt")
+	ok(absf(float(s.volume) - 0.42) < 0.001, "lydstyrken bliver gemt")
+	s.crt = was_crt
+	s.volume = was_volume
+	s.save_settings()
+
+	# Rekorden slaas kun, naar den faktisk slaas.
+	var was_high: int = s.high_score
+	s.high_score = 1000
+	ok(not s.submit_score(500), "en lavere score slaar ikke rekorden")
+	ok(s.submit_score(1500), "en hoejere score slaar rekorden")
+	eq(s.high_score, 1500, "rekorden er opdateret")
+	s.high_score = was_high
+	s.save_settings()
+
+
+## Hele lydbanken skal kunne indlaeses, ellers er der en tavs lyd.
+func _test_audio_bank() -> void:
+	for id in Audio.BANK:
+		var stream: Resource = load(Audio.BANK[id])
+		ok(stream != null, "lyden '%s' kan indlaeses" % str(id))
+		if stream is AudioStreamWAV:
+			ok(stream.get_length() > 0.01, "lyden '%s' har indhold" % str(id))
+	var drone: AudioStreamWAV = load(Audio.DRONE_PATH)
+	ok(drone != null and drone.get_length() > 4.0, "dronen er lang nok til at loope")
+
+
+## Alt, spilleren laeser, er paa engelsk.
+func _test_english() -> void:
+	var danish := "æøåÆØÅ"
+	for path in LevelLoader.level_paths():
+		var data: Dictionary = LevelLoader.load_level(path)["data"]
+		var name := str(data.get("name", ""))
+		var clean := true
+		for ch in danish:
+			if name.contains(ch):
+				clean = false
+		ok(clean and not name.is_empty(), "%s har et engelsk navn (%s)" % [path, name])
+	eq(game.hud.zone_name, "THE BELT", "zonen hedder THE BELT i HUD'en")
+
+
+## Rydder scenen af inden exit, saa motoren ikke rapporterer objekter,
+## der bare stod i traeet, da vi lukkede midt i en frame.
+func _teardown() -> void:
+	if is_instance_valid(game):
+		# Lyd, der stadig koerer, holder paa afspilningsobjekter, naar
+		# motoren lukker. Sluk foerst, ryd saa op.
+		game.audio.stop_all()
+		# Lydserveren slipper foerst afspilningerne efter et par ticks.
+		await get_tree().create_timer(0.2).timeout
+		game.free()
+	# Lad motoren rydde op, inden vi lukker, ellers rapporterer den
+	# noder, der bare stod i traeet, som laekager.
+	await get_tree().process_frame
+	await get_tree().process_frame

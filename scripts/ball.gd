@@ -17,6 +17,7 @@ extends CharacterBody2D
 signal wall_hit(pos: Vector2, normal: Vector2)
 signal paddle_hit(pos: Vector2, exit_angle_deg: float, sweet: bool)
 signal brick_hit(brick: Brick, damage: int, pos: Vector2, passed_through: bool)
+signal launched()
 signal lost(ball: Ball)
 
 enum Look { NORMAL, FIREBALL, SLOW, FAST, ZAP }
@@ -56,6 +57,9 @@ var game_feel: GameFeel
 var effects: Effects
 
 var stuck := true
+## Slukkes, mens en skærm er oppe, så et klik på en knap ikke også
+## sender bolden afsted.
+var input_enabled := true
 ## Frosset ved level clear: bolden holder sin retning og fart, men
 ## bevæger sig ikke. Så er tilstanden stadig sand, når HUD og debug
 ## kigger på den.
@@ -123,7 +127,7 @@ func _fill_trail() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not stuck:
+	if not stuck or not input_enabled or frozen:
 		return
 	var fire := false
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
@@ -142,6 +146,7 @@ func launch() -> void:
 	var dir_x := 1.0 if randf() < 0.5 else -1.0
 	var a := deg_to_rad(angle)
 	velocity = Vector2(cos(a) * dir_x, -sin(a)) * current_speed()
+	launched.emit()
 
 
 ## Bruges af Multi: en ny bold sendes ud i en ny retning med samme fart.

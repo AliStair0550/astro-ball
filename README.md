@@ -7,14 +7,40 @@ Designdokumentet ligger i [CLAUDE.md](CLAUDE.md).
 
 ## Status
 
-Punkt 1, 2, 3, 5 og 6 i byggerækkefølgen er bygget, og HUD'en fra punkt 7
-er trukket frem: bold, paddle og containment-felt, alle ti klodstyper fra
-Bæltet, level-loader med validering, level 1 til 3 spilbare fra start til
-clear, og et brandet instrumentpanel i toppen med Unbounded og Space
-Grotesk.
+Punkt 1 til 7 i byggerækkefølgen er bygget: bold, paddle og
+containment-felt, alle ti klodstyper fra Bæltet, level-loader med
+validering, level 1 til 3 spilbare fra start til clear, HUD, baggrund
+med alle reaktioner, og lyd.
 
-Ikke bygget endnu: lyd, touch-styring, level 4 til 12 og de power-ups,
-som level 1 til 3 ikke kalder på.
+Ikke bygget endnu: touch-styring, level 4 til 12 og de power-ups, som
+level 1 til 3 ikke kalder på.
+
+### Skærme
+
+Spillet åbner på en titelskærm over det bare stjernefelt. Derfra går det
+gennem indstillinger, en level-intro der siger LEVEL og banens navn, selve
+banen, level clear og game over med rekord og genstart. Alt, spilleren
+læser, er på engelsk.
+
+| Skærm | Indhold |
+|---|---|
+| Titel | ASTRO BALL, PLAY, SETTINGS, rekord |
+| Indstillinger | lyd til og fra, lydstyrke, CRT-tilstand, screen shake |
+| Level-intro | LEVEL n og banens navn, klik for at begynde |
+| Level clear | FIELD CLEARED og score |
+| Game over | GAME OVER, score, NEW RECORD, PLAY AGAIN og MENU |
+
+### Lyd
+
+Lydbanken er syntetiseret, ikke optaget. `tools/make_audio.py` genererer
+alle 18 lyde uden afhængigheder, så en lyd kan justeres ved at ændre et
+tal og køre scriptet igen.
+
+Samplerne er tørre i sig selv. Rumklangen lægges på i en Godot-bus, så
+alt sidder i det samme kammer, præcis som afsnit 12 beskriver. Under spil
+er der ingen musik, kun en drone, der stiger en anelse med komboen.
+Klods-klikket stiger i tonehøjde med komboen og nulstilles ved
+paddle-ramt.
 
 ### Afvigelser fra designdokumentet
 
@@ -25,23 +51,30 @@ Alle tre er bevidste og lette at rulle tilbage.
 | HUD-højde og navn | 44 px, ASTRO BALL i Bone 13 px | 140 px, Pulse-lilla 28 px | Skærmen er dobbelt så høj som bred. Et højere panel skubber klodserne ned i rækkevidde i stedet for at efterlade en halv skærm dødt rum, og navnet bærer brandet. |
 | Boldens grundfart | 320 px/s | 360, 360, 380 pr. level | Dokumentets forventede leveltider (45 til 70 sekunder for level 1) kan ikke nås på et 698 px højt felt ved 320 px/s. Farten står i hver levelfil og kan ændres uden at røre kode. |
 | Langsom i level 1 til 3 | Level 1 og 2 havde den | Fjernet | En bremse er en straf, når banen er let. Langsom hører til, når det bliver svært. Ildkugle, Laser og Multi fylder pladsen. |
+| Den fjerne planet | Lag 2 havde en planet i nederste hjørne | Fjernet | Den lå, hvor paddlen arbejder, og læste som en cirkel frem for en verden. Baggrunden holder sig til stjerner, støv og et fjernt lysvask, der skifter farve fra bane til bane. |
+| Sprogets side | Dokumentet er på dansk | Alt, spilleren læser, er på engelsk | Banenavne, menuer og power-up-navne. Kodens kommentarer følger stadig dokumentet. |
 
 - **Motor:** Godot 4.7 (standard, ikke .NET)
 - **Viewport:** 390 x 844 logisk, iPhone portræt, `canvas_items` med aspect `keep`
 - **Styring:** musens x. Klik sender bolden afsted, og skyder med laser. Touch kommer i fase 4.
-- **F1** debug-overlay · **F2** næste level · **F3** genstart level
+- **F1** debug-overlay · **F2** næste level · **F3** genstart level · **ESC** menu
 
 ### Rummet
 
-Baggrunden er tre parallax-lag, alt tegnet proceduralt. Planeten er en
-kugle og ikke en cirkel: terminatoren løber ned mod højre, fordi solen
-står oppe til venstre, samme lysretning som klodsernes kernelys. Den
-ligger halvt uden for feltets venstre kant, over paddlens bane og under
-klodserne.
+Baggrunden er tre parallax-lag, alt tegnet proceduralt, og den bliver ved
+med at være rum: stjerner, støv og et par asteroide-silhuetter. Ingen
+genstande, der stjæler opmærksomhed fra klodserne. Hvert level i zonen
+får sin egen anelse af temperatur gennem stjernefarven og et fjernt
+lysvask nede fra venstre.
 
-Paddlen er et stykke isenkram: afrundede hjørner, bevel foroven og
-forneden, glansbånd, kolde metalsegmenter mod Bone-endestykker, og et
-sweet spot med egen glød og et lys, der vandrer gennem feltet.
+Paddlen er et stykke isenkram: afrundede hjørner, en cylinderskygge der
+går fra lyst i toppen til mørkt i bunden, en glansstribe højt oppe, kolde
+metalsegmenter mod Bone-endestykker, og et sweet spot med egen glød og et
+lys, der vandrer gennem feltet.
+
+CRT-tilstanden fra afsnit 12 er en shader over hele billedet: scanlines,
+vignette og 1 px farvefranger. Slukket som standard, som dokumentet
+foreskriver.
 
 ### Fysik
 
@@ -95,10 +128,17 @@ scripts/background.gd     stjernefelt, planet, asteroider, parallax, reaktioner
 scripts/game_feel.gd      screen shake, hitstop, squash
 scripts/hud.gd            provisorisk HUD
 scripts/hud.gd            instrumentpanelet i toppen
+scripts/screens.gd        titel, indstillinger, intro, clear, game over
+scripts/settings.gd       indstillinger der overlever et genstart
+scripts/audio.gd          buser med rumklang, stemmer, drone
+scripts/crt.gd            CRT-tilstanden
 levels/01_afgang.json     level 1, 47 klodser
 levels/02_kapslen.json    level 2, 68 klodser plus 2 Sten
 levels/03_kaeden.json     level 3, 53 klodser
 assets/fonts/             Unbounded og Space Grotesk, begge under OFL
+assets/audio/             18 syntetiserede lyde
+assets/shaders/crt.gdshader
+tools/make_audio.py       genererer lydbanken
 tests/                    regressionssuite, køres med tests/run.sh
 ```
 

@@ -22,6 +22,8 @@ func _ready() -> void:
 	_test_sweep_vs_brick()
 	_test_powerup_rules()
 	_test_paddle_states()
+	for child in get_children():
+		child.free()
 	print("--- MEKANIK: %d tjek, %d fejl ---" % [checks, fails])
 	get_tree().quit(1 if fails > 0 else 0)
 

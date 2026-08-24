@@ -37,6 +37,8 @@ func _ready() -> void:
 	add_child(scene)
 	game = scene as Game
 	game.paddle.set_physics_process(false)
+	# Spring titel og intro over, saa autopiloten kan gaa i gang.
+	game.call_deferred("_on_screen_action", "play")
 	game.grid.brick_destroyed.connect(func(_b, by_chain):
 		bricks_destroyed += 1
 		if by_chain:
@@ -67,11 +69,17 @@ func _physics_process(delta: float) -> void:
 
 
 func _autopilot() -> void:
+	# Introskaermene klikkes vaek.
+	if game.state == Game.State.LEVEL_INTRO or game.state == Game.State.LEVEL_CLEAR:
+		game._on_screen_action("skip")
+		return
+	if game.state != Game.State.PLAYING and game.state != Game.State.BALL_LOST:
+		return
 	var paddle := game.paddle
 	var target: Ball = null
 	var lowest := -INF
 	for ball in game._balls:
-		if ball.stuck:
+		if ball.stuck and game.state == Game.State.PLAYING:
 			ball.launch()
 		if ball.global_position.y > lowest:
 			lowest = ball.global_position.y
@@ -158,4 +166,24 @@ func _report() -> void:
 	print("fejl:              %d" % errors.size())
 	for e in errors:
 		print("   " + e)
+	await _teardown()
 	get_tree().quit(1 if errors.size() > 0 else 0)
+
+
+## Rydder scenen af inden exit, saa motoren ikke rapporterer objekter,
+## der bare stod i traeet, da vi lukkede midt i en frame.
+func _teardown() -> void:
+	# Tiden koerer 6 gange hurtigere. Saetter vi den ikke tilbage, venter
+	# timeren nedenfor kun en sjettedel af det, den ser ud til.
+	Engine.time_scale = 1.0
+	if is_instance_valid(game):
+		# Lyd, der stadig koerer, holder paa afspilningsobjekter, naar
+		# motoren lukker. Sluk foerst, ryd saa op.
+		game.audio.stop_all()
+		# Lydserveren slipper foerst afspilningerne efter et par ticks.
+		await get_tree().create_timer(0.2).timeout
+		game.free()
+	# Lad motoren rydde op, inden vi lukker, ellers rapporterer den
+	# noder, der bare stod i traeet, som laekager.
+	await get_tree().process_frame
+	await get_tree().process_frame

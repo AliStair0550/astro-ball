@@ -3,18 +3,20 @@ extends Node2D
 
 ## Lag 1: baggrunden. Alt tegnes proceduralt, ingen billedfiler.
 ##
+## Den skal blive ved med at være rum. Ingen genstande, der stjæler
+## opmærksomhed fra klodserne, kun stjerner, støv og et par
+## asteroide-silhuetter, der driver forbi.
+##
 ## Tre lag med hver sin parallax:
-##   Bagerst  stjernefelt, ingen parallax
-##   Midten   fjern planet og drivende asteroider, 3 px
+##   Bagerst  stjernefelt og et fjernt lysvask, ingen parallax
+##   Midten   drivende asteroider, 3 px
 ##   Forrest  støv og småsten, 8 px
 ##
-## Reaktion i fase 1: de nærmeste 5 stjerner blinker op, når bolden
-## rammer rammen. Resten af reaktionerne kommer i fase 2.
+## Zonen giver farven. Hvert level i zonen får sin egen anelse af
+## temperatur, så banerne ikke ligner hinanden, uden at nogen af dem
+## holder op med at være rummet.
 
 const VOID := Color("07070C")
-const STAR := Color("C8C8D4")
-const PLANET := Color("1A2030")
-const ATMOSPHERE := Color("2A3448")
 const ASTEROID := Color("12121A")
 const DUST := Color("1C1C26")
 
@@ -28,8 +30,14 @@ const FLASH_TIME := 0.3
 const SHOOTING_STAR_MIN := 40.0
 const SHOOTING_STAR_MAX := 70.0
 
-## Sættes af arenaen, så alle lag kender skærmen.
-var screen_size := Vector2(390, 844)
+## Én stemning per level i zonen. Kun temperatur og tæthed skifter.
+const MOODS := [
+	{"star": Color("C8C8D4"), "wash": Color("1B2A46"), "strength": 0.30, "rocks": 3, "dust": 8},
+	{"star": Color("BFD4E4"), "wash": Color("15303C"), "strength": 0.34, "rocks": 2, "dust": 6},
+	{"star": Color("DCCEC2"), "wash": Color("3A2018"), "strength": 0.32, "rocks": 4, "dust": 10},
+]
+
+var screen_size := Vector2(390.0, 844.0)
 
 var _stars: Array[Dictionary] = []
 var _small_star_indices: PackedInt32Array = []
@@ -45,9 +53,7 @@ var _twinkle := [
 var _shooting := {"active": false, "t": 0.0, "duration": 0.7, "from": Vector2.ZERO, "to": Vector2.ZERO}
 var _shooting_wait := 0.0
 
-var _planet_center := Vector2.ZERO
-var _planet_radius := 60.0
-
+var _mood: Dictionary = MOODS[0]
 var _focus_x := 195.0
 var _time := 0.0
 
@@ -63,9 +69,22 @@ func _ready() -> void:
 	_shooting_wait = randf_range(SHOOTING_STAR_MIN, SHOOTING_STAR_MAX)
 
 
+## Hvert level i zonen får sin egen anelse af temperatur.
+func set_level_mood(level_number: int) -> void:
+	_mood = MOODS[posmod(level_number - 1, MOODS.size())]
+	_build()
+
+
 func _build() -> void:
 	_stars.clear()
 	_small_star_indices.clear()
+	# Stjernefeltet bygges om ved hvert level. Flimre-pladserne peger på
+	# indekser i det gamle felt og skal slippe dem, ellers læser de uden
+	# for arrayet, næste gang feltet bliver kortere.
+	for slot in _twinkle:
+		slot["index"] = -1
+		slot["wait"] = randf_range(0.3, 2.0)
+	var star_color: Color = _mood["star"]
 	var count := randi_range(STAR_COUNT_MIN, STAR_COUNT_MAX)
 	for i in count:
 		# Tre størrelser. De små er langt de fleste, som på en rigtig himmel.
@@ -85,32 +104,26 @@ func _build() -> void:
 			"size": size,
 			"base": base,
 			"flash": 0.0,
-			"flash_color": STAR,
+			"flash_color": star_color,
 			"twinkle": 0.0,
 		})
 		if size == 1:
 			_small_star_indices.append(i)
 
-	# Planeten sad før nede i hjørnet, hvor paddlen arbejder. Der læste
-	# den som en cirkel, ikke som en verden. Nu ligger den halvt uden for
-	# feltets venstre kant, over paddlens bane og under klodserne.
-	_planet_center = Vector2(24.0, screen_size.y - 244.0)
-	_planet_radius = 64.0
-
 	_asteroids.clear()
-	for i in randi_range(2, 3):
+	for i in int(_mood["rocks"]):
 		_asteroids.append({
-			"pos": Vector2(randf_range(120.0, screen_size.x - 40.0), randf_range(160.0, screen_size.y - 260.0)),
+			"pos": Vector2(randf_range(60.0, screen_size.x - 60.0), randf_range(200.0, screen_size.y - 120.0)),
 			"rot": randf() * TAU,
 			# Umærkeligt. En hel omgang tager over ti minutter.
 			"rot_speed": randf_range(-0.010, 0.010),
 			# 1 px per 2 sekunder.
 			"drift": Vector2(randf_range(-0.5, 0.5), -0.5).normalized() * 0.5,
-			"shape": _rock_shape(randf_range(9.0, 17.0)),
+			"shape": _rock_shape(randf_range(6.0, 12.0)),
 		})
 
 	_dust.clear()
-	for i in randi_range(6, 10):
+	for i in int(_mood["dust"]):
 		_dust.append({
 			"pos": Vector2(randf() * screen_size.x, randf() * screen_size.y),
 			"size": Vector2(randf_range(2.0, 5.0), randf_range(1.0, 3.0)),
@@ -132,8 +145,7 @@ func set_focus_x(x: float) -> void:
 	_focus_x = x
 
 
-## Ved tab af liv dimmer stjernefeltet til 50 procent i 800 ms, og
-## planeten mister sin atmosfærelinje et øjeblik.
+## Ved tab af liv dimmer stjernefeltet til 50 procent i 800 ms.
 func dim() -> void:
 	_dim = 1.0
 
@@ -143,8 +155,8 @@ func blitz() -> void:
 	_blitz = 1.0
 
 
-## Pulse-kernen giver planetens atmosfærelinje et kort lysglimt.
-func planet_glint() -> void:
+## Pulse-kernen sender et kort lysglimt gennem det fjerne lys.
+func field_glint() -> void:
 	_glint = 1.0
 
 
@@ -164,8 +176,8 @@ func _shooting_interval() -> float:
 	return randf_range(SHOOTING_STAR_MIN, SHOOTING_STAR_MAX)
 
 
-## Bolden ramte rammen: de nærmeste stjerner blinker svagt op i 300 ms.
-func flash_near(world_pos: Vector2, count := 5, color := STAR) -> void:
+## Bolden ramte noget: de nærmeste stjerner blinker svagt op i 300 ms.
+func flash_near(world_pos: Vector2, count := 5, color := Color.WHITE) -> void:
 	var order: Array[int] = []
 	for i in _stars.size():
 		order.append(i)
@@ -218,6 +230,9 @@ func _update_twinkle(delta: float) -> void:
 				slot["duration"] = randf_range(0.6, 1.4)
 			continue
 		slot["t"] += delta
+		if int(slot["index"]) >= _stars.size():
+			slot["index"] = -1
+			continue
 		var f: float = slot["t"] / slot["duration"]
 		var star: Dictionary = _stars[slot["index"]]
 		if f >= 1.0:
@@ -270,23 +285,41 @@ func _draw() -> void:
 	# Lidt større end skærmen, så screen shake aldrig afslører kanten.
 	draw_rect(Rect2(-16.0, -16.0, screen_size.x + 32.0, screen_size.y + 32.0), VOID)
 
+	_draw_wash()
 	_draw_stars()
 	_draw_shooting_star()
 
 	var n := clampf((_focus_x - screen_size.x * 0.5) / (screen_size.x * 0.5), -1.0, 1.0)
-	_draw_mid_layer(Vector2(-n * PARALLAX_MID, 0.0))
-	_draw_front_layer(Vector2(-n * PARALLAX_FRONT, 0.0))
+	_draw_asteroids(Vector2(-n * PARALLAX_MID, 0.0))
+	_draw_dust(Vector2(-n * PARALLAX_FRONT, 0.0))
+
+
+## Fjernt lys nede fra venstre. Ikke en genstand, bare en anelse farve i
+## rummet, som skifter fra level til level.
+func _draw_wash() -> void:
+	var color: Color = _mood["wash"]
+	var strength := float(_mood["strength"]) * (1.0 - _dim * 0.6) + _glint * 0.25
+	var bands := 22
+	for i in bands:
+		var f := float(i) / float(bands - 1)
+		var c := color
+		c.a = strength * 0.05 * (1.0 - f) * (1.0 - f)
+		if c.a <= 0.002:
+			continue
+		var radius := 120.0 + f * 460.0
+		draw_rect(Rect2(-radius * 0.55, screen_size.y - radius * 0.8, radius * 1.5, radius * 1.1), c)
 
 
 func _draw_stars() -> void:
 	var dim_factor := 1.0 - 0.5 * _dim
+	var star_color: Color = _mood["star"]
 	for star in _stars:
 		var size: int = star["size"]
 		var alpha: float = clampf(star["base"] + star["twinkle"], 0.0, 1.0)
-		var color := STAR
+		var color := star_color
 		var flash: float = star["flash"]
 		if flash > 0.0:
-			color = STAR.lerp(star["flash_color"], flash)
+			color = star_color.lerp(star["flash_color"], flash)
 			alpha = clampf(alpha + flash * 0.5, 0.0, 1.0)
 		alpha *= dim_factor
 		if _blitz > 0.0:
@@ -304,11 +337,10 @@ func _draw_shooting_star() -> void:
 	var head: Vector2 = _shooting["from"].lerp(_shooting["to"], f)
 	var tail_dir: Vector2 = (_shooting["from"] - _shooting["to"]).normalized()
 	var fade := sin(clampf(f, 0.0, 1.0) * PI)
-	var length := 26.0
 	for i in 8:
 		var s := float(i) / 8.0
-		var p := head + tail_dir * (length * s)
-		var c := STAR
+		var p := head + tail_dir * (26.0 * s)
+		var c: Color = _mood["star"]
 		c.a = fade * (1.0 - s) * 0.85
 		draw_rect(Rect2(p.floor(), Vector2(1, 1)), c)
 	var hc := Color.WHITE
@@ -316,9 +348,7 @@ func _draw_shooting_star() -> void:
 	draw_rect(Rect2(head.floor(), Vector2(2, 2)), hc)
 
 
-func _draw_mid_layer(offset: Vector2) -> void:
-	_draw_planet(_planet_center + offset)
-
+func _draw_asteroids(offset: Vector2) -> void:
 	for rock in _asteroids:
 		var pts := PackedVector2Array()
 		var shape: PackedVector2Array = rock["shape"]
@@ -329,71 +359,6 @@ func _draw_mid_layer(offset: Vector2) -> void:
 		draw_colored_polygon(pts, ASTEROID)
 
 
-## En kugle, ikke en cirkel. Solen står oppe til venstre, samme retning
-## som klodsernes kernelys, så terminatoren løber ned mod højre og
-## atmosfærelinjen kun findes på den oplyste rand.
-func _draw_planet(c: Vector2) -> void:
-	var r := _planet_radius
-	var lit_center := c + Vector2(-r * 0.12, -r * 0.12)
-	var lit_radius := r * 0.88
-
-	# Skyggesiden.
-	draw_circle(c, r, PLANET.darkened(0.45))
-	# Den oplyste krop, forskudt mod lyset.
-	draw_circle(lit_center, lit_radius, PLANET)
-	# Kernen, hvor lyset står vinkelret på overfladen.
-	draw_circle(c + Vector2(-r * 0.26, -r * 0.26), r * 0.62, PLANET.lightened(0.12))
-
-	_draw_planet_bands(lit_center, lit_radius)
-
-	# Randen mod lyset og atmosfærelinjen udenom. Begge fader i enderne,
-	# så de ikke ender som to løse streger, hvor kuglen er mørk.
-	if _dim < 0.5:
-		var fade := 1.0 - _dim * 2.0
-		_draw_limb(c, r - 0.5, PLANET.lightened(0.38), fade * 0.9, 1.0)
-		var atmosphere := ATMOSPHERE.lerp(Color("9FB6E4"), _glint)
-		_draw_limb(c, r + 1.5, atmosphere, fade, 1.0 + _glint * 1.5)
-
-
-## Et lysende stykke rand, tegnet punkt for punkt, så den kan fade ud
-## i begge ender i stedet for at blive klippet over.
-func _draw_limb(c: Vector2, radius: float, color: Color, strength: float, thickness: float) -> void:
-	var from := PI * 0.52
-	var to := PI * 1.58
-	var steps := 52
-	for i in steps + 1:
-		var f := float(i) / float(steps)
-		var a := lerpf(from, to, f)
-		var pt := c + Vector2(cos(a), sin(a)) * radius
-		var col := color
-		col.a = strength * sin(f * PI)
-		if col.a <= 0.01:
-			continue
-		draw_rect(Rect2(pt - Vector2(thickness, thickness) * 0.5, Vector2(thickness, thickness)), col)
-
-
-## Vandrette bånd, klippet af kuglens egen kant. Ingen maske, bare
-## Pythagoras: halvbredden af båndet følger cirklen.
-func _draw_planet_bands(center: Vector2, radius: float) -> void:
-	var bands := [
-		{"offset": -0.52, "height": 3.0, "tone": 0.10},
-		{"offset": -0.18, "height": 5.0, "tone": -0.08},
-		{"offset": 0.14, "height": 4.0, "tone": 0.07},
-		{"offset": 0.46, "height": 6.0, "tone": -0.12},
-		{"offset": 0.72, "height": 3.0, "tone": 0.05},
-	]
-	for band in bands:
-		var y := center.y + radius * float(band["offset"])
-		var dy := absf(y - center.y)
-		if dy >= radius:
-			continue
-		var half := sqrt(radius * radius - dy * dy)
-		var tone := float(band["tone"])
-		var c := PLANET.lightened(tone) if tone > 0.0 else PLANET.darkened(-tone)
-		c.a = 0.75
-		draw_rect(Rect2(center.x - half, y, half * 2.0, float(band["height"])), c)
-
-
-func _draw_front_layer(offset: Vector2) -> void:
+func _draw_dust(offset: Vector2) -> void:
 	for grain in _dust:
 		draw_rect(Rect2(grain["pos"] + offset, grain["size"]), DUST)

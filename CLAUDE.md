@@ -420,3 +420,89 @@ Valideringsregler:
 8. Resten af power-ups.
 
 Hvis punkt 1 og 2 ikke føles rigtige, er intet af det andet værd at bygge.
+
+
+14. Sprog og tekster
+
+Alt spilvendt tekst er engelsk. Kode, kommentarer og filnavne er engelsk. Designdokumentet forbliver dansk.
+
+Tone i al spiltekst: kort, tør, teknisk, som telemetri fra et fartøj. Aldrig udråbstegn. "Ball lost", ikke "Oh no!". "Field cleared", ikke "Level complete!".
+
+Officielle engelske navne:
+
+Design (dansk)	I spillet
+Bæltet	The Belt
+Isringen	The Ice Rings
+Solvinden	The Solar Wind
+Tågen	The Nebula
+Hullet	The Core
+Afgang (level 1)	Liftoff
+Kapslen (level 2)	The Capsule
+Kæden (level 3)	The Chain
+
+Alle strenge samles i én fil (strings-resource) fra fase 3, selv om der kun er engelsk. Ingen hardcodede tekster i scripts eller scener.
+
+Score vises med mellemrum som tusindtalsseparator: 24 380.
+
+15. Progression og retention
+
+Stjerner pr. level. 1 til 3 stjerner: (1) gennemført, (2) gennemført under parTime, (3) gennemført uden at miste bolden. Stjernerne er uafhængige, man kan få nr. 3 uden nr. 2. Bedste resultat gemmes pr. level. Zone-adgang kan kræve et minimum af stjerner fra forrige zone.
+
+Konstellationskortet. Level-select er et stjernekort, ikke en liste. Hvert level er en stjerne. Gennemførte levels tændes. Når en zone er fuldført, tegnes linjerne mellem stjernerne, og zonen bliver en konstellation. Bygges i fase 7.
+
+Daily Orbit (efter lancering). Ét dagligt level genereret fra en dato-seed, ens for alle spillere, eget Game Center-leaderboard. Streak-tæller med kosmetiske belønninger. Aldrig straf for at misse en dag.
+
+Gyldne splinter (efter lancering). Sjældent fald fra en smadret klods, skal fanges med paddlen. Samlingen vises på konstellationskortet. Ingen gameplay-effekt.
+
+Sværhedsgrader. To: Normal og Drift. Drift: boldfart 80 %, paddle altid 132 px, ingen dårlige power-ups. Vælges pr. profil, ikke pr. level. Samme levels, samme stjerner.
+
+Multiplayer: bevidst udeladt i version 1.
+
+16. Død og fortsættelse
+
+Mistet bold, liv tilbage:
+
+Effekt som afsnit 6: kometen splintrer, 400 ms frys, stjernerne dimmer.
+Alle aktive power-ups slettes. Klodser og score står urørt.
+Ny bold spawner klæbet til paddlen. Spilleren affyrer selv. Ingen nedtælling.
+Næste power-up er garanteret god (regel fra afsnit 7).
+
+Alle liv tabt: SIGNAL LOST-skærmen.
+
+Sort baggrund, stjernefeltet dæmpet til 20 %.
+Opgørelse i telemetri-stil: bricks cleared, best combo, time.
+Ghost-linje med rekord: "Best: 24 380".
+To valg:
+RE-ENTRY: ét ekstra liv, fortsæt præcis hvor spillet stod. Gratis-version: mod rewarded-reklame. Betalt version: gratis, én gang pr. level.
+RESTART FIELD: levelet forfra med 3 liv. Level-score nulstilles.
+Stjerner, zone-progression og gyldne splinter mistes aldrig ved død.
+Der findes ikke game over til hovedmenu, energi-systemer eller ventetid.
+17. Indstillinger
+
+Hele listen. Der tilføjes ikke flere uden beslutning:
+
+Sound (til/fra)
+Music (til/fra)
+Haptics (til/fra)
+CRT Mode (til/fra, fra som standard: scanlines, vignette, 1 px fringing)
+Left-handed UI (spejler knapper på skærme, ikke gameplay)
+Difficulty (Normal / Drift)
+Reset Progress (med bekræftelse)
+18. Optage-tilstand
+
+Skjult udvikler-feature, aldrig synlig for spillere. Aktiveres med en debug-genvej.
+
+HUD kan slås fra.
+Scenarier kan trigges direkte: fyldt mur, kædereaktion, multiball, level clear.
+Formål: klip til TikTok/Reels/LinkedIn under hele udviklingen.
+Bygges billigt oven på feel_test-scenen fra fase 2.
+19. Monetisering (scope-beslutning)
+
+Model: gratis download med hele The Belt (12 levels).
+
+Interstitial-reklame kun mellem levels, efter hvert 3. level. Aldrig midt i spil.
+Rewarded video: frivillig, giver ekstra liv (Re-entry) eller garanteret god power-up.
+Én IAP: "Astro Ball Complete", 39 til 49 kr. Fjerner alle reklamer, åbner alle zoner, gør Re-entry gratis (1 pr. level).
+Ingen møntøkonomi, ingen energi, ingen gameplay-køb. Eventuelle senere småkøb er udelukkende kosmetiske (komethaler, CRT-temaer).
+
+Implementeres først efter fase 8. Intet reklame-SDK i projektet før da.

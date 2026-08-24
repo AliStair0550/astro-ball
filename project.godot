@@ -15,6 +15,10 @@ config/description="Fase 1: game feel-prototype. Bold, paddle og containment-fel
 run/main_scene="res://scenes/game.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
+[autoload]
+
+GameSettings="*res://scripts/settings.gd"
+
 [display]
 
 window/size/viewport_width=390

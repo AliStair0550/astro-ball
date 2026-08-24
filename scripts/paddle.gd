@@ -47,6 +47,8 @@ var max_x := 390.0
 
 var width := WIDTH_NORMAL
 var laser := false
+## Slukkes, mens en skærm er oppe.
+var input_enabled := true
 ## Bremses af Tung i senere levels. 1.0 = følger musen præcist.
 var follow_speed := 1.0
 
@@ -136,6 +138,8 @@ func has_sweet_spot() -> bool:
 # --- Styring -----------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
+	if not input_enabled:
+		return
 	var target := clampf(get_global_mouse_position().x, min_x, max_x)
 	if follow_speed < 1.0:
 		target = lerpf(position.x, target, clampf(follow_speed * delta * 18.0, 0.0, 1.0))
@@ -147,7 +151,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not laser:
+	if not laser or not input_enabled:
 		return
 	var tap := false
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
@@ -230,30 +234,7 @@ func _draw() -> void:
 	var hw := half_width()
 
 	_draw_projection(top, h, hw)
-
-	match segment_count():
-		1:
-			_draw_block(-hw, hw, top, h, BONE, true, true)
-		5:
-			var span := (width - CAP_WIDTH * 2.0) / 3.0
-			_draw_block(-hw, -hw + CAP_WIDTH, top, h, _cap_color(_left_light), true, false)
-			_draw_block(-hw + CAP_WIDTH, -hw + CAP_WIDTH + span, top, h, MID, false, false)
-			_draw_block(-hw + CAP_WIDTH + span, hw - CAP_WIDTH - span, top, h, MID, false, false)
-			_draw_block(hw - CAP_WIDTH - span, hw - CAP_WIDTH, top, h, MID, false, false)
-			_draw_block(hw - CAP_WIDTH, hw, top, h, _cap_color(_right_light), false, true)
-		_:
-			_draw_block(-hw, -hw + CAP_WIDTH, top, h, _cap_color(_left_light), true, false)
-			_draw_block(-hw + CAP_WIDTH, hw - CAP_WIDTH, top, h, MID, false, false)
-			_draw_block(hw - CAP_WIDTH, hw, top, h, _cap_color(_right_light), false, true)
-
-	for seam_x in _seam_positions():
-		draw_rect(Rect2(seam_x - 1.0, top + 1.0, 1.0, h - 2.0), SEAM)
-		var chrome := Color.WHITE
-		chrome.a = 0.22
-		draw_rect(Rect2(seam_x, top + 1.0, 1.0, h - 2.0), chrome)
-
-	for offset in sweet_offsets():
-		_draw_sweet_spot(offset, top, h)
+	_draw_body(top, h, hw)
 
 	if laser:
 		_draw_laser_tubes(top, h, hw)
@@ -282,55 +263,117 @@ func _draw_projection(top: float, h: float, hw: float) -> void:
 	draw_rect(Rect2(-hw + 2.0, top + h, width - 4.0, 2.0), shadow)
 
 
-## Ét segment med afrundede yderhjørner, bevel foroven og forneden og
-## et glansbånd i den øverste tredjedel.
-func _draw_block(x0: float, x1: float, top: float, h: float, base: Color, round_l: bool, round_r: bool) -> void:
-	var y1 := top + h
-	var il := 1.0 if round_l else 0.0
-	var ir := 1.0 if round_r else 0.0
-	var inner_w := (x1 - x0) - il - ir
-	if inner_w <= 0.0 or h < 3.0:
-		return
+## Skjoldet i spans: endestykker, midterstykker og sweet spots.
+## De tegnes med samme skygge, så hele skjoldet er ét stykke rundt metal
+## og ikke fem flade klodser ved siden af hinanden.
+func _spans() -> Array[Dictionary]:
+	var hw := half_width()
+	var half_sweet := SWEET_WIDTH * 0.5
+	var out: Array[Dictionary] = []
+	match segment_count():
+		1:
+			out.append({"x0": -hw, "x1": hw, "color": _cap_color(maxf(_left_light, _right_light)), "sweet": false})
+		5:
+			var span := (width - CAP_WIDTH * 2.0) / 3.0
+			var a := -hw + CAP_WIDTH
+			var b := hw - CAP_WIDTH
+			out.append({"x0": -hw, "x1": a, "color": _cap_color(_left_light), "sweet": false})
+			out.append({"x0": a, "x1": -span - half_sweet, "color": MID, "sweet": false})
+			out.append({"x0": -span - half_sweet, "x1": -span + half_sweet, "color": VOLT, "sweet": true})
+			out.append({"x0": -span + half_sweet, "x1": span - half_sweet, "color": MID, "sweet": false})
+			out.append({"x0": span - half_sweet, "x1": span + half_sweet, "color": VOLT, "sweet": true})
+			out.append({"x0": span + half_sweet, "x1": b, "color": MID, "sweet": false})
+			out.append({"x0": b, "x1": hw, "color": _cap_color(_right_light), "sweet": false})
+		_:
+			out.append({"x0": -hw, "x1": -hw + CAP_WIDTH, "color": _cap_color(_left_light), "sweet": false})
+			out.append({"x0": -hw + CAP_WIDTH, "x1": -half_sweet, "color": MID, "sweet": false})
+			out.append({"x0": -half_sweet, "x1": half_sweet, "color": VOLT, "sweet": true})
+			out.append({"x0": half_sweet, "x1": hw - CAP_WIDTH, "color": MID, "sweet": false})
+			out.append({"x0": hw - CAP_WIDTH, "x1": hw, "color": _cap_color(_right_light), "sweet": false})
+	return out
 
-	# Grundform: to rektangler forskudt 1 px giver det afrundede hjørne.
-	draw_rect(Rect2(x0 + il, top, inner_w, h), base)
-	if round_l:
-		draw_rect(Rect2(x0, top + 1.0, 1.0, h - 2.0), base)
-	if round_r:
-		draw_rect(Rect2(x1 - 1.0, top + 1.0, 1.0, h - 2.0), base)
 
-	# Bevel. Lyset kommer oppefra, samme retning som klodsernes kernelys.
-	draw_rect(Rect2(x0 + il, top, inner_w, 1.0), base.lightened(0.6))
-	draw_rect(Rect2(x0 + il, top + 1.0, inner_w, 1.0), base.lightened(0.28))
-	draw_rect(Rect2(x0 + il, y1 - 2.0, inner_w, 1.0), base.darkened(0.32))
-	draw_rect(Rect2(x0 + il, y1 - 1.0, inner_w, 1.0), base.darkened(0.6))
-
-	# Glans.
-	var gloss := Color.WHITE
-	gloss.a = 0.14
-	draw_rect(Rect2(x0 + il, top + 2.0, inner_w, maxf(h * 0.26, 1.0)), gloss)
+## Hjørnerne rundes ved at trække rækkerne ind i toppen og bunden.
+static func _row_inset(row: int, rows: int) -> float:
+	if row == 0 or row == rows - 1:
+		return 2.0
+	if row == 1 or row == rows - 2:
+		return 1.0
+	return 0.0
 
 
-## Sweet spot: Volt-felt med egen bevel, en glød udenom og et lys, der
-## vandrer, så man kan se, at feltet er ladet.
-func _draw_sweet_spot(offset: float, top: float, h: float) -> void:
-	var x0 := offset - SWEET_WIDTH * 0.5
-	var glow := VOLT
-	for i in 3:
-		glow.a = 0.20 - float(i) * 0.055
-		var pad := 2.0 + float(i) * 2.0
-		draw_rect(Rect2(x0 - pad, top - pad * 0.6, SWEET_WIDTH + pad * 2.0, h + pad * 1.2), glow)
+## Cylinderens lys: lysest lidt over midten, mørkest i bunden. Det er
+## den kurve, der gør en flad stribe til et rundt stykke metal.
+static func _shade_at(t: float) -> float:
+	return cos((t - 0.30) * PI * 1.08)
 
-	draw_rect(Rect2(x0, top, SWEET_WIDTH, h), VOLT)
-	draw_rect(Rect2(x0, top, SWEET_WIDTH, 1.0), VOLT.lightened(0.65))
-	draw_rect(Rect2(x0, top + h - 1.0, SWEET_WIDTH, 1.0), VOLT.darkened(0.45))
 
-	# Vandrende lys i feltet.
-	var travel := fposmod(_time * 26.0, SWEET_WIDTH + 6.0) - 3.0
-	var spark := Color.WHITE
-	spark.a = 0.55
-	var sx := clampf(x0 + travel, x0, x0 + SWEET_WIDTH - 1.0)
-	draw_rect(Rect2(sx, top + 1.0, 1.0, maxf(h - 2.0, 1.0)), spark)
+func _draw_body(top: float, h: float, hw: float) -> void:
+	var rows := maxi(int(round(h)), 5)
+	var row_h := h / float(rows)
+	var spans := _spans()
+
+	# Glød omkring sweet spots, under kroppen så den ikke vasker den ud.
+	for span in spans:
+		if not span["sweet"]:
+			continue
+		# Gløden skal hugge om feltet, ikke ligge som en firkant bagved.
+		var glow := VOLT
+		for i in 3:
+			glow.a = 0.16 - float(i) * 0.05
+			var pad := 1.5 + float(i) * 1.8
+			draw_rect(Rect2(float(span["x0"]) - pad, top - pad * 0.35,
+				float(span["x1"]) - float(span["x0"]) + pad * 2.0, h + pad * 0.7), glow)
+
+	# Mørk kontur hele vejen rundt om silhuetten.
+	var outline := Color("0A0A12")
+	for r in rows:
+		var inset := _row_inset(r, rows)
+		draw_rect(Rect2(-hw - 1.0 + inset, top + float(r) * row_h, width + 2.0 - inset * 2.0, row_h + 0.5), outline)
+
+	# Kroppen, række for række.
+	for r in rows:
+		var t := (float(r) + 0.5) / float(rows)
+		var shade := _shade_at(t)
+		var inset := _row_inset(r, rows)
+		var y := top + float(r) * row_h
+		for i in spans.size():
+			var span := spans[i]
+			var x0: float = float(span["x0"]) + (inset if i == 0 else 0.0)
+			var x1: float = float(span["x1"]) - (inset if i == spans.size() - 1 else 0.0)
+			if x1 <= x0:
+				continue
+			var base: Color = span["color"]
+			var c := base.lightened(shade * 0.6) if shade > 0.0 else base.darkened(-shade * 0.62)
+			draw_rect(Rect2(x0, y, x1 - x0, row_h + 0.5), c)
+
+	# Glansstriben. Ét smalt bånd højt oppe, som lyset i et rør.
+	var spec_row := maxi(int(float(rows) * 0.18), 1)
+	var spec := Color.WHITE
+	spec.a = 0.30
+	draw_rect(Rect2(-hw + 2.0, top + float(spec_row) * row_h, width - 4.0, maxf(row_h, 1.0)), spec)
+	spec.a = 0.12
+	draw_rect(Rect2(-hw + 2.0, top + float(spec_row + 1) * row_h, width - 4.0, maxf(row_h, 1.0)), spec)
+
+	# Samlinger mellem segmenterne.
+	for seam_x in _seam_positions():
+		var seam := SEAM
+		seam.a = 0.9
+		draw_rect(Rect2(seam_x - 1.0, top + 1.0, 1.0, h - 2.0), seam)
+		var chrome := Color.WHITE
+		chrome.a = 0.20
+		draw_rect(Rect2(seam_x, top + 1.0, 1.0, h - 2.0), chrome)
+
+	# Vandrende lys i sweet spottet, så feltet ser ladet ud.
+	for span in spans:
+		if not span["sweet"]:
+			continue
+		var x0: float = float(span["x0"])
+		var w: float = float(span["x1"]) - x0
+		var travel := fposmod(_time * 26.0, w + 6.0) - 3.0
+		var sparkle := Color.WHITE
+		sparkle.a = 0.6
+		draw_rect(Rect2(clampf(x0 + travel, x0, x0 + w - 1.0), top + 1.0, 1.0, maxf(h - 2.0, 1.0)), sparkle)
 
 
 ## Endestykkerne lyser op i 100 ms, når bolden rammer dem.
