@@ -9,7 +9,7 @@ extends Node2D
 
 signal action(name: String)
 
-enum Screen { NONE, TITLE, SETTINGS, PAUSED, LEVEL_INTRO, LEVEL_CLEAR, SIGNAL_LOST }
+enum Screen { NONE, TITLE, UNIVERSES, SETTINGS, PAUSED, LEVEL_INTRO, LEVEL_CLEAR, SIGNAL_LOST }
 
 const FONT_BRAND := preload("res://assets/fonts/Unbounded-900.ttf")
 const FONT_DISPLAY := preload("res://assets/fonts/Unbounded-700.ttf")
@@ -54,6 +54,9 @@ var can_re_enter := true
 ## label; the gate decides whether it is offered at all.
 var re_entry_costs_ad := false
 
+## One entry per universe, filled by the game before the screen opens:
+## {"name", "note", "open", "levels", "cleared"}.
+var universes: Array[Dictionary] = []
 var _reset_armed := false
 
 var _buttons: Array[Dictionary] = []
@@ -111,17 +114,26 @@ func _layout() -> void:
 	var cx := screen_size.x * 0.5
 	match current:
 		Screen.TITLE:
-			# PLAY on a fresh save, CONTINUE once there is something to
-			# continue. The chart only appears once there is a chart to
-			# look at: one cleared field.
-			var started := has_progress()
-			_add_button("play", Strings.text("BTN_CONTINUE" if started else "BTN_PLAY"),
-				Vector2(cx, 508.0), Vector2(220.0, 52.0), VOLT)
-			if started:
-				_add_button("chart", Strings.text("BTN_CHART"), Vector2(cx, 570.0), Vector2(220.0, 44.0), ICE)
-				_add_button("settings", Strings.text("BTN_SETTINGS"), Vector2(cx, 626.0), Vector2(220.0, 44.0), PULSE)
-			else:
-				_add_button("settings", Strings.text("BTN_SETTINGS"), Vector2(cx, 574.0), Vector2(220.0, 44.0), PULSE)
+			# Two choices. Start, or change how it behaves. Where to start
+			# is the next screen's question, not this one's.
+			_add_button("play", Strings.text("BTN_PLAY"),
+				Vector2(cx, 516.0), Vector2(240.0, 54.0), VOLT)
+			_add_button("settings", Strings.text("BTN_SETTINGS"),
+				Vector2(cx, 582.0), Vector2(240.0, 46.0), PULSE)
+		Screen.UNIVERSES:
+			# One tile per universe, in order. The open one is a button;
+			# the rest are there to be seen, not pressed.
+			var y := 300.0
+			for i in universes.size():
+				var entry: Dictionary = universes[i]
+				var open := bool(entry.get("open", false))
+				var value := str(entry.get("note", ""))
+				_add_button("universe_%d" % (i + 1), str(entry.get("name", "")),
+					Vector2(cx, y + float(i) * 66.0), Vector2(300.0, 56.0),
+					VOLT if open else Color("3A3A48"),
+					"%s · %s" % [Strings.fmt("UNIVERSE_NUMBER", [i + 1]), value], open)
+			_add_button("back", Strings.text("BTN_BACK"),
+				Vector2(cx, y + float(universes.size()) * 66.0 + 8.0), Vector2(180.0, 42.0), SLATE)
 		Screen.SETTINGS:
 			var s := _settings()
 			var y := 262.0
@@ -146,7 +158,7 @@ func _layout() -> void:
 			# the field: a pause screen is not a menu you meant to open.
 			_add_button("resume", Strings.text("BTN_RESUME"), Vector2(cx, 470.0), Vector2(240.0, 52.0), VOLT)
 			_add_button("restart", Strings.text("BTN_RESTART_FIELD"), Vector2(cx, 534.0), Vector2(240.0, 44.0), SLATE)
-			_add_button("chart", Strings.text("BTN_CHART"), Vector2(cx, 588.0), Vector2(240.0, 44.0), ICE)
+			_add_button("chart", Strings.text("BTN_LEVELS"), Vector2(cx, 588.0), Vector2(240.0, 44.0), ICE)
 			_add_button("settings", Strings.text("BTN_SETTINGS"), Vector2(cx, 642.0), Vector2(240.0, 44.0), PULSE)
 		Screen.SIGNAL_LOST:
 			# Two ways on. There is no way back to a main menu from here.
@@ -190,7 +202,7 @@ func _process(delta: float) -> void:
 	if not visible:
 		return
 	_time += delta
-	_fade = minf(1.0, _fade + delta * 4.0)
+	_fade = minf(1.0, _fade + delta * 7.0)
 
 	var mouse := get_viewport().get_mouse_position()
 	var was := _hover
@@ -244,6 +256,9 @@ func _draw() -> void:
 		Screen.TITLE:
 			_draw_curtain_in(0.82)
 			_draw_title()
+		Screen.UNIVERSES:
+			_draw_curtain(0.9)
+			_draw_universes()
 		Screen.SETTINGS:
 			_draw_curtain(0.9)
 			_draw_settings()
@@ -265,7 +280,10 @@ func _draw() -> void:
 			_draw_curtain(0.8)
 			_draw_signal_lost()
 	for i in _buttons.size():
-		_draw_button(_buttons[i], i == _hover)
+		if str(_buttons[i]["id"]).begins_with("universe_"):
+			_draw_universe_tile(_buttons[i], i == _hover)
+		else:
+			_draw_button(_buttons[i], i == _hover)
 
 
 ## The field behind dims but never goes out. Space is still there while
@@ -321,6 +339,55 @@ func _draw_title() -> void:
 	var hint := SLATE
 	hint.a = blink * 0.8
 	_centered(FONT_UI, Strings.text("HINT_TITLE"), cx, 760.0, 9, hint, 1.8, false)
+
+
+func _draw_universes() -> void:
+	var cx := screen_size.x * 0.5
+	_centered(FONT_BRAND, Strings.text("UNIVERSE_SELECT"), cx, 232.0, 19, PULSE, 2.2, true)
+	_rule(cx, 250.0, 130.0, PULSE, 0.45)
+
+
+## A universe is a place with a name and a line about where you are in
+## it. The name gets the row; the line sits under it. Nothing shares a
+## line with anything else, which is what went wrong when this borrowed
+## the settings row and the two texts met in the middle.
+func _draw_universe_tile(button: Dictionary, hovered: bool) -> void:
+	var rect := Rect2(button["rect"])
+	var tint: Color = button["tint"]
+	var open := bool(button.get("value_on", false))
+
+	var bg := PANEL
+	bg.a = 0.95 if open else 0.7
+	draw_rect(rect, bg)
+	if hovered and open:
+		var glow := tint
+		for i in 3:
+			glow.a = 0.10 - float(i) * 0.028
+			draw_rect(rect.grow(2.0 + float(i) * 3.0), glow)
+		var fill := tint
+		fill.a = 0.14
+		draw_rect(rect, fill)
+	draw_rect(rect, tint if hovered and open else EDGE, false, 1.0)
+	# A lit spine on the open one, so the eye finds it without reading.
+	if open:
+		var spine := tint
+		spine.a = 0.9
+		draw_rect(Rect2(rect.position, Vector2(3.0, rect.size.y)), spine)
+
+	_tracked(FONT_DISPLAY, str(button["label"]), Vector2(rect.position.x + 16.0,
+		rect.get_center().y - 1.0), 15, BONE if open else SLATE, 2.0)
+	_tracked(FONT_UI, str(button["value"]), Vector2(rect.position.x + 16.0,
+		rect.get_center().y + 16.0), 8, VOLT if open else Color("4A4A58"), 1.8)
+
+	# The way in, drawn rather than written.
+	if open:
+		var arrow := tint
+		arrow.a = 0.85 if hovered else 0.55
+		var at := Vector2(rect.end.x - 22.0, rect.get_center().y)
+		draw_colored_polygon(PackedVector2Array([
+			at + Vector2(-3.0, -7.0), at + Vector2(5.0, 0.0), at + Vector2(-3.0, 7.0),
+			at + Vector2(-6.0, 4.0), at + Vector2(-1.0, 0.0), at + Vector2(-6.0, -4.0),
+		]), arrow)
 
 
 func _draw_settings() -> void:
@@ -393,8 +460,8 @@ func _draw_level_clear() -> void:
 		var bit: int = rows[i][0]
 		var earned := (stars_earned & bit) != 0
 		var had := (stars_total & bit) != 0 and not earned
-		var landed := _time > 0.9 + float(i) * 0.45
-		var pop := clampf((_time - (0.9 + float(i) * 0.45)) / 0.25, 0.0, 1.0)
+		var landed := _time > 0.55 + float(i) * 0.34
+		var pop := clampf((_time - (0.55 + float(i) * 0.34)) / 0.25, 0.0, 1.0)
 
 		var mark := Vector2(cx - 92.0, y + float(i) * 34.0)
 		_draw_star(mark, earned and landed, had, pop)

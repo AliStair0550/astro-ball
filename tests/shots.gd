@@ -13,6 +13,7 @@ var names := [
 	"01_title", "02_settings", "03_level_intro", "04_level1",
 	"05_level3", "06_effects", "07_wide_laser", "08_signal_lost", "09_crt", "10_field_cleared", "11_title_settling",
 	"12_capsules", "13_the_fuse", "14_the_core", "15_chart", "16_chart_done", "17_paused",
+	"18_universes",
 ]
 
 
@@ -201,6 +202,13 @@ func _process(_delta: float) -> void:
 			game.star_map.focus = 11
 			game.star_map._fade = 1.0
 			game.star_map.reveal = 1.0
+		17:
+			var p2 := get_node("/root/GameProgress")
+			p2.reset()
+			p2.record_clear(1, GameProgress.ALL_STARS, 41.0)
+			p2.record_clear(2, GameProgress.STAR_CLEARED, 96.0)
+			game._set_state(Game.State.UNIVERSES)
+			game.screens._fade = 1.0
 		16:
 			get_node("/root/GameProgress").reset()
 			game._load_level(6)

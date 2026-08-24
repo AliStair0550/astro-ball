@@ -133,8 +133,8 @@ func _test_unlocking() -> void:
 
 
 func _test_strings() -> void:
-	for key in ["MAP_TITLE", "MAP_FIELD", "MAP_LOCKED", "MAP_LOCKED_HINT", "MAP_BEST",
-			"BTN_CHART", "BTN_CONTINUE"]:
+	for key in ["MAP_FIELD", "MAP_LOCKED", "MAP_LOCKED_HINT", "MAP_BEST",
+			"BTN_LEVELS", "UNIVERSE_SELECT", "UNIVERSE_CLEARED", "UNIVERSE_SOON"]:
 		ok(Strings.has(key), "the chart's '%s' is written down" % key)
 	ok(Strings.fmt("MAP_FIELD", [7, "OFF AXIS"]).contains("OFF AXIS"), "and the caption fills in")
 
@@ -143,43 +143,52 @@ func _test_flow() -> void:
 	var progress := get_node("/root/GameProgress")
 	progress.reset()
 
-	# A fresh save says PLAY and offers no chart to look at.
+	# The title asks one question: start, or change how it behaves.
 	game._set_state(Game.State.SETTINGS)
 	game._set_state(Game.State.TITLE)
-	ok(not game.screens.has_progress(), "a new save has nothing to continue")
 	var ids := []
 	for button in game.screens._buttons:
 		ids.append(str(button["id"]))
-	ok(not ids.has("chart"), "so the title does not offer a chart yet")
-	eq(game._first_unfinished(), 0, "and PLAY means field one")
+	eq(ids.size(), 2, "the title offers two choices and no more")
+	ok(ids.has("play") and ids.has("settings"), "start, or settings")
+	eq(game._first_unfinished(), 0, "and a new save starts at level one")
 
-	# One field cleared and both change.
+	# Start asks the next question: which universe.
+	game._on_screen_action("play")
+	eq(game.state, Game.State.UNIVERSES, "start leads to the universe list")
+	eq(game.screens.universes.size(), 5, "all five are on it")
+	ok(bool(game.screens.universes[0]["open"]), "The Drift is open")
+	eq(str(game.screens.universes[0]["name"]), "THE DRIFT", "and named, not numbered")
+	for i in range(1, 5):
+		ok(not bool(game.screens.universes[i]["open"]),
+			"universe %d is not built yet" % [i + 1])
+	game._on_screen_action("universe_3")
+	eq(game.state, Game.State.UNIVERSES, "and pressing one of those goes nowhere")
+
 	progress.record_clear(1, GameProgress.STAR_CLEARED, 44.0)
-	game._set_state(Game.State.SETTINGS)
-	game._set_state(Game.State.TITLE)
-	ok(game.screens.has_progress(), "a cleared field is something to continue")
-	ids.clear()
-	for button in game.screens._buttons:
-		ids.append(str(button["id"]))
-	ok(ids.has("chart"), "and the chart is worth opening now")
-	eq(game._first_unfinished(), 1, "CONTINUE means the first field still standing")
+	eq(game._first_unfinished(), 1, "a cleared level moves the mark on")
 
-	# The chart opens with what the save actually holds.
-	game._on_screen_action("chart")
+	# The universe opens its own list of levels.
+	game._on_screen_action("universe_1")
 	eq(game.state, Game.State.STAR_MAP, "the chart opens")
 	ok(game.star_map.visible, "and is on screen")
 	ok(not game.grid.visible, "with the field put away behind it")
-	eq(game.star_map.fields.size(), 12, "it charts the whole zone")
-	ok(bool(game.star_map.fields[0]["cleared"]), "field one is lit")
-	ok(not bool(game.star_map.fields[1]["cleared"]), "field two is not")
+	eq(game.star_map.fields.size(), 12, "it charts the whole universe")
+	ok(bool(game.star_map.fields[0]["cleared"]), "level one is lit")
+	ok(not bool(game.star_map.fields[1]["cleared"]), "level two is not")
 	ok(game.star_map.unlocked(1), "but it is open")
-	ok(not game.star_map.unlocked(2), "and field three is not")
+	ok(not game.star_map.unlocked(2), "and level three is not")
 
 	# Choosing a field starts it.
 	game._on_field_chosen(1)
-	eq(game.state, Game.State.LEVEL_INTRO, "choosing a field starts it")
+	eq(game.state, Game.State.LEVEL_INTRO, "choosing a level starts it")
 	eq(int(game.level_data["id"]), 2, "the one that was chosen")
-	ok(not game.star_map.visible, "and the chart steps out of the way")
+	ok(not game.star_map.visible, "and the list steps out of the way")
+
+	# And back from the levels is the universe list, not the title.
+	game._open_chart(false)
+	game._on_map_action("back")
+	eq(game.state, Game.State.UNIVERSES, "back goes where the player came from")
 
 	# The zone ends on the chart rather than wrapping round to field one.
 	game._load_level(11)

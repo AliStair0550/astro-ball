@@ -882,3 +882,65 @@ et fejlet tjek: bare en gemt fil, der stille blev til testdata.
 gemmefil, og lægger den tilbage bagefter. Suiten er samtidig blevet
 deterministisk: en maskine, hvor nogen har spillet, giver nu samme
 resultat som en frisk.
+
+---
+
+## Ordforrådet, skrevet om efter at have spillet det
+
+Afsnit 14 gav hver ting sit eget ord: zoner blev universer, baner blev
+fields, døden blev SIGNAL LOST, og et ekstra liv blev RE-ENTRY. Fem
+begreber, spilleren skulle lære, før noget gav mening. Det blev prøvet på
+en telefon, og det virkede ikke.
+
+Reglen nu: **ét ord pr. ting, og helst et, spilleren har i forvejen.**
+
+| Før | Nu |
+|---|---|
+| FIELD | LEVEL, overalt |
+| SIGNAL LOST | GAME OVER |
+| RE-ENTRY | CONTINUE |
+| RESTART FIELD | RESTART LEVEL |
+| HOLDING | PAUSED |
+| STAR CHART | SELECT LEVEL |
+| UNCHARTED | LOCKED |
+| FIELD CLEARED | LEVEL CLEARED |
+
+Universerne bliver. Spilleren bad selv om dem ved navn, og de er det
+eneste sted, hvor et eget ord bærer noget: fem verdener, hvoraf én er
+åben. En test går grædende, hvis ordet "FIELD" eller "RE-ENTRY" nogensinde
+kommer tilbage i en spillervendt streng.
+
+## Vejen ind i et level
+
+Titlen stiller ét spørgsmål: **START GAME** eller **SETTINGS**. Ikke
+hvilket level, ikke hvilket univers, ikke om man vil se et kort.
+
+START GAME viser de fem universer som felter med navn og status. The
+Drift er åben og har en lysende ryg og en pil; de fire andre står med
+COMING SOON, så man kan se, hvor spillet er på vej hen. Et univers åbner
+sin egen levelliste, og et level starter.
+
+Tre skærme, ét spørgsmål hver. Stjernekortet er ikke længere noget, man
+skal opdage fra titlen: det er, hvad der ligger inde i et univers.
+
+## HUD'en siger stedet, ikke arkivnummeret
+
+Under logoet stod der "UNIVERSE 1 · LEVEL 7 · OFF AXIS". Der står nu
+"THE DRIFT · LEVEL 7". Man ved, hvor man er, ved navnet på stedet, ikke
+ved dets nummer, og banens eget navn hører til på skærmen, der
+introducerer det, ikke på en linje man læser hundrede gange.
+
+Til højre stod tre firkanter for liv og tre diamanter for stjerner, i to
+forskellige former, uden at noget sagde hvilken var hvad. Nu er der én
+række: tre diamanter for liv, fyldte mens de er der, hule når de er
+brugt. Stjernerne hører til på de skærme, der uddeler dem.
+
+## Rammen på alle de sider, den har
+
+Loftet blev tegnet hele tiden, men panelet ovenover har næsten samme
+farve, så det forsvandt i det: skinner ned ad begge sider og tilsyneladende
+ingenting foroven. En linje af void giver det en kant at stå på.
+
+Bunden er stadig åben, som afsnit 2 kræver, men den har fået to fødder,
+én i hvert hjørne. Åbningen imellem dem er vejen ud, og nu ligner den
+noget, der er tegnet med vilje.

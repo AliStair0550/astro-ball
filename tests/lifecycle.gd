@@ -154,8 +154,14 @@ func _test_opening() -> void:
 	game._on_screen_action("back")
 	eq(game.state, Game.State.TITLE, "BACK leads back to the title")
 
+	# START GAME asks which universe first, and a universe asks which
+	# level. Each screen puts exactly one question.
 	game._on_screen_action("play")
-	eq(game.state, Game.State.LEVEL_INTRO, "PLAY leads to the level intro")
+	eq(game.state, Game.State.UNIVERSES, "START GAME leads to the universes")
+	game._on_screen_action("universe_1")
+	eq(game.state, Game.State.STAR_MAP, "The Drift opens its levels")
+	game._on_field_chosen(0)
+	eq(game.state, Game.State.LEVEL_INTRO, "and a level leads to its intro")
 	eq(int(game.level_data["id"]), 1, "the intro shows level 1")
 	eq(game.screens.level_title, "Liftoff", "the intro shows the field name")
 	eq(game.lives, 3, "the game starts with three lives")

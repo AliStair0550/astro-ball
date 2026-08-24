@@ -214,6 +214,19 @@ func _draw_frame() -> void:
 	var lip := ENERGY
 	lip.a = 0.7
 	draw_rect(Rect2(WALL, HUD_HEIGHT + WALL - 1.0, SCREEN.x - WALL * 2.0, 1.0), lip)
+	# The panel above is nearly the same colour as the frame, so the
+	# ceiling disappeared into it: rails down both sides and apparently
+	# none across the top. A line of void gives it an edge to stand on.
+	draw_rect(Rect2(0.0, HUD_HEIGHT - 1.0, SCREEN.x, 1.0), VOID)
+
+	# The bottom is open by design, and it still has to look like part of
+	# the same frame. Two feet, and the gap between them is the way out.
+	var foot := SCREEN.x * 0.22
+	draw_rect(Rect2(0.0, FIELD_BOTTOM - WALL, foot, WALL), FRAME)
+	draw_rect(Rect2(SCREEN.x - foot, FIELD_BOTTOM - WALL, foot, WALL), FRAME)
+	lip.a = 0.5
+	draw_rect(Rect2(WALL, FIELD_BOTTOM - WALL, foot - WALL, 1.0), lip)
+	draw_rect(Rect2(SCREEN.x - foot, FIELD_BOTTOM - WALL, foot - WALL, 1.0), lip)
 
 
 func _draw_energy_line() -> void:

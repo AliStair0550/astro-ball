@@ -75,10 +75,20 @@ func _test_strings() -> void:
 	eq(Strings.universe_index("baeltet"), 1, "The Drift is universe 1")
 	eq(Strings.universe_line("baeltet"), "UNIVERSE 1 · THE DRIFT",
 		"and it is presented as a universe")
-	eq(Strings.universe_short("baeltet"), "UNIVERSE 1", "the short form for the HUD")
+	# The HUD says the place, not its number: a player knows where they
+	# are by the name of it.
+	eq(Strings.universe_short("baeltet"), "THE DRIFT", "the short form for the HUD")
 	eq(Strings.fmt("LEVEL_NUMBER", [1]), "LEVEL 1", "the level intro line")
-	eq(Strings.text("SIGNAL_LOST"), "SIGNAL LOST", "section 16 names the death screen")
-	eq(Strings.text("FIELD_CLEARED"), "FIELD CLEARED", "section 14 tone, no exclamation")
+	# One word per thing. A level is a level everywhere, and the screen
+	# that says you are finished says so in the words everyone has.
+	eq(Strings.text("SIGNAL_LOST"), "GAME OVER", "the death screen says what happened")
+	eq(Strings.text("FIELD_CLEARED"), "LEVEL CLEARED", "and the win screen too")
+	eq(Strings.text("BTN_RE_ENTRY"), "CONTINUE", "no coined words on the buttons")
+	eq(Strings.text("BTN_RESTART_FIELD"), "RESTART LEVEL", "and a level is called a level")
+	for key in Strings.keys():
+		var value := Strings.text(str(key))
+		ok(not value.contains("FIELD"), "'%s' does not call a level a field" % str(key))
+		ok(not value.contains("RE-ENTRY"), "'%s' has no coined word in it" % str(key))
 
 	# Tone, section 14: telemetry, never an exclamation mark.
 	for key in Strings.keys():

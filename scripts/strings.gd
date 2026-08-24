@@ -41,6 +41,7 @@ const TABLE := {
 	# the level data stays what it has always been.
 	"UNIVERSE_NUMBER": "UNIVERSE %d",
 	"UNIVERSE_FULL": "UNIVERSE %d · %s",
+	"UNIVERSE_NAMED": "%s",
 	"ZONE_baeltet": "THE DRIFT",
 	"ZONE_isringen": "THE ICE RINGS",
 	"ZONE_solvinden": "THE SOLAR WIND",
@@ -48,15 +49,16 @@ const TABLE := {
 	"ZONE_hullet": "THE CORE",
 
 	# --- Buttons ---------------------------------------------------------
-	"BTN_PLAY": "PLAY",
-	"BTN_CONTINUE": "CONTINUE",
-	"BTN_CHART": "STAR CHART",
-	"BTN_RESUME": "RESUME",
+	"BTN_PLAY": "START GAME",
 	"BTN_SETTINGS": "SETTINGS",
 	"BTN_BACK": "BACK",
-	"BTN_RE_ENTRY": "RE-ENTRY",
-	"BTN_RE_ENTRY_AD": "RE-ENTRY · WATCH AD",
-	"BTN_RESTART_FIELD": "RESTART FIELD",
+	"BTN_RESUME": "RESUME",
+	"BTN_LEVELS": "SELECT LEVEL",
+	# Was RE-ENTRY. A word the player has to learn first is a word in
+	# the way, and this is the screen where they are already losing.
+	"BTN_RE_ENTRY": "CONTINUE",
+	"BTN_RE_ENTRY_AD": "CONTINUE · WATCH AD",
+	"BTN_RESTART_FIELD": "RESTART LEVEL",
 
 	# --- Settings, section 17 --------------------------------------------
 	"SETTINGS_TITLE": "SETTINGS",
@@ -78,26 +80,36 @@ const TABLE := {
 	"HINT_CONTINUE": "CLICK TO CONTINUE",
 
 	# --- Paused ----------------------------------------------------------
-	"PAUSED": "HOLDING",
+	"PAUSED": "PAUSED",
 
-	# --- Star chart, section 15 ------------------------------------------
-	"MAP_TITLE": "STAR CHART",
+	# --- Universe select -------------------------------------------------
+	"UNIVERSE_SELECT": "CHOOSE A UNIVERSE",
+	"UNIVERSE_LEVELS": "%d LEVELS",
+	"UNIVERSE_CLEARED": "%d OF %d CLEARED",
+	"UNIVERSE_LOCKED": "LOCKED",
+	"UNIVERSE_LOCKED_HINT": "FINISH THE UNIVERSE BEFORE IT",
+	"UNIVERSE_SOON": "COMING SOON",
+
+	# --- Level select, section 15 ----------------------------------------
 	"MAP_FIELD": "LEVEL %02d · %s",
-	"MAP_LOCKED": "UNCHARTED",
-	"MAP_LOCKED_HINT": "CLEAR THE FIELD BEFORE IT",
+	"MAP_LOCKED": "LOCKED",
+	"MAP_LOCKED_HINT": "CLEAR THE LEVEL BEFORE IT",
 	"MAP_BEST": "BEST %s",
-	"MAP_COMPLETE": "CONSTELLATION CHARTED",
+	"MAP_COMPLETE": "ALL LEVELS CLEARED",
 
-	# --- Field cleared ---------------------------------------------------
-	"FIELD_CLEARED": "FIELD CLEARED",
+	# --- Level cleared ---------------------------------------------------
+	"FIELD_CLEARED": "LEVEL CLEARED",
 	"STAR_CLEARED": "CLEARED",
 	"STAR_UNDER_PAR": "UNDER PAR",
 	"STAR_NO_LOSS": "NO BALL LOST",
+	"LEVEL_OF": "LEVEL %d OF %d",
 	"PAR_TIME": "PAR %s",
 	"LEVEL_AND_NAME": "LEVEL %d · %s",
 
-	# --- Signal lost, section 16 -----------------------------------------
-	"SIGNAL_LOST": "SIGNAL LOST",
+	# --- Game over, section 16 -------------------------------------------
+	# Was SIGNAL LOST. It is the one screen where nobody should have to
+	# work out what has happened to them.
+	"SIGNAL_LOST": "GAME OVER",
 	"STAT_BRICKS": "BRICKS CLEARED",
 	"STAT_COMBO": "BEST COMBO",
 	"STAT_TIME": "TIME",
@@ -107,7 +119,7 @@ const TABLE := {
 	# --- HUD -------------------------------------------------------------
 	"HUD_COMBO": "COMBO",
 	"HUD_STARS": "STARS",
-	"HUD_LEVEL_LINE": "%s · LEVEL %d · %s",
+	"HUD_LEVEL_LINE": "%s · LEVEL %d",
 
 	# --- Power-up names, section 7 ---------------------------------------
 	# The design document's Danish names are in the section 7 table.
@@ -172,9 +184,18 @@ static func universe_line(slug: String) -> String:
 	return fmt("UNIVERSE_FULL", [universe_index(slug), zone_name(slug)])
 
 
-## "UNIVERSE 1". The HUD has no room for the full line.
+## "THE DRIFT". The player knows where they are by the name of the place,
+## not by its number: the number is filing, and filing is not a feeling.
 static func universe_short(slug: String) -> String:
-	return fmt("UNIVERSE_NUMBER", [universe_index(slug)])
+	return zone_name(slug)
+
+
+## The slug of a universe by its number, 1 to 5.
+static func slug_of_universe(number: int) -> String:
+	for slug in UNIVERSE_OF:
+		if int(UNIVERSE_OF[slug]) == number:
+			return str(slug)
+	return "baeltet"
 
 
 ## The display name of a power-up, from its catalog id.

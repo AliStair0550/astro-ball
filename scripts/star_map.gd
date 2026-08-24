@@ -67,6 +67,7 @@ const TOUCH_RADIUS := 26.0
 const LINE_DRAW_TIME := 0.28
 
 var screen_size := Vector2(390.0, 844.0)
+var zone_slug := "baeltet"
 ## Filled by the game: one entry per field, in order.
 var fields: Array[Dictionary] = []
 ## The field the caption is talking about. -1 is none.
@@ -164,7 +165,7 @@ func _process(delta: float) -> void:
 	if not visible:
 		return
 	_time += delta
-	_fade = minf(1.0, _fade + delta * 3.2)
+	_fade = minf(1.0, _fade + delta * 6.0)
 
 	if reveal < 1.0 and is_zone_complete():
 		# A beat of stillness first, then the figure draws itself.
@@ -235,9 +236,12 @@ func _draw() -> void:
 
 
 func _draw_header() -> void:
-	var title := Strings.text("MAP_TITLE")
-	_text(FONT_BRAND, title, Vector2(screen_size.x * 0.5, 128.0), 26, PULSE, true)
-	_text(FONT_UI, Strings.universe_line("baeltet"), Vector2(screen_size.x * 0.5, 152.0), 10, SLATE, true)
+	# The place, then the number of it. A player who came here through
+	# the universe list already knows where they are; the header confirms
+	# it rather than introducing a second name for the same thing.
+	_text(FONT_BRAND, Strings.zone_name(zone_slug), Vector2(screen_size.x * 0.5, 128.0), 24, PULSE, true)
+	_text(FONT_UI, Strings.fmt("UNIVERSE_NUMBER", [Strings.universe_index(zone_slug)]),
+		Vector2(screen_size.x * 0.5, 150.0), 9, SLATE, true)
 
 	# The tally, so the chart is also the answer to "how far am I".
 	var stars := 0

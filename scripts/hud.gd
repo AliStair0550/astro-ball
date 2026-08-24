@@ -145,29 +145,49 @@ func _draw_status_row() -> void:
 	var y := TOP + 46.0
 	var running := combo >= 3
 
-	var text := Strings.fmt("LEVEL_AND_NAME", [level_number, level_name.to_upper()])
+	# Where you are, in the two words that answer it: the place and the
+	# number. The level's own name belongs on the screen that introduces
+	# it, not on a line the player reads a hundred times.
+	var text := Strings.fmt("HUD_LEVEL_LINE", [Strings.universe_short(zone_slug), level_number])
 	if running:
 		text = Strings.fmt("LEVEL_NUMBER", [level_number])
-	else:
-		text = "%s · %s" % [Strings.universe_short(zone_slug), text]
 	_tracked(FONT_UI, text, Vector2(15.0, y), 9, SLATE, 1.4)
 
 	if running:
 		_draw_combo(y)
 
+	# One row of marks, not two. There used to be lives beside the stars
+	# earned on this level, in two different shapes, and nothing said
+	# which was which. The stars belong on the screens that award them.
 	var right := screen_size.x - 15.0
-	for i in 3:
-		_draw_star_mark(Vector2(right - 8.0 - float(2 - i) * 15.0, y - 4.0),
-			(stars & (1 << i)) != 0)
-	var lives_right := right - 3.0 * 15.0 - 10.0
 	for i in max_lives:
-		var alive := i < lives
-		var c := BONE if alive else LOST_LIFE
-		var x := lives_right - float(max_lives - i) * 13.0
-		var tail := c
-		tail.a = 0.4 if alive else 0.2
-		draw_rect(Rect2(x - 5.0, y - 5.0, 5.0, 2.0), tail)
-		draw_rect(Rect2(x, y - 6.0, 5.0, 5.0), c)
+		_draw_life_mark(Vector2(right - 7.0 - float(max_lives - 1 - i) * 17.0, y - 4.0),
+			i < lives)
+
+
+## A life. A diamond, in the same language as the bricks and the shards,
+## and hollow once it is spent so the count reads at a glance.
+func _draw_life_mark(at: Vector2, alive: bool) -> void:
+	var size := 5.5
+	if alive:
+		var glow := BONE
+		glow.a = 0.16
+		draw_colored_polygon(_diamond_points(at, size + 3.5), glow)
+		draw_colored_polygon(_diamond_points(at, size), BONE)
+		return
+	var spent := LOST_LIFE
+	spent.a = 0.9
+	draw_polyline(_diamond_points(at, size, true), spent, 1.0)
+
+
+static func _diamond_points(at: Vector2, size: float, closed := false) -> PackedVector2Array:
+	var points := PackedVector2Array([
+		at + Vector2(0.0, -size), at + Vector2(size, 0.0),
+		at + Vector2(0.0, size), at + Vector2(-size, 0.0),
+	])
+	if closed:
+		points.append(at + Vector2(0.0, -size))
+	return points
 
 
 ## A diamond: a square turned forty-five degrees, so it stays in the same

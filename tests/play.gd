@@ -42,8 +42,9 @@ func _ready() -> void:
 	add_child(scene)
 	game = scene as Game
 	game.paddle.set_physics_process(false)
-	# Spring titel og intro over, saa autopiloten kan gaa i gang.
-	game.call_deferred("_on_screen_action", "play")
+	# Straight into the first level. START GAME now opens the universe
+	# list, and the autopilot is here to play, not to press menus.
+	game.call_deferred("_start_new_game")
 	game.grid.brick_destroyed.connect(func(_b, by_chain):
 		bricks_destroyed += 1
 		if by_chain:

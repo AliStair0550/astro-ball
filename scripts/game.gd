@@ -8,13 +8,13 @@ extends Node2D
 ## do not know what a level is, and the background only knows that
 ## something happened somewhere. It all meets here.
 
-enum State { TITLE, SETTINGS, STAR_MAP, PAUSED, LEVEL_INTRO, PLAYING, BALL_LOST, LEVEL_CLEAR, SIGNAL_LOST }
+enum State { TITLE, UNIVERSES, SETTINGS, STAR_MAP, PAUSED, LEVEL_INTRO, PLAYING, BALL_LOST, LEVEL_CLEAR, SIGNAL_LOST }
 
 const START_LIVES := LevelState.START_LIVES
 const MAX_BALLS := 6
 const BALL_LOST_PAUSE := 0.5
-const LEVEL_INTRO_PAUSE := 2.2
-const LEVEL_CLEAR_PAUSE := 3.6
+const LEVEL_INTRO_PAUSE := 1.6
+const LEVEL_CLEAR_PAUSE := 3.0
 
 ## Hitstop. 16 ms on a brick, 60 on a blast. It is what gives the blast
 ## brick its weight.
@@ -76,6 +76,7 @@ var level_paths: PackedStringArray
 var _level_blind := false
 ## Whether SETTINGS was opened from a paused field or from the title.
 var _settings_from_pause := false
+var _meta_cache: Array[Dictionary] = []
 
 var _balls: Array[Ball] = []
 ## Section 16 and 19: a re-entry is free in the paid version and costs a
@@ -148,6 +149,9 @@ func _set_state(new_state: State) -> void:
 	match state:
 		State.TITLE:
 			overlay = Screens.Screen.TITLE
+		State.UNIVERSES:
+			overlay = Screens.Screen.UNIVERSES
+			screens.universes = _universe_rows()
 		State.SETTINGS:
 			overlay = Screens.Screen.SETTINGS
 		State.PAUSED:
@@ -181,7 +185,8 @@ func _set_state(new_state: State) -> void:
 	# 20 per cent. Title and settings sit over the bare stars too. Bricks
 	# and shield behind a readout are noise, not atmosphere.
 	var field_visible := state != State.TITLE and state != State.SETTINGS \
-		and state != State.SIGNAL_LOST and state != State.STAR_MAP
+		and state != State.SIGNAL_LOST and state != State.STAR_MAP \
+		and state != State.UNIVERSES
 	arena.visible = field_visible
 	grid.visible = field_visible
 	paddle.visible = field_visible
@@ -214,10 +219,16 @@ func _on_screen_action(name: String) -> void:
 			audio.play("ui_move", 1.0, -6.0)
 		"play":
 			audio.play("ui_select")
-			_start_new_game()
+			_set_state(State.UNIVERSES)
 		"chart":
 			audio.play("ui_select")
 			_open_chart(false)
+		"universe_1":
+			audio.play("ui_select")
+			_open_chart(false)
+		"universe_2", "universe_3", "universe_4", "universe_5":
+			# Nothing to enter yet. The tile says so; the sound agrees.
+			audio.play("ui_back", 0.8, -6.0)
 		"pause":
 			audio.play("ui_move", 0.8, -4.0)
 			_set_state(State.PAUSED)
@@ -306,24 +317,61 @@ func _start_new_game() -> void:
 
 
 func _first_unfinished() -> int:
-	for i in level_paths.size():
-		var data: Dictionary = LevelLoader.load_level(level_paths[i])["data"]
-		if GameProgress.stars_for(int(data.get("id", i + 1))) & GameProgress.STAR_CLEARED:
+	var meta := _level_meta()
+	for i in meta.size():
+		if GameProgress.stars_for(int(meta[i]["id"])) & GameProgress.STAR_CLEARED:
 			continue
 		return i
 	return 0
+
+
+## The five universes, as the select screen needs them. Only The Drift
+## has levels; the rest are named so the player can see where the game
+## goes, and marked so nobody presses them twice.
+func _universe_rows() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	for number in range(1, 6):
+		var slug := Strings.slug_of_universe(number)
+		var built := number == 1
+		var note := Strings.text("UNIVERSE_SOON")
+		if built:
+			var cleared := 0
+			for entry in _level_meta():
+				if GameProgress.stars_for(int(entry["id"])) & GameProgress.STAR_CLEARED:
+					cleared += 1
+			note = Strings.fmt("UNIVERSE_CLEARED", [cleared, _level_meta().size()])
+		rows.append({
+			"name": Strings.zone_name(slug),
+			"note": note,
+			"open": built,
+			"slug": slug,
+		})
+	return rows
+
+
+## The level list, read once. Twelve JSON files parsed every time a menu
+## opened was a menu that felt slow for no reason anyone could see.
+func _level_meta() -> Array[Dictionary]:
+	if not _meta_cache.is_empty():
+		return _meta_cache
+	for i in level_paths.size():
+		var data: Dictionary = LevelLoader.load_level(level_paths[i])["data"]
+		_meta_cache.append({
+			"id": int(data.get("id", i + 1)),
+			"name": str(data.get("name", "")),
+		})
+	return _meta_cache
 
 
 ## Section 15. Everything the chart needs to draw itself, read once when
 ## it opens rather than reached for while it draws.
 func _open_chart(celebrate: bool) -> void:
 	var entries: Array[Dictionary] = []
-	for i in level_paths.size():
-		var data: Dictionary = LevelLoader.load_level(level_paths[i])["data"]
-		var id := int(data.get("id", i + 1))
+	for entry in _level_meta():
+		var id := int(entry["id"])
 		var bits := GameProgress.stars_for(id)
 		entries.append({
-			"name": str(data.get("name", "")),
+			"name": str(entry["name"]),
 			"bits": bits,
 			"stars": GameProgress.star_count(id),
 			"cleared": (bits & GameProgress.STAR_CLEARED) != 0,
@@ -350,12 +398,10 @@ func _on_map_action(name: String) -> void:
 			# One note per line, climbing as the figure closes.
 			audio.play("combo", 0.9 + 0.03 * float(star_map._lines_drawn), -6.0)
 		"back":
+			# Out of a universe's levels is back to the universes, which
+			# is the screen the player came through.
 			audio.play("ui_back")
-			if _settings_from_pause:
-				_settings_from_pause = false
-				_set_state(State.PAUSED)
-			else:
-				_set_state(State.TITLE)
+			_set_state(State.UNIVERSES)
 
 
 func _begin_level() -> void:
@@ -809,13 +855,13 @@ func _process(delta: float) -> void:
 
 	if state == State.LEVEL_CLEAR and _star_sounds != 0:
 		_star_sound_timer += delta
-		var due := 0.9
+		var due := 0.55
 		for bit in [1, 2, 4]:
 			if _star_sounds & bit and _star_sound_timer > due:
 				_star_sounds &= ~bit
 				audio.play("combo", 1.0 + 0.18 * float([1, 2, 4].find(bit)), -3.0)
 				break
-			due += 0.45
+			due += 0.34
 
 	if _state_timer > 0.0:
 		_state_timer = maxf(0.0, _state_timer - delta)
@@ -876,7 +922,8 @@ func _refresh_hud() -> void:
 	hud.stars = GameProgress.stars_for(int(level_data.get("id", 1)))
 	hud.best_score = GameProgress.high_score
 	hud.visible = state != State.TITLE and state != State.SETTINGS \
-		and state != State.SIGNAL_LOST and state != State.STAR_MAP
+		and state != State.SIGNAL_LOST and state != State.STAR_MAP \
+		and state != State.UNIVERSES
 
 
 ## The pause control sits in the panel, above the field. TouchInput
