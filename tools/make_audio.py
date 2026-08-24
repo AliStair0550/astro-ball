@@ -252,13 +252,19 @@ def make_life_lost(rng):
 
 
 def make_level_clear():
-    """Feltet er ryddet. Op ad en dur-akkord og bliv der."""
-    buf = silence(1.5)
-    for i, semi in enumerate((0, 4, 7, 12, 16)):
-        add(buf, i * 0.075, hit(0.5, note_hz(semi), 0.20, "tri"), 0.5)
-        add(buf, i * 0.075, hit(0.4, note_hz(semi + 12), 0.14, "sine"), 0.16)
+    """Feltet er ryddet. Et motiv, ikke en akkord: op ad treklangen, et
+    hop op i oktaven, og en akkord der bliver staaende under det."""
+    buf = silence(2.4)
+    for i, semi in enumerate((0, 4, 7, 12, 16, 19)):
+        add(buf, i * 0.068, hit(0.5, note_hz(semi), 0.18, "tri"), 0.46 - i * 0.02)
+        add(buf, i * 0.068, hit(0.36, note_hz(semi + 12), 0.11, "sine"), 0.15)
+    # Toppen, som hele stigningen peger paa.
+    add(buf, 0.42, hit(1.2, note_hz(24), 0.34, "sine"), 0.34)
+    add(buf, 0.42, hit(1.2, note_hz(12), 0.40, "tri"), 0.20)
+    # Og gulvet under den, saa den staar i et rum.
     for semi in (0, 7, 16):
-        add(buf, 0.42, hit(1.0, note_hz(semi), 0.42, "tri"), 0.28)
+        add(buf, 0.46, hit(1.6, note_hz(semi), 0.62, "tri"), 0.22)
+    add(buf, 0.50, hit(1.8, note_hz(-12), 0.70, "sine"), 0.18)
     write("level_clear", buf)
 
 
@@ -271,6 +277,26 @@ def make_game_over():
     for semi in (-5, -1, 2):
         add(buf, 0.78, hit(1.2, note_hz(semi), 0.5, "tri"), 0.22)
     write("game_over", buf)
+
+
+def make_powerup_neutral():
+    """Byt og Lotteri. To toner, en op og en ned, og ingen af dem vinder.
+    En neutral kapsel maa ikke lyde som en gave eller som en straf."""
+    buf = silence(0.5)
+    add(buf, 0.0, hit(0.22, note_hz(4), 0.08, "tri"), 0.42)
+    add(buf, 0.09, hit(0.26, note_hz(-3), 0.10, "tri"), 0.38)
+    add(buf, 0.18, hit(0.30, note_hz(1), 0.12, "sine"), 0.30)
+    write("powerup_neutral", buf)
+
+
+def make_star_tick():
+    """En stjerne lander. Kort, lys, og hoejere for hver."""
+    for i, semi in enumerate((19, 23, 26)):
+        buf = silence(0.55)
+        add(buf, 0.0, hit(0.30, note_hz(semi), 0.10, "sine"), 0.45)
+        add(buf, 0.0, hit(0.16, note_hz(semi + 12), 0.05, "sine"), 0.18)
+        add(buf, 0.02, hit(0.40, note_hz(semi - 12), 0.18, "tri"), 0.14)
+        write("star_%d" % (i + 1), buf)
 
 
 def make_combo():
@@ -340,6 +366,8 @@ def main():
     make_level_clear()
     make_game_over()
     make_combo()
+    make_powerup_neutral()
+    make_star_tick()
     make_ui()
     make_launch(rng)
     make_drone()

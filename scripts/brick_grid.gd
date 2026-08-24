@@ -56,6 +56,10 @@ const NEIGHBOUR_SPIRAL := [
 
 var rows := 0
 var blind := false
+## Section: the tail of a level. With three or fewer left, standing
+## around looking for them is the least interesting thing in the game,
+## so they say where they are.
+const SURVIVOR_MARK_AT := 3
 
 ## Set per level by build(), from the row count and the level's gridAnchor.
 var origin_y := 0.0
@@ -327,7 +331,24 @@ func update_proximity(ball_positions: Array[Vector2]) -> void:
 		brick.proximity = clampf(1.0 - nearest / 90.0, 0.0, 1.0)
 
 
+## True while the field is down to its last few bricks.
+func in_the_tail() -> bool:
+	return remaining_breakable() <= SURVIVOR_MARK_AT
+
+
 func _draw() -> void:
+	# The halo goes under the bricks, so it reads as light coming off
+	# them rather than a box drawn around them.
+	if in_the_tail():
+		var beat := 0.55 + 0.45 * sin(_time * 4.0)
+		for brick in _bricks:
+			if brick == null or not brick.alive or not brick.counts_toward_clear():
+				continue
+			var halo: Color = brick.color()
+			for i in 3:
+				halo.a = (0.22 - float(i) * 0.06) * beat
+				var pad := 4.0 + float(i) * 5.0
+				draw_rect(brick.rect.grow(pad), halo)
 	for brick in _bricks:
 		if brick != null:
 			brick.draw_into(self, _time, blind)

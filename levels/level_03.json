@@ -10,8 +10,7 @@
     "..GGGGGGGGG..",
     "...PPPPPPP...",
     "....PPEPP....",
-    ".....VVV.....",
-    "......?......"
+    "....?VVV?...."
   ],
   "ballSpeed": 380,
   "gridAnchor": 0,
@@ -28,5 +27,5 @@
     "invert": 5
   },
   "forcedFirstPowerup": null,
-  "parTime": 80
+  "parTime": 75
 }

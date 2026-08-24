@@ -61,6 +61,7 @@ var _reset_armed := false
 ## Once a finger has touched the screen, the mouse is a fiction Godot
 ## keeps up for us, and following it lights up buttons nobody is over.
 var _touch_seen := false
+var _par_note := ""
 
 var _buttons: Array[Dictionary] = []
 var _hover := -1
@@ -80,6 +81,8 @@ func show_screen(which: Screen) -> void:
 	_time = 0.0
 	_fade = 0.0
 	_hover = -1
+	# Built once, on the way in, rather than on every frame of the draw.
+	_par_note = Strings.fmt("PAR_TIME", [format_time(par_time)]) if par_time > 0.0 else ""
 	_layout()
 	visible = which != Screen.NONE
 	queue_redraw()
@@ -292,7 +295,7 @@ func _draw() -> void:
 			_draw_curtain(0.7)
 			_draw_paused()
 		Screen.LEVEL_INTRO:
-			_draw_curtain(0.62)
+			_draw_curtain_in(0.62)
 			_draw_level_intro()
 		Screen.LEVEL_CLEAR:
 			# Heavier than it was. The readout is the point here, and a
@@ -482,6 +485,48 @@ func _draw_level_intro() -> void:
 	_centered(FONT_UI, Strings.text("HINT_BEGIN"), cx, 540.0, 9, hint, 2.0, false)
 
 
+## The ceremony, in one place so it can be read as a sequence.
+##
+##   0.00  the field freezes, the frame lights, the sky flashes
+##   0.10  the readout arrives
+##   0.55  first star lands, then one every 0.34
+##   1.60  the score has finished climbing
+##   2.10  the way on appears
+##
+## A press before the end runs it to the end rather than skipping it; a
+## press after the end goes to the next level. There is no state in
+## between the two, which is what stops a fast finger inventing one.
+const CEREMONY := {
+	"readout": 0.10,
+	"first_star": 0.55,
+	"star_gap": 0.34,
+	"score_time": 1.05,
+	"hint": 2.10,
+	"end": 2.35,
+}
+
+
+## bit, label key, and whether this row carries the par note.
+const STAR_ROWS := [
+	[1, "STAR_CLEARED", false],
+	[2, "STAR_UNDER_PAR", true],
+	[4, "STAR_NO_LOSS", false],
+]
+
+
+func ceremony_done() -> bool:
+	return current != Screen.LEVEL_CLEAR or _time >= float(CEREMONY["end"])
+
+
+## Runs the ceremony to its end without changing where it ends up.
+func finish_ceremony() -> void:
+	if current != Screen.LEVEL_CLEAR:
+		return
+	_time = maxf(_time, float(CEREMONY["end"]))
+	_fade = 1.0
+	queue_redraw()
+
+
 func _draw_level_clear() -> void:
 	var cx := screen_size.x * 0.5
 	_centered(FONT_BRAND, Strings.text("FIELD_CLEARED"), cx, 330.0, 26, VOLT, 2.6, true)
@@ -491,23 +536,22 @@ func _draw_level_clear() -> void:
 
 	# The score climbs rather than appearing. A number that arrives all
 	# at once is information; a number that climbs is a reward.
-	var climb := ease(clampf(_time / 0.9, 0.0, 1.0), 0.4)
+	var climb := ease(clampf((_time - float(CEREMONY["readout"])) / float(CEREMONY["score_time"]), 0.0, 1.0), 0.4)
 	_centered(FONT_SCORE, HUD.group_digits(int(round(float(final_score) * climb))),
 		cx, 424.0, 28, BONE, 0.0, false)
 
-	# The three stars land one at a time, half a second apart.
-	var rows := [
-		[GameProgressBits.CLEARED, "STAR_CLEARED", ""],
-		[GameProgressBits.UNDER_PAR, "STAR_UNDER_PAR", Strings.fmt("PAR_TIME", [format_time(par_time)])],
-		[GameProgressBits.NO_LOSS, "STAR_NO_LOSS", ""],
-	]
+	# The three stars land one at a time. The table is a constant and the
+	# par string is built once when the screen opens: this runs every
+	# frame of the ceremony, and every frame of a ceremony is a frame
+	# with a full shard storm in it.
 	var y := 486.0
-	for i in rows.size():
-		var bit: int = rows[i][0]
+	for i in STAR_ROWS.size():
+		var bit: int = STAR_ROWS[i][0]
 		var earned := (stars_earned & bit) != 0
 		var had := (stars_total & bit) != 0 and not earned
-		var landed := _time > 0.55 + float(i) * 0.34
-		var pop := clampf((_time - (0.55 + float(i) * 0.34)) / 0.25, 0.0, 1.0)
+		var due: float = float(CEREMONY["first_star"]) + float(i) * float(CEREMONY["star_gap"])
+		var landed := _time > due
+		var pop := clampf((_time - due) / 0.25, 0.0, 1.0)
 
 		var mark := Vector2(cx - 92.0, y + float(i) * 34.0)
 		_draw_star(mark, earned and landed, had, pop)
@@ -517,14 +561,14 @@ func _draw_level_clear() -> void:
 			label_color = VOLT
 		elif had:
 			label_color = Color("55545C")
-		_tracked(FONT_UI, Strings.text(str(rows[i][1])),
+		_tracked(FONT_UI, Strings.text(str(STAR_ROWS[i][1])),
 			Vector2(cx - 72.0, y + float(i) * 34.0 + 4.0), 10, label_color, 1.6)
-		if not str(rows[i][2]).is_empty():
-			var note_w := _tracked_width(FONT_UI, str(rows[i][2]), 8, 1.2)
-			_tracked(FONT_UI, str(rows[i][2]),
+		if bool(STAR_ROWS[i][2]) and not _par_note.is_empty():
+			var note_w := _tracked_width(FONT_UI, _par_note, 8, 1.2)
+			_tracked(FONT_UI, _par_note,
 				Vector2(cx + 92.0 - note_w, y + float(i) * 34.0 + 4.0), 8, Color("55545C"), 1.2)
 
-	if _time > 2.3:
+	if _time > float(CEREMONY["hint"]):
 		_centered(FONT_UI, Strings.text("HINT_CONTINUE"), cx, 640.0, 9,
 			Color(SLATE, 0.4 + 0.6 * sin(_time * 4.0)), 2.0, false)
 

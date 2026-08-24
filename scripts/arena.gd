@@ -52,7 +52,10 @@ const EMBER_WARN_DISTANCE := 100.0
 ## The field ends above the screen, and the shield rides 65 px above
 ## that. Everything below is thumb: 126 px of it, because a hand holding
 ## a phone covers the bottom of it whatever the design says.
-const FIELD_BOTTOM := 778.0
+const FIELD_BOTTOM := 760.0
+## The gap in the sill: the only way out of the field, and the only part
+## of the frame the ball can pass.
+const MOUTH_WIDTH := 150.0
 const EMBER_LINE_BASE := FIELD_BOTTOM - 4.0
 
 const CELEBRATE_TIME := 0.9
@@ -223,13 +226,19 @@ func _draw_frame() -> void:
 	draw_rect(Rect2(0.0, HUD_HEIGHT - 1.0, SCREEN.x, 1.0), VOID)
 
 	# The bottom is open by design, and it still has to look like part of
-	# the same frame. Two feet, and the gap between them is the way out.
-	var foot := SCREEN.x * 0.22
-	draw_rect(Rect2(0.0, FIELD_BOTTOM - WALL, foot, WALL), FRAME)
-	draw_rect(Rect2(SCREEN.x - foot, FIELD_BOTTOM - WALL, foot, WALL), FRAME)
-	lip.a = 0.5
-	draw_rect(Rect2(WALL, FIELD_BOTTOM - WALL, foot - WALL, 1.0), lip)
-	draw_rect(Rect2(SCREEN.x - foot, FIELD_BOTTOM - WALL, foot - WALL, 1.0), lip)
+	# the same frame. A full sill with a mouth cut in the middle of it,
+	# rather than two feet in the corners with nothing between them.
+	var mouth := MOUTH_WIDTH * 0.5
+	var sill := SCREEN.x * 0.5 - mouth
+	draw_rect(Rect2(0.0, FIELD_BOTTOM - WALL, sill, WALL), FRAME)
+	draw_rect(Rect2(SCREEN.x - sill, FIELD_BOTTOM - WALL, sill, WALL), FRAME)
+	lip.a = 0.55
+	draw_rect(Rect2(WALL, FIELD_BOTTOM - WALL, sill - WALL, 1.0), lip)
+	draw_rect(Rect2(SCREEN.x - sill, FIELD_BOTTOM - WALL, sill - WALL, 1.0), lip)
+	# The two ends of the sill are cut, not broken off.
+	var cut := FRAME.lightened(0.25)
+	draw_rect(Rect2(sill - 1.0, FIELD_BOTTOM - WALL, 1.0, WALL), cut)
+	draw_rect(Rect2(SCREEN.x - sill, FIELD_BOTTOM - WALL, 1.0, WALL), cut)
 
 
 func _draw_energy_line() -> void:

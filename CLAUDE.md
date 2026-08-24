@@ -1056,3 +1056,59 @@ ikke en sky.
 
 Pauseskærmens tredje knap hedder MAIN MENU og går til titlen. SELECT
 LEVEL var et sted at gå hen, ikke en vej ud.
+
+---
+
+## Fase 5, poleringen
+
+**Rammen, målt i pixels.** Panelets sidste gradientbånd startede ved
+HUD_HEIGHT og løb et helt bånd forbi den: det malede ti pixels ned i
+feltet og dækkede loftet. Derfor så det ud som om der var skinner ned ad
+begge sider og ingenting foroven. Bunden er nu en fuld sokkel med en
+mund skåret i midten, 150 px bred, i stedet for to fødder i hjørnerne.
+Målt med pixelaflæsning, ikke med øjet: `#232330` hele vejen rundt med
+lyskant indenfor.
+
+**Boblerne er væk.** Afsnit 2's drivende asteroide-silhuetter læste på en
+telefon som luft under et panserglas. Baggrunden er stjerner, støv og et
+fjernt lysvask.
+
+**Halerne på banerne.** At stå tilbage og lede efter tre klodser er det
+mindst interessante i spillet. To ting: de sidste tre klodser lyser nu,
+så de siger hvor de er, og de tre første baner er tegnet om, så de ikke
+ender i en enlig klods. Level 1 sluttede før i en enkelt Gnist på
+spidsen, level 3 i en enkelt skjult klods. Level 1 er 43 klodser mod 47
+og slutter i en klynge på fem med to Gnister i. Level 2 er 64 mod 68 og
+har ingen enkeltklods-søjler mere.
+
+**Ceremonien har en rækkefølge.** Den står som en tabel i screens.gd:
+udlæsningen 0,10, første stjerne 0,55, en hver 0,34 derefter, scoren
+færdig 1,05, vejen videre 2,10, slut 2,35. Et tryk før slutningen kører
+den til ende; et tryk efter går videre. Der findes ingen tilstand
+imellem de to, og det er dét, der forhindrer en hurtig finger i at
+opfinde en.
+
+**Lyd.** Neutrale kapsler har fået deres egen tone, der hverken er en
+gave eller en straf. Stjernerne har tre toner, en pr. stjerne, stigende.
+Level clear er et motiv i stedet for en akkord. Dronen dykker ved tab og
+kommer tilbage over halvandet sekund i stedet for at blive slukket.
+
+**Haptik.** Et tik pr. stjerne, to knok ved level clear, ét langt buzz
+ved game over. Alt gennem `pulse()`, som spørger til indstillingen
+først.
+
+**Ingen allokering pr. frame.** Ceremoniens rækketabel er en konstant, og
+par-teksten bygges én gang, når skærmen åbnes. Kortets stiplede linjer
+tegnes direkte i stedet for at bygge en liste pr. segment. Autopiloten
+måler statisk hukommelse fra første bane til sidste og fejler, hvis den
+vokser.
+
+**Optagetilstand, afsnit 18.** F5 slår den til og skjuler panelet. 1
+bygger muren op igen, 2 udløser den største kæde på feltet, 3 giver tre
+bolde, 4 lader banen falde. Hele blokken ligger bag
+`OS.is_debug_build()`, så den ikke findes i et release-build.
+
+En note til næste gang: `var halo := brick.color()` kan ikke udlede sin
+type, fordi `color()` ikke erklærer en. Parse-fejlen fik test-scenen til
+at hænge i ti minutter med nul procent CPU og ingen output overhovedet.
+Symptomet på en parse-fejl er tavshed, ikke en fejlbesked.

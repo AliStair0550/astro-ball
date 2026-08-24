@@ -18,6 +18,11 @@ const HAPTIC_PADDLE := 8
 const HAPTIC_BLAST := 30
 const HAPTIC_BALL_LOST := 50
 const HAPTIC_POWERUP := 15
+## One tick per star as it lands, a double knock when the level falls,
+## and one long buzz when the run ends.
+const HAPTIC_STAR := 12
+const HAPTIC_LEVEL_CLEAR := 26
+const HAPTIC_SIGNAL_LOST := 140
 
 ## The camera the shake offsets. Wired from the scene.
 @export var camera_path: NodePath
@@ -50,6 +55,23 @@ func pulse(milliseconds: int) -> bool:
 		return false
 	Input.vibrate_handheld(milliseconds)
 	return true
+
+
+## A rhythm rather than a single knock. The gaps are in milliseconds and
+## the whole thing respects the Haptics setting, because the first pulse
+## is the one that asks.
+func pulse_pattern(pattern: Array) -> void:
+	var when := 0.0
+	for i in pattern.size():
+		var step: Array = pattern[i]
+		var ms := int(step[0])
+		var gap := float(step[1]) / 1000.0
+		if when <= 0.0:
+			pulse(ms)
+		else:
+			var timer := get_tree().create_timer(when, false)
+			timer.timeout.connect(pulse.bind(ms), CONNECT_ONE_SHOT)
+		when += gap
 
 
 ## True while the game is frozen. The ball and paddle skip their update

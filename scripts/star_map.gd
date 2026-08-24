@@ -350,27 +350,19 @@ func _draw_route() -> void:
 		draw_line(NODES[i - 1], NODES[i], line, 1.0)
 
 
-static func _dash_points(a: Vector2, b: Vector2) -> PackedVector2Array:
-	var out := PackedVector2Array()
+## Drawn straight, without building a list first: this runs eleven times
+## a frame and a list per segment is eleven allocations that nobody ever
+## reads twice.
+func _dashed(a: Vector2, b: Vector2, color: Color) -> void:
 	var length := a.distance_to(b)
 	if length <= 0.01:
-		return out
+		return
 	var dir := (b - a) / length
 	var travelled := 0.0
 	while travelled < length:
 		var to := minf(travelled + 4.0, length)
-		out.append(a + dir * travelled)
-		out.append(a + dir * to)
+		draw_line(a + dir * travelled, a + dir * to, color, 1.0)
 		travelled = to + 5.0
-	return out
-
-
-func _dashed(a: Vector2, b: Vector2, color: Color) -> void:
-	var points := _dash_points(a, b)
-	var i := 0
-	while i + 1 < points.size():
-		draw_line(points[i], points[i + 1], color, 1.0)
-		i += 2
 
 
 func _draw_edges() -> void:

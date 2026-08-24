@@ -29,6 +29,9 @@ var level_started := 0.0
 var level_times: Array[float] = []
 var powerup_counts: Dictionary = {}
 var done := false
+## Static memory after the first level, against the end of the run.
+var memory_baseline := 0
+var memory_peak := 0
 
 
 func _ready() -> void:
@@ -54,6 +57,10 @@ func _ready() -> void:
 		levels_cleared += 1
 		level_times.append(elapsed - level_started)
 		level_started = elapsed
+		# The first level's ceremony has run by now, so everything the
+		# effects and the screens ever allocate has been allocated once.
+		if memory_baseline == 0:
+			memory_baseline = Performance.get_monitor(Performance.MEMORY_STATIC)
 	)
 	game.powerups.collected.connect(func(id):
 		powerups_collected += 1
@@ -69,6 +76,8 @@ func _physics_process(delta: float) -> void:
 
 	_autopilot()
 	_check_invariants()
+	if frames % 30 == 0:
+		memory_peak = maxi(memory_peak, Performance.get_monitor(Performance.MEMORY_STATIC))
 
 	if levels_cleared >= 12 or elapsed > MAX_SECONDS:
 		_report()
@@ -172,6 +181,15 @@ func _report() -> void:
 	print("smallest angle:    %.2f degrees" % min_angle)
 	if levels_cleared < 12:
 		_err("only %d of 12 fields cleared in %.0f seconds" % [levels_cleared, elapsed])
+	# Eleven more levels, eleven more ceremonies, eleven more shard
+	# storms. Nothing frame-critical may keep anything.
+	var growth := float(memory_peak - memory_baseline) / 1048576.0
+	print("memory:            %.2f MB above the first level" % growth)
+	# Generous on purpose: the number moves a megabyte or two between
+	# runs on its own. A real leak across twelve ceremonies and twelve
+	# shard storms is tens of megabytes, and that is what this catches.
+	if memory_baseline > 0 and growth > 8.0:
+		_err("static memory grew %.2f MB across the zone" % growth)
 	print("failures:          %d" % errors.size())
 	for e in errors:
 		print("   " + e)

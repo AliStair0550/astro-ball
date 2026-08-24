@@ -21,6 +21,10 @@ const BANK := {
 	"wall": "res://assets/audio/wall.wav",
 	"powerup_good": "res://assets/audio/powerup_good.wav",
 	"powerup_bad": "res://assets/audio/powerup_bad.wav",
+	"powerup_neutral": "res://assets/audio/powerup_neutral.wav",
+	"star_1": "res://assets/audio/star_1.wav",
+	"star_2": "res://assets/audio/star_2.wav",
+	"star_3": "res://assets/audio/star_3.wav",
 	"laser": "res://assets/audio/laser.wav",
 	"life_lost": "res://assets/audio/life_lost.wav",
 	"level_clear": "res://assets/audio/level_clear.wav",
@@ -43,6 +47,9 @@ var _next_voice := 0
 var _drone: AudioStreamPlayer
 var _drone_target := 0.0
 var _drone_level := 0.0
+## A lost ball pulls the floor out from under the drone and lets it come
+## back. Cutting it dead made the field feel switched off.
+var _drone_dip := 0.0
 var _sfx_bus := 1
 var _drone_bus := 2
 var _drone_filter: AudioEffectLowPassFilter
@@ -191,13 +198,22 @@ func set_drone_intensity(combo: int) -> void:
 	_drone_target = 1.0 + clampf(float(combo) / 20.0, 0.0, 1.0) * 0.85
 
 
+## A lost ball. The floor drops out and climbs back over a second and a
+## half, which is a room reacting rather than a switch being thrown.
+func drone_dip() -> void:
+	_drone_dip = 1.0
+
+
 func _process(delta: float) -> void:
 	_drone_level = move_toward(_drone_level, _drone_target, delta * 1.2)
-	if _drone_level <= 0.001:
+	if _drone_dip > 0.0:
+		_drone_dip = maxf(0.0, _drone_dip - delta * 0.7)
+	var dipped := _drone_level * (1.0 - 0.85 * _drone_dip)
+	if dipped <= 0.001:
 		if _drone.playing:
 			_drone.stop()
 		return
 	if not _drone.playing and _drone_target > 0.0:
 		_drone.play()
-	_drone.volume_db = linear_to_db(clampf(_drone_level * 0.16, 0.0001, 1.0))
-	_drone_filter.cutoff_hz = lerpf(240.0, 520.0, clampf(_drone_level - 1.0, 0.0, 1.0))
+	_drone.volume_db = linear_to_db(clampf(dipped * 0.16, 0.0001, 1.0))
+	_drone_filter.cutoff_hz = lerpf(240.0, 520.0, clampf(dipped - 1.0, 0.0, 1.0))

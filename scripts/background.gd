@@ -4,12 +4,12 @@ extends Node2D
 ## Layer 1: the background. Drawn procedurally, no image files.
 ##
 ## It has to keep being space. No objects that pull attention off the
-## bricks, only stars, dust and a couple of asteroid silhouettes
+## bricks, only stars, dust and a far wash of light
 ## drifting past.
 ##
 ## Three layers, each with its own parallax:
 ##   Back   star field and a distant wash of light, no parallax
-##   Middle drifting asteroids, 3 px
+##   Middle a slow wash of far light, 3 px
 ##   Front  dust and grit, 8 px
 ##
 ## The zone gives the colour. Each level in it gets its own hint of
@@ -17,7 +17,6 @@ extends Node2D
 ## ceasing to be space.
 
 const VOID := Color("07070C")
-const ASTEROID := Color("12121A")
 const DUST := Color("1C1C26")
 
 const STAR_COUNT_MIN := 80
@@ -32,16 +31,15 @@ const SHOOTING_STAR_MAX := 70.0
 
 ## One mood per level in the zone. Only temperature and density change.
 const MOODS := [
-	{"star": Color("C8C8D4"), "wash": Color("1B2A46"), "strength": 0.30, "rocks": 3, "dust": 8},
-	{"star": Color("BFD4E4"), "wash": Color("15303C"), "strength": 0.34, "rocks": 2, "dust": 6},
-	{"star": Color("DCCEC2"), "wash": Color("3A2018"), "strength": 0.32, "rocks": 4, "dust": 10},
+	{"star": Color("C8C8D4"), "wash": Color("1B2A46"), "strength": 0.30, "dust": 8},
+	{"star": Color("BFD4E4"), "wash": Color("15303C"), "strength": 0.34, "dust": 6},
+	{"star": Color("DCCEC2"), "wash": Color("3A2018"), "strength": 0.32, "dust": 10},
 ]
 
 var screen_size := Vector2(390.0, 844.0)
 
 var _stars: Array[Dictionary] = []
 var _small_star_indices: PackedInt32Array = []
-var _asteroids: Array[Dictionary] = []
 var _dust: Array[Dictionary] = []
 
 ## Two twinkle slots. Never more than 2 small stars flicker at once.
@@ -110,34 +108,12 @@ func _build() -> void:
 		if size == 1:
 			_small_star_indices.append(i)
 
-	_asteroids.clear()
-	for i in int(_mood["rocks"]):
-		_asteroids.append({
-			"pos": Vector2(randf_range(60.0, screen_size.x - 60.0), randf_range(200.0, screen_size.y - 120.0)),
-			"rot": randf() * TAU,
-			# Imperceptible. A full turn takes over ten minutes.
-			"rot_speed": randf_range(-0.010, 0.010),
-			# 1 px every 2 seconds.
-			"drift": Vector2(randf_range(-0.5, 0.5), -0.5).normalized() * 0.5,
-			"shape": _rock_shape(randf_range(6.0, 12.0)),
-		})
-
 	_dust.clear()
 	for i in int(_mood["dust"]):
 		_dust.append({
 			"pos": Vector2(randf() * screen_size.x, randf() * screen_size.y),
 			"size": Vector2(randf_range(2.0, 5.0), randf_range(1.0, 3.0)),
 		})
-
-
-func _rock_shape(radius: float) -> PackedVector2Array:
-	var points := PackedVector2Array()
-	var steps := randi_range(6, 8)
-	for i in steps:
-		var a := TAU * float(i) / float(steps)
-		var r := radius * randf_range(0.65, 1.0)
-		points.append(Vector2(cos(a), sin(a)) * r)
-	return points
 
 
 ## The game feeds the paddle's x in, so the parallax has something to follow.
@@ -160,7 +136,7 @@ func field_glint() -> void:
 	_glint = 1.0
 
 
-## Combo 5+ brings more shooting stars. Combo 10+ makes the asteroids
+## Combo 5+ brings more shooting stars. Combo 10+ makes the dust
 ## drift noticeably faster. Space notices that it is going well.
 func set_intensity(combo: int) -> void:
 	_combo = combo
@@ -206,14 +182,6 @@ func _process(delta: float) -> void:
 		_blitz = 0.0 if _blitz < 1.0 else 0.999
 	if _glint > 0.0:
 		_glint = maxf(0.0, _glint - delta / 0.35)
-
-	var drift := _drift_scale()
-	for rock in _asteroids:
-		rock["pos"] += rock["drift"] * drift * delta
-		rock["rot"] += rock["rot_speed"] * drift * delta
-		var p: Vector2 = rock["pos"]
-		if p.y < -40.0:
-			rock["pos"] = Vector2(randf_range(60.0, screen_size.x - 60.0), screen_size.y + 40.0)
 
 	queue_redraw()
 
@@ -290,7 +258,6 @@ func _draw() -> void:
 	_draw_shooting_star()
 
 	var n := clampf((_focus_x - screen_size.x * 0.5) / (screen_size.x * 0.5), -1.0, 1.0)
-	_draw_asteroids(Vector2(-n * PARALLAX_MID, 0.0))
 	_draw_dust(Vector2(-n * PARALLAX_FRONT, 0.0))
 
 
@@ -348,17 +315,6 @@ func _draw_shooting_star() -> void:
 	var hc := Color.WHITE
 	hc.a = fade
 	draw_rect(Rect2(head.floor(), Vector2(2, 2)), hc)
-
-
-func _draw_asteroids(offset: Vector2) -> void:
-	for rock in _asteroids:
-		var pts := PackedVector2Array()
-		var shape: PackedVector2Array = rock["shape"]
-		var rot: float = rock["rot"]
-		var pos: Vector2 = rock["pos"] + offset
-		for p in shape:
-			pts.append(pos + p.rotated(rot))
-		draw_colored_polygon(pts, ASTEROID)
 
 
 func _draw_dust(offset: Vector2) -> void:

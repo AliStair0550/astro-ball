@@ -23,6 +23,9 @@ func _ready() -> void:
 	_test_splinter()
 	_test_swap()
 	_test_spark_table()
+	_test_tail_marking()
+	_test_recording_mode()
+	_test_no_frame_allocation()
 	_test_the_drift()
 	_test_chains()
 
@@ -373,6 +376,93 @@ func _test_spark_table() -> void:
 	pm.queue_free()
 
 
+# --- The tail of a level ------------------------------------------------
+
+func _test_tail_marking() -> void:
+	grid.build([
+		".............",
+		".VVVVVVVVVVV.",
+		".VVVVVVVVVVV.",
+	], 0.0)
+	ok(not grid.in_the_tail(), "a full field is not a tail")
+	var live := grid.live_bricks()
+	var left := live.size()
+	for brick in live:
+		if left <= BrickGrid.SURVIVOR_MARK_AT:
+			break
+		grid.hit(brick, brick.hits_left)
+		left -= 1
+	eq(grid.remaining_breakable(), BrickGrid.SURVIVOR_MARK_AT, "three left")
+	ok(grid.in_the_tail(), "and the last few say where they are")
+	# Stone does not count: a field of nothing but stone is cleared, not
+	# a tail, and it must not sit there glowing.
+	grid.build([".............", ".SSSSSSSSSSS.", "............."], 0.0)
+	ok(grid.in_the_tail(), "unbreakable bricks leave nothing to look for")
+	eq(grid.remaining_breakable(), 0, "and nothing to clear")
+
+
+# --- Section 18 and the frame budget ------------------------------------
+
+func _test_recording_mode() -> void:
+	var scene: Node = load("res://scenes/game.tscn").instantiate()
+	add_child(scene)
+	var game: Game = scene as Game
+	game.paddle.set_physics_process(false)
+	game._start_new_game()
+	game._begin_level()
+
+	ok(not game.recording, "recording mode is off unless somebody asks")
+	game.recording = true
+	game._refresh_hud()
+	ok(not game.hud.visible, "and it takes the panel away")
+
+	# Every scenario works on whatever level is loaded, with no level
+	# knowing anything about it.
+	var before := game.grid.remaining_breakable()
+	ok(game._recording_key(KEY_2), "a chain is a scenario")
+	for i in 60:
+		game.grid._process(1.0 / 60.0)
+	ok(game.grid.remaining_breakable() < before, "and it takes bricks with it")
+	ok(game._recording_key(KEY_3), "three balls is a scenario")
+	ok(game._balls.size() > 1, "and there are more balls than there were")
+	ok(game._recording_key(KEY_1), "the whole wall again is a scenario")
+	eq(game.grid.remaining_breakable(), before, "and the field is back")
+	ok(game._recording_key(KEY_4), "the level falling is a scenario")
+	eq(game.grid.remaining_breakable(), 0, "and it falls")
+	ok(not game._recording_key(KEY_9), "and nothing else is")
+
+	game.recording = false
+	game._refresh_hud()
+	game.audio.stop_all()
+	game.free()
+
+
+## Phase 5: the frame-critical effects allocate nothing per frame.
+##
+## The drawing itself cannot be called from a test — Godot refuses draw
+## commands outside a real draw pass — so this checks the two things
+## that made the ceremony allocate, and the autopilot watches the actual
+## memory across a full run of twelve levels.
+func _test_no_frame_allocation() -> void:
+	eq(Screens.STAR_ROWS.size(), 3, "the ceremony's rows are a constant, not built per frame")
+	eq(typeof(Screens.CEREMONY), TYPE_DICTIONARY, "and so is its schedule")
+
+	var screens := Screens.new()
+	add_child(screens)
+	screens.par_time = 60.0
+	screens.show_screen(Screens.Screen.LEVEL_CLEAR)
+	ok(not screens._par_note.is_empty(), "the par line is built once, on the way in")
+	var once := screens._par_note
+	screens._time = 1.4
+	eq(screens._par_note, once, "and not again on every frame that draws it")
+	# A level with no par time says nothing rather than saying PAR 00:00.
+	screens.par_time = 0.0
+	screens.show_screen(Screens.Screen.NONE)
+	screens.show_screen(Screens.Screen.LEVEL_CLEAR)
+	ok(screens._par_note.is_empty(), "and it is empty when there is no par to make")
+	screens.queue_free()
+
+
 # --- The zone -----------------------------------------------------------
 
 func _test_the_drift() -> void:
@@ -422,25 +512,26 @@ func _test_the_drift() -> void:
 func _test_chains() -> void:
 	# Section 10 promises that one hit clears 60 per cent of level 9. The
 	# number is asserted because a redraw can quietly take it away.
-	var nine: Dictionary = LevelLoader.load_level("res://levels/level_09.json")["data"]
-	var share := _best_chain_share(nine["grid"])
-	ok(share >= 0.55, "one hit takes most of The Fuse (%.0f %%)" % (share * 100.0))
 
 	# Every level has a chain worth finding. Four of them once had no
 	# blast brick at all, which meant no moment: just a wall coming down
 	# one brick at a time. The floor is a fifth of the level in one hit.
+	#
+	# Measured once per level and kept: every measurement rebuilds the
+	# grid and runs the chain out for each blast brick on it, and the
+	# zone holds ninety of them.
 	var paths := LevelLoader.level_paths()
+	var names: Array[String] = []
+	var shares: Array[float] = []
 	for i in paths.size():
 		var d: Dictionary = LevelLoader.load_level(paths[i])["data"]
-		var s := _best_chain_share(d["grid"])
-		ok(s >= 0.20, "%s: one hit takes %.0f %% of it" % [str(d["name"]), s * 100.0])
-	# And The Fuse is still the one the chain belongs to.
-	for i in paths.size():
-		if i == 8:
-			continue
-		var d: Dictionary = LevelLoader.load_level(paths[i])["data"]
-		ok(_best_chain_share(d["grid"]) < share,
-			"%s does not out-chain The Fuse" % str(d["name"]))
+		names.append(str(d["name"]))
+		shares.append(_best_chain_share(d["grid"]))
+	for i in shares.size():
+		ok(shares[i] >= 0.20, "%s: one hit takes %.0f %% of it" % [names[i], shares[i] * 100.0])
+		if i != 8:
+			ok(shares[i] < shares[8], "%s does not out-chain The Fuse" % names[i])
+	ok(shares[8] >= 0.55, "one hit takes most of The Fuse (%.0f %%)" % (shares[8] * 100.0))
 
 
 ## The share of a field a single blast brick takes with it, measured the

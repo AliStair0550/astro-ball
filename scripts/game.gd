@@ -77,6 +77,8 @@ var _level_blind := false
 ## Whether SETTINGS was opened from a paused field or from the title.
 var _settings_from_pause := false
 var _meta_cache: Array[Dictionary] = []
+## Section 18. Debug builds only, and off unless somebody asks for it.
+var recording := false
 
 var _balls: Array[Ball] = []
 ## Section 16 and 19: a re-entry is free in the paid version and costs a
@@ -286,7 +288,12 @@ func _on_screen_action(name: String) -> void:
 			if state == State.LEVEL_INTRO:
 				_begin_level()
 			elif state == State.LEVEL_CLEAR:
-				_next_level()
+				# One press runs the ceremony out, the next goes on. A
+				# fast finger cannot land between the two.
+				if screens.ceremony_done():
+					_next_level()
+				else:
+					_finish_ceremony()
 		"toggle_sound":
 			GameSettings.sound = not GameSettings.sound
 			GameSettings.apply()
@@ -460,6 +467,18 @@ func _load_level(index: int) -> void:
 
 	run.start_level()
 	_refresh_hud()
+
+
+## Everything the ceremony still had to say, said at once. The stars that
+## had not landed still land, still make their noise, and still count.
+func _finish_ceremony() -> void:
+	screens.finish_ceremony()
+	for bit in [1, 2, 4]:
+		if _star_sounds & bit:
+			_star_sounds &= ~bit
+			audio.play("star_%d" % ([1, 2, 4].find(bit) + 1), 1.0, -6.0)
+	game_feel.pulse(GameFeel.HAPTIC_STAR)
+	_state_timer = 0.4
 
 
 func _next_level() -> void:
@@ -662,6 +681,9 @@ func _on_level_cleared() -> void:
 	arena.celebrate()
 	background.blitz()
 	audio.play("level_clear")
+	# Two knocks: the level is down, and there is another one.
+	game_feel.pulse_pattern([[GameFeel.HAPTIC_LEVEL_CLEAR, 110.0],
+		[GameFeel.HAPTIC_LEVEL_CLEAR, 0.0]])
 	_set_state(State.LEVEL_CLEAR)
 
 
@@ -708,6 +730,7 @@ func _on_ball_lost(ball: Ball) -> void:
 	audio.play("life_lost")
 	game_feel.pulse(GameFeel.HAPTIC_BALL_LOST)
 	audio.set_drone_intensity(0)
+	audio.drone_dip()
 	powerups.reset_level()
 	paddle.set_width(Paddle.WIDTH_NORMAL)
 	paddle.laser = false
@@ -719,6 +742,7 @@ func _on_ball_lost(ball: Ball) -> void:
 		screens.high_score = GameProgress.high_score
 		screens.new_record = GameProgress.submit_score(run.score)
 		audio.play("game_over")
+		game_feel.pulse(GameFeel.HAPTIC_SIGNAL_LOST)
 		_set_state(State.SIGNAL_LOST)
 	else:
 		_set_state(State.BALL_LOST)
@@ -736,7 +760,14 @@ func _on_powerup_collected(id: String) -> void:
 	var info := Powerup.info(id)
 	paddle.on_powerup_caught(info["color"])
 	effects.powerup_icon(paddle.global_position - Vector2(0.0, 22.0), Strings.powerup_name(id), info["color"])
-	audio.play("powerup_good" if Powerup.is_good(id) else "powerup_bad", 1.0, -2.0)
+	# Three kinds of capsule, three sounds. A coin flip must not arrive
+	# sounding like a gift or like a punishment.
+	var note := "powerup_good"
+	if Powerup.is_bad(id):
+		note = "powerup_bad"
+	elif Powerup.is_neutral(id):
+		note = "powerup_neutral"
+	audio.play(note, 1.0, -2.0)
 	game_feel.pulse(GameFeel.HAPTIC_POWERUP)
 
 	match id:
@@ -872,13 +903,14 @@ func _process(delta: float) -> void:
 
 	if state == State.LEVEL_CLEAR and _star_sounds != 0:
 		_star_sound_timer += delta
-		var due := 0.55
+		var due: float = float(Screens.CEREMONY["first_star"])
 		for bit in [1, 2, 4]:
 			if _star_sounds & bit and _star_sound_timer > due:
 				_star_sounds &= ~bit
-				audio.play("combo", 1.0 + 0.18 * float([1, 2, 4].find(bit)), -3.0)
+				audio.play("star_%d" % ([1, 2, 4].find(bit) + 1), 1.0, -2.0)
+				game_feel.pulse(GameFeel.HAPTIC_STAR)
 				break
-			due += 0.34
+			due += float(Screens.CEREMONY["star_gap"])
 
 	if _state_timer > 0.0:
 		_state_timer = maxf(0.0, _state_timer - delta)
@@ -940,7 +972,7 @@ func _refresh_hud() -> void:
 	hud.best_score = GameProgress.high_score
 	hud.visible = state != State.TITLE and state != State.SETTINGS \
 		and state != State.SIGNAL_LOST and state != State.STAR_MAP \
-		and state != State.UNIVERSES
+		and state != State.UNIVERSES and not recording
 
 
 ## The pause control sits in the panel, above the field. TouchInput
@@ -969,8 +1001,22 @@ func _notification(what: int) -> void:
 				_set_state(State.PAUSED)
 
 
+## Section 18: the recording mode. Never visible to a player, and never
+## present in a release build: OS.is_debug_build() is false there, and
+## the whole block below is behind it. It exists to make clips of the
+## game without having to play for the right moment.
+##
+##   F1  overlay      F5  recording mode on/off (hides the panel)
+##   F2  next level   1   the wall, whole again
+##   F3  restart      2   a chain, from the best blast brick on the field
+##                    3   three balls
+##                    4   the level falls
 func _input(event: InputEvent) -> void:
+	if not OS.is_debug_build():
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
+		if recording and _recording_key(event.keycode):
+			return
 		match event.keycode:
 			KEY_F1:
 				_debug = not _debug
@@ -982,9 +1028,59 @@ func _input(event: InputEvent) -> void:
 				if state == State.PLAYING:
 					_load_level(level_index)
 					_set_state(State.PLAYING)
+			KEY_F5:
+				recording = not recording
+				_refresh_hud()
 			KEY_ESCAPE:
 				if state == State.PLAYING or state == State.LEVEL_INTRO:
 					_set_state(State.TITLE)
+
+
+## The scenarios, on any level. Returns whether the key was one of them.
+func _recording_key(key: int) -> bool:
+	match key:
+		KEY_1:
+			_load_level(level_index)
+			_set_state(State.PLAYING)
+		KEY_2:
+			_record_chain()
+		KEY_3:
+			_split_balls()
+		KEY_4:
+			_record_clear()
+		_:
+			return false
+	return true
+
+
+## The biggest chain on the field, set off. Picks the blast brick that
+## takes the most with it, so a clip never catches a dud.
+func _record_chain() -> void:
+	var best: Brick = null
+	var best_count := -1
+	for brick in grid.live_bricks():
+		if brick.type != Brick.Type.BLAST:
+			continue
+		var count := 0
+		for offset in BrickGrid.NEIGHBOUR_SPIRAL:
+			var n := grid.brick_at(brick.col + offset.x, brick.row + offset.y)
+			if n != null and n.alive and n.is_breakable():
+				count += 1
+		if count > best_count:
+			best_count = count
+			best = brick
+	if best != null:
+		# Through the grid, not through the ball's own hit path: that one
+		# reads the ball that struck, and in a recording there is not
+		# necessarily one. The destroyed signal carries the rest.
+		grid.hit(best, best.hits_left)
+
+
+## The level falls, all of it, so the ceremony can be filmed on demand.
+func _record_clear() -> void:
+	for brick in grid.live_bricks():
+		if brick.counts_toward_clear():
+			grid.hit(brick, brick.hits_left)
 
 
 func _update_debug() -> void:

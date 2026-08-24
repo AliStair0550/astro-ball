@@ -5,14 +5,12 @@
   "grid": [
     ".S.........S.",
     ".VVVVVVVVVVV.",
-    ".VFFFFFFFFFV.",
-    ".V.........V.",
-    ".V.IIIIIII.V.",
-    ".V.I.....I.V.",
-    ".V.I.PEP.I.V.",
-    ".V.I.....I.V.",
-    ".V.IIIIIII.V.",
-    ".VVVEEEEEVVV."
+    ".VVFFEEEFFVV.",
+    ".VV.......VV.",
+    ".VV.IIIII.VV.",
+    ".VV.IPPPI.VV.",
+    ".VV.IIIII.VV.",
+    ".VVEEEEEEEVV."
   ],
   "ballSpeed": 360,
   "gridAnchor": 0,
@@ -27,5 +25,5 @@
     "fast": 6
   },
   "forcedFirstPowerup": null,
-  "parTime": 110
+  "parTime": 95
 }

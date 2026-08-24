@@ -230,7 +230,7 @@ func _test_opening() -> void:
 	eq(game.state, Game.State.PLAYING, "a click skips the intro")
 	ok(game._balls[0].input_enabled, "the ball can be launched once the field runs")
 	ok(game._balls[0].stuck, "the ball starts stuck to the paddle")
-	eq(game.grid.remaining_breakable(), 47, "level 1 has 47 bricks")
+	eq(game.grid.remaining_breakable(), 43, "level 1 has 43 bricks")
 
 
 ## Section 4: speed rises 4 per cent per 10 bricks, capped at 520.
@@ -322,7 +322,7 @@ func _test_game_over() -> void:
 	eq(game.state, Game.State.LEVEL_INTRO, "RESTART FIELD rebuilds the field")
 	eq(game.lives, 3, "RESTART FIELD gives three lives")
 	eq(int(game.level_data["id"]), 1, "and it is still level 1")
-	eq(game.grid.remaining_breakable(), 47, "the field is built again")
+	eq(game.grid.remaining_breakable(), 43, "the field is built again")
 	game._begin_level()
 
 
@@ -332,14 +332,14 @@ func _test_level_progression() -> void:
 	eq(game.state, Game.State.LEVEL_INTRO, "every new level starts with an intro")
 	eq(int(game.level_data["id"]), 2, "level 2 loads")
 	eq(game.screens.level_title, "The Capsule", "the intro shows level 2 name")
-	eq(game.grid.remaining_breakable(), 68, "level 2 has 68 bricks")
+	eq(game.grid.remaining_breakable(), 64, "level 2 has 64 bricks")
 	eq(game.paddle.width, Paddle.WIDTH_NORMAL, "a new level gives a normal paddle")
 	eq(game.run.level_bricks, 0, "the speed ramp resets on a new level")
 	game._begin_level()
 	game._next_level()
 	eq(int(game.level_data["id"]), 3, "level 3 loads")
 	eq(game.screens.level_title, "The Chain", "the intro shows level 3 name")
-	eq(game.grid.remaining_breakable(), 48, "level 3 has 48 bricks")
+	eq(game.grid.remaining_breakable(), 49, "level 3 has 49 bricks")
 	game._begin_level()
 	game._next_level()
 	eq(int(game.level_data["id"]), 4, "and the zone keeps going")

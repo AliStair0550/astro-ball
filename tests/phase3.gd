@@ -155,8 +155,8 @@ func _test_loader_fixtures() -> void:
 	eq(str(one["name"]), "Liftoff", "level 1 is Liftoff")
 	eq(str(one["zone"]), "baeltet", "the zone slug in the data stays baeltet")
 	eq(str(one["forcedFirstPowerup"]), "wide", "level 1 forces Wide first")
-	eq(int(one["parTime"]), 60, "level 1 par time is 60")
-	eq(LevelLoader.breakable_count(one["grid"]), 47, "level 1 has 47 bricks")
+	eq(int(one["parTime"]), 55, "level 1 par time is 55")
+	eq(LevelLoader.breakable_count(one["grid"]), 43, "level 1 has 43 bricks")
 	# The first fields teach the chain before they teach patience: blast
 	# bricks in all three, and no Hardened until level 6, which is the
 	# one built out of it.

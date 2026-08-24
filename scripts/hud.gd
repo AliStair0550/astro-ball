@@ -103,11 +103,17 @@ func _draw() -> void:
 ## Graphite, and nothing at the bottom edge. The frame's top bar below is
 ## the ceiling; a second line two pixels above it read as two.
 func _draw_panel() -> void:
+	# The panel ends where the frame begins. The last band used to start
+	# at HEIGHT and run a whole band past it, painting over the ceiling
+	# of the field: rails down both sides and none across the top, which
+	# is exactly what it looked like.
 	var bands := 18
+	var band_h := HEIGHT / float(bands)
 	for i in bands:
+		var y := band_h * float(i)
 		var f := float(i) / float(bands - 1)
 		var c := GRAPHITE_TOP.lerp(GRAPHITE_BOTTOM, f * f)
-		draw_rect(Rect2(0.0, HEIGHT * f, screen_size.x, HEIGHT / float(bands) + 1.0), c)
+		draw_rect(Rect2(0.0, y, screen_size.x, minf(band_h + 1.0, HEIGHT - y)), c)
 
 	var etch := Color("1B1B26")
 	etch.a = 0.4

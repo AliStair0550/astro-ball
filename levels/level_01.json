@@ -8,9 +8,7 @@
     ".IIIEEEEEIII.",
     "..FFFFFFFFF..",
     "...PPPPPPP...",
-    "....VVVVV....",
-    ".....III.....",
-    "......X......"
+    "....XVVVX...."
   ],
   "ballSpeed": 360,
   "gridAnchor": 0,
@@ -24,5 +22,5 @@
     "narrow": 8
   },
   "forcedFirstPowerup": "wide",
-  "parTime": 60
+  "parTime": 55
 }
