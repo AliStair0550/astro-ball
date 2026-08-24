@@ -3,7 +3,7 @@ extends Node2D
 
 ## Layer 4: the power-up capsule.
 ##
-## 20x12 px, falling at 140 px/s. A rounded rectangle in the capsule's
+## 34x22 px, falling at 140 px/s. A rounded rectangle in the capsule's
 ## colour, a white rotating icon, a 6 px glow. Good ones have a light
 ## edge. Bad ones a dark edge and a zigzag, readable at 20 px.
 ##
@@ -17,8 +17,14 @@ signal collected(id: String)
 
 enum Kind { GOOD, BAD, NEUTRAL }
 
-const SIZE := Vector2(20.0, 12.0)
+## Bigger than the document's 20x12. On a phone a capsule has to say
+## what it is from across the field, not once it is already caught.
+const SIZE := Vector2(34.0, 22.0)
+const ICON_SCALE := 1.45
 const FALL_SPEED := 140.0
+
+const LABEL_FONT := preload("res://assets/fonts/SpaceGrotesk-700.ttf")
+const LABEL_SIZE := 9
 
 const VOLT := Color("D6FF3D")
 const ICE := Color("4DD8FF")
@@ -56,6 +62,12 @@ const CATALOG := {
 	"zap": {
 		"name": "Zap", "color": VOLT, "kind": Kind.GOOD,
 		"duration": 10.0, "icon": "bolt",
+	},
+	# Section 20. Doubles the ball and breaks Hardened in one hit.
+	# Cannot run alongside Fireball: the last one caught wins.
+	"giant": {
+		"name": "Giant", "color": BONE, "kind": Kind.GOOD,
+		"duration": 15.0, "icon": "big_circle",
 	},
 	"narrow": {
 		"name": "Narrow", "color": SLATE, "kind": Kind.BAD,
@@ -123,35 +135,66 @@ func _draw() -> void:
 	var scale_factor := 1.0 - _implode * 0.7
 	var half := SIZE * 0.5 * scale_factor
 
-	# A 6 px glow.
+	# A glow, wider than before because the capsule is.
 	var glow := color
-	glow.a = 0.18 * (1.0 - _implode)
-	draw_rect(Rect2(-half - Vector2(6.0, 6.0), (half + Vector2(6.0, 6.0)) * 2.0), glow)
-	glow.a = 0.28 * (1.0 - _implode)
-	draw_rect(Rect2(-half - Vector2(3.0, 3.0), (half + Vector2(3.0, 3.0)) * 2.0), glow)
+	glow.a = 0.16 * (1.0 - _implode)
+	draw_rect(Rect2(-half - Vector2(8.0, 8.0), (half + Vector2(8.0, 8.0)) * 2.0), glow)
+	glow.a = 0.26 * (1.0 - _implode)
+	draw_rect(Rect2(-half - Vector2(4.0, 4.0), (half + Vector2(4.0, 4.0)) * 2.0), glow)
 
-	# Rounded rectangle: two rects offset by 1 px make the corner.
+	# Rounded rectangle: two rects offset by 2 px make the corner.
 	var body := color
 	body.a = 1.0 - _implode * 0.5
-	draw_rect(Rect2(-half + Vector2(1.0, 0.0), Vector2(half.x * 2.0 - 2.0, half.y * 2.0)), body)
-	draw_rect(Rect2(-half + Vector2(0.0, 1.0), Vector2(half.x * 2.0, half.y * 2.0 - 2.0)), body)
+	draw_rect(Rect2(-half + Vector2(2.0, 0.0), Vector2(half.x * 2.0 - 4.0, half.y * 2.0)), body)
+	draw_rect(Rect2(-half + Vector2(0.0, 2.0), Vector2(half.x * 2.0, half.y * 2.0 - 4.0)), body)
+	# A darker well behind the icon, so a white shape always has contrast
+	# to sit against whatever colour the capsule is.
+	var well := color.darkened(0.55)
+	well.a = body.a
+	draw_rect(Rect2(-half + Vector2(3.0, 3.0), (half - Vector2(3.0, 3.0)) * 2.0), well)
 
 	# The edge tells you whether you want it.
 	var edge := color.lightened(0.55) if good else color.darkened(0.6)
 	edge.a = body.a
-	draw_rect(Rect2(-half + Vector2(1.0, 0.0), Vector2(half.x * 2.0 - 2.0, 1.0)), edge)
-	draw_rect(Rect2(Vector2(-half.x + 1.0, half.y - 1.0), Vector2(half.x * 2.0 - 2.0, 1.0)), edge)
-	draw_rect(Rect2(Vector2(-half.x, -half.y + 1.0), Vector2(1.0, half.y * 2.0 - 2.0)), edge)
-	draw_rect(Rect2(Vector2(half.x - 1.0, -half.y + 1.0), Vector2(1.0, half.y * 2.0 - 2.0)), edge)
+	var thickness := 2.0 if good else 1.0
+	draw_rect(Rect2(-half + Vector2(2.0, 0.0), Vector2(half.x * 2.0 - 4.0, thickness)), edge)
+	draw_rect(Rect2(Vector2(-half.x + 2.0, half.y - thickness), Vector2(half.x * 2.0 - 4.0, thickness)), edge)
+	draw_rect(Rect2(Vector2(-half.x, -half.y + 2.0), Vector2(thickness, half.y * 2.0 - 4.0)), edge)
+	draw_rect(Rect2(Vector2(half.x - thickness, -half.y + 2.0), Vector2(thickness, half.y * 2.0 - 4.0)), edge)
 
 	if not good:
 		_draw_zigzag(half, edge)
 
 	var ink := Color.WHITE
 	ink.a = body.a
-	draw_set_transform(Vector2.ZERO, _angle, Vector2.ONE * scale_factor)
+	draw_set_transform(Vector2.ZERO, _angle, Vector2.ONE * scale_factor * ICON_SCALE)
 	_icon_shapes(self, str(data["icon"]), ink)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+	_draw_label(color, body.a)
+
+
+## The name under the capsule. An icon says what kind of thing it is; the
+## word says which one, and there is no learning it by trial at 140 px/s.
+func _draw_label(color: Color, alpha: float) -> void:
+	if _implode > 0.0:
+		return
+	var text := Strings.powerup_name(id)
+	var width := 0.0
+	for i in text.length():
+		width += LABEL_FONT.get_string_size(text[i], HORIZONTAL_ALIGNMENT_LEFT, -1.0, LABEL_SIZE).x + 0.8
+	var at := Vector2(-width * 0.5, SIZE.y * 0.5 + 12.0)
+	var shadow := Color("07070C")
+	shadow.a = alpha * 0.8
+	var ink := color.lightened(0.45)
+	ink.a = alpha
+	for pass_index in 2:
+		var pen := at + (Vector2(1.0, 1.0) if pass_index == 0 else Vector2.ZERO)
+		for i in text.length():
+			var ch := text[i]
+			draw_string(LABEL_FONT, pen, ch, HORIZONTAL_ALIGNMENT_LEFT, -1.0, LABEL_SIZE,
+				shadow if pass_index == 0 else ink)
+			pen.x += LABEL_FONT.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1.0, LABEL_SIZE).x + 0.8
 
 
 func _draw_zigzag(half: Vector2, edge: Color) -> void:
@@ -210,6 +253,11 @@ static func _icon_shapes(ci: CanvasItem, icon: String, ink: Color) -> void:
 			_bar(ci, Vector2(-4.0, -1.0), Vector2(8.0, 2.0), ink)
 			_bar(ci, Vector2(-3.0, 1.0), Vector2(6.0, 1.0), ink)
 			_bar(ci, Vector2(-1.0, 2.0), Vector2(2.0, 2.0), ink)
+		"big_circle":
+			# A ring, not a disc: a filled circle at this size reads as a
+			# blob, and the icon has to survive being 10 px wide.
+			ci.draw_arc(Vector2.ZERO, 5.0, 0.0, TAU, 24, ink, 2.0, true)
+			ci.draw_arc(Vector2.ZERO, 1.5, 0.0, TAU, 12, ink, 1.5, true)
 		"bolt":
 			ci.draw_colored_polygon(PackedVector2Array([
 				Vector2(1.0, -5.0), Vector2(-3.0, 1.0), Vector2(0.0, 1.0),

@@ -18,9 +18,10 @@ const VOLT := Color("D6FF3D")
 const EMBER := Color("FF4D2E")
 
 const SCREEN := Vector2(390.0, 844.0)
-## The HUD fills the top. The frame starts below it, which brings the
-## bricks down within reach on a screen twice as tall as it is wide.
-const HUD_HEIGHT := 140.0
+## The HUD fills the top. On a screen twice as tall as it is wide the
+## panel is not decoration: it is where the dead space goes. Every pixel
+## it takes is a pixel the wall does not have to hover above.
+const HUD_HEIGHT := 196.0
 const WALL := 6.0
 
 const EMITTER_SIZE := 8.0

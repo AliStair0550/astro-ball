@@ -1,0 +1,30 @@
+{
+  "id": 3,
+  "name": "The Chain",
+  "zone": "baeltet",
+  "grid": [
+    ".............",
+    ".VV.......VV.",
+    ".VVVV...VVVV.",
+    ".VVVVVEVVVVV.",
+    "..GGEGGGEGG..",
+    "...PPPPPPP...",
+    "....PPEPP....",
+    ".....VVV.....",
+    "......?......"
+  ],
+  "ballSpeed": 380,
+  "gridAnchor": 0,
+  "powerups": {
+    "multi": 20,
+    "fireball": 20,
+    "giant": 15,
+    "laser": 15,
+    "zap": 10,
+    "wide": 10,
+    "fast": 5,
+    "narrow": 5
+  },
+  "forcedFirstPowerup": null,
+  "parTime": 80
+}

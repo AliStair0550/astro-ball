@@ -6,6 +6,9 @@ extends Node
 
 const BRICK := Rect2(100.0, 100.0, 24.0, 16.0)
 const SPEEDS := [320.0, 520.0]
+## Section 20: Giant doubles the ball, so every sweep guarantee has to
+## hold at both sizes. A bigger circle overlaps more rects per step.
+const RADII := [4.0, 8.0]
 const SWEEP_TRIALS := 10000
 
 var fails := 0
@@ -52,11 +55,12 @@ func _single_brick_grid() -> Brick:
 	return grid.brick_at(col, row)
 
 
-func _make_ball() -> Ball:
+func _make_ball(radius := 4.0) -> Ball:
 	var ball := Ball.new()
 	ball.grid = grid
 	add_child(ball)
 	ball.stuck = false
+	ball.radius = radius
 	return ball
 
 
@@ -81,6 +85,11 @@ func _fire(ball: Ball, brick: Brick, from: Vector2, dir: Vector2, speed: float) 
 
 
 func _test_faces() -> void:
+	for radius: float in RADII:
+		_faces_at(radius)
+
+
+func _faces_at(radius: float) -> void:
 	for speed: float in SPEEDS:
 		var brick := _single_brick_grid()
 		var center := brick.rect.get_center()
@@ -93,21 +102,26 @@ func _test_faces() -> void:
 		for name in cases:
 			var brick_now := _single_brick_grid()
 			var case: Array = cases[name]
-			var ball := _make_ball()
+			var ball := _make_ball(radius)
 			var result := _fire(ball, brick_now, case[0], case[1], speed)
-			ok(result["hit"], "%.0f px/s: the %s face is hit" % [speed, name])
+			ok(result["hit"], "r%.0f %.0f px/s: the %s face is hit" % [radius, speed, name])
 			var out: Vector2 = result["velocity"]
 			var want: Vector2 = case[2]
 			ok(out.normalized().dot(want) > 0.9,
 				"%.0f px/s: the %s face throws the ball back (got %s)" % [speed, name, str(out.normalized())])
 			ok(absf(out.length() - speed) < 1.0,
 				"%.0f px/s: speed is unchanged after the %s face" % [speed, name])
-			ok(not brick_now.rect.grow(Ball.RADIUS - 0.5).has_point(ball.global_position),
+			ok(not brick_now.rect.grow(ball.radius - 0.5).has_point(ball.global_position),
 				"%.0f px/s: the ball ends outside the brick at %s" % [speed, name])
 			ball.free()
 
 
 func _test_corners() -> void:
+	for radius: float in RADII:
+		_corners_at(radius)
+
+
+func _corners_at(radius: float) -> void:
 	for speed: float in SPEEDS:
 		var offsets := {
 			"top left": Vector2(-1.0, -1.0),
@@ -121,14 +135,14 @@ func _test_corners() -> void:
 			var away: Vector2 = offsets[name]
 			var corner := center + Vector2(away.x * brick.rect.size.x * 0.5, away.y * brick.rect.size.y * 0.5)
 			var from := corner + away.normalized() * 45.0
-			var ball := _make_ball()
+			var ball := _make_ball(radius)
 			var result := _fire(ball, brick, from, -away.normalized(), speed)
-			ok(result["hit"], "%.0f px/s: the %s corner is hit" % [speed, name])
+			ok(result["hit"], "r%.0f %.0f px/s: the %s corner is hit" % [radius, speed, name])
 			var out: Vector2 = result["velocity"]
 			# Whatever face or corner it caught, it must leave the brick.
 			ok(out.dot(center - ball.global_position) < 0.0,
 				"%.0f px/s: the %s corner sends the ball away from the brick" % [speed, name])
-			ok(not brick.rect.grow(Ball.RADIUS - 0.5).has_point(ball.global_position),
+			ok(not brick.rect.grow(ball.radius - 0.5).has_point(ball.global_position),
 				"%.0f px/s: the ball ends outside the brick at the %s corner" % [speed, name])
 			ball.free()
 
@@ -138,9 +152,14 @@ func _test_corners() -> void:
 ## That is what tunnelling is: not a fast ball, but a step longer than
 ## the thing it should have hit. Not one of them may pass through.
 func _test_no_tunneling() -> void:
+	for radius: float in RADII:
+		_tunneling_at(radius)
+
+
+func _tunneling_at(radius: float) -> void:
 	var brick := _single_brick_grid()
 	var center := brick.rect.get_center()
-	var ball := _make_ball()
+	var ball := _make_ball(radius)
 	var missed := 0
 	var worst_step := 0.0
 	var worst_frames := 0.0
@@ -152,7 +171,9 @@ func _test_no_tunneling() -> void:
 		var target := center + Vector2(randf_range(-11.0, 11.0), randf_range(-7.0, 7.0))
 		# Start well clear of the brick, so the ball is never inside it
 		# at t=0. A ball that starts inside is a different problem.
-		var start_distance := randf_range(30.0, 160.0)
+		# Far enough out that the ball is never inside the brick at t=0,
+		# at either radius: half the brick diagonal is 14.4 px.
+		var start_distance := randf_range(30.0 + radius, 160.0)
 		var from := target - dir * start_distance
 		var speed: float = SPEEDS[i % SPEEDS.size()]
 		# One step that reaches past the far side in a single sweep.
@@ -178,7 +199,7 @@ func _test_no_tunneling() -> void:
 				print("    missed: from %s dir %s speed %.0f step %.1f px"
 					% [str(from.round()), str(dir.snapped(Vector2(0.01, 0.01))), speed, speed * step])
 
-	ok(missed == 0, "%d of %d runs tunnelled through the brick" % [missed, SWEEP_TRIALS])
+	ok(missed == 0, "r%.0f: %d of %d runs tunnelled through the brick" % [radius, missed, SWEEP_TRIALS])
 	ok(worst_step > 150.0,
 		"the test reached steps of %.0f px (%.1f frames), far past the brick 16 px"
 			% [worst_step, worst_frames])

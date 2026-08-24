@@ -91,6 +91,22 @@ static func validate(data: Dictionary) -> PackedStringArray:
 	if not powerups.is_empty() and absf(sum - 100.0) > 0.001:
 		errors.append("power-up percentages sum to %.1f, not 100" % sum)
 
+	# Section 20: gridAnchor is a px offset from the default wall line.
+	# A negative one lifts the wall, and lifting it too far eats the sky
+	# the ball needs to get up behind the wall.
+	var anchor := float(data.get("gridAnchor", 0))
+	var sky := BrickGrid.sky_for(grid, anchor)
+	if sky < BrickGrid.MIN_SKY:
+		errors.append("gridAnchor %.0f leaves %.0f px of sky, the minimum is %.0f"
+			% [anchor, sky, BrickGrid.MIN_SKY])
+	# The 57 per cent line is the guard: no wall's underside may cross it,
+	# whatever the anchor asks for. That is what keeps the fall zone long
+	# enough to react in, on every level.
+	var bottom := BrickGrid.origin_for(grid, anchor) + BrickGrid.wall_height(grid)
+	if bottom > BrickGrid.wall_line_y() + 0.01:
+		errors.append("gridAnchor %.0f puts the lowest row at y %.0f, past the wall line at %.0f"
+			% [anchor, bottom, BrickGrid.wall_line_y()])
+
 	var forced: Variant = data.get("forcedFirstPowerup", null)
 	if forced != null and not Powerup.CATALOG.has(str(forced)):
 		errors.append("forcedFirstPowerup '%s' does not exist" % str(forced))

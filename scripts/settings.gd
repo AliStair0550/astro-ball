@@ -21,8 +21,6 @@ var crt := false
 ## Mirrors buttons on the screens. Never gameplay.
 var left_handed := false
 
-var high_score := 0
-
 
 func _ready() -> void:
 	load_settings()
@@ -37,7 +35,6 @@ func load_settings() -> void:
 	haptics = bool(cfg.get_value("input", "haptics", haptics))
 	crt = bool(cfg.get_value("video", "crt", crt))
 	left_handed = bool(cfg.get_value("video", "left_handed", left_handed))
-	high_score = int(cfg.get_value("progress", "high_score", high_score))
 
 
 func save_settings() -> void:
@@ -47,7 +44,6 @@ func save_settings() -> void:
 	cfg.set_value("input", "haptics", haptics)
 	cfg.set_value("video", "crt", crt)
 	cfg.set_value("video", "left_handed", left_handed)
-	cfg.set_value("progress", "high_score", high_score)
 	cfg.save(PATH)
 
 
@@ -56,17 +52,5 @@ func apply() -> void:
 	changed.emit()
 
 
-## Returns true if the record was beaten.
-func submit_score(value: int) -> bool:
-	if value <= high_score:
-		return false
-	high_score = value
-	save_settings()
-	return true
-
-
-## Reset Progress. Stars and zone progression join this once they exist.
-func reset_progress() -> void:
-	high_score = 0
-	save_settings()
-	changed.emit()
+## Progress lives in GameProgress, not here. Settings are settings:
+## RESET PROGRESS erases stars and records and leaves these alone.

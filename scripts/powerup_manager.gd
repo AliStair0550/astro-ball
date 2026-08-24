@@ -17,6 +17,12 @@ const MAX_ON_SCREEN := 2
 ## Death and the other hard punishments stay out of the first five levels.
 const HARSH := ["death"]
 const HARSH_SAFE_LEVELS := 5
+## Section 20: Giant and Fireball cannot both be active. The last one
+## caught wins, so catching one clears the other.
+const EXCLUSIVE := {
+	"giant": ["fireball"],
+	"fireball": ["giant"],
+}
 
 var table: Dictionary = {}
 var forced_first := ""
@@ -29,6 +35,9 @@ var _active: Dictionary = {}
 var _last_was_bad := false
 var _next_guaranteed_good := false
 var _first_spawned := false
+## Section 15, the quiet helper: percentage points moved from the bad
+## drops to the good ones after three fails on the same field.
+var _good_bonus := 0.0
 
 
 func configure(level_data: Dictionary) -> void:
@@ -38,6 +47,37 @@ func configure(level_data: Dictionary) -> void:
 	level_number = int(level_data.get("id", 1))
 	_first_spawned = false
 	_last_was_bad = false
+
+
+## Section 15. Points are taken from the bad entries and handed to the
+## good ones, so the table still sums to 100 and the level still feels
+## like itself, only kinder.
+func set_good_bonus(points: float) -> void:
+	_good_bonus = maxf(points, 0.0)
+
+
+## The level's table with the helper folded in.
+func effective_table() -> Dictionary:
+	if _good_bonus <= 0.0 or table.is_empty():
+		return table
+	var good_sum := 0.0
+	var bad_sum := 0.0
+	for id in table:
+		if Powerup.is_good(str(id)):
+			good_sum += float(table[id])
+		else:
+			bad_sum += float(table[id])
+	if bad_sum <= 0.0 or good_sum <= 0.0:
+		return table
+	var moved := minf(_good_bonus, bad_sum)
+	var out := {}
+	for id in table:
+		var weight := float(table[id])
+		if Powerup.is_good(str(id)):
+			out[id] = weight * (good_sum + moved) / good_sum
+		else:
+			out[id] = weight * (bad_sum - moved) / bad_sum
+	return out
 
 
 func reset_level() -> void:
@@ -89,7 +129,8 @@ func _pick_id() -> String:
 	var candidates: Array[String] = []
 	var weights: Array[float] = []
 	var total := 0.0
-	for id in table:
+	var source := effective_table()
+	for id in source:
 		var name := str(id)
 		if not Powerup.CATALOG.has(name):
 			continue
@@ -98,7 +139,7 @@ func _pick_id() -> String:
 		if must_be_good and not Powerup.is_good(name):
 			continue
 		candidates.append(name)
-		var w := float(table[id])
+		var w := float(source[id])
 		weights.append(w)
 		total += w
 
@@ -141,6 +182,10 @@ func _process(delta: float) -> void:
 
 
 func _apply(id: String) -> void:
+	for other in EXCLUSIVE.get(id, []):
+		if _active.has(other):
+			_active.erase(other)
+			expired.emit(other)
 	var duration := float(Powerup.info(id)["duration"])
 	if duration > 0.0:
 		# Catching the same one again restarts its clock.

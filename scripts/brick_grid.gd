@@ -17,10 +17,24 @@ signal cleared()
 const COLUMNS := 13
 const SPACING := 2.0
 const PITCH := Vector2(Brick.SIZE.x + SPACING, Brick.SIZE.y + SPACING)
-## Centred horizontally. Vertically it sits as low as the air above it
-## allows: there must still be room to get up behind the wall, because
-## that is where the DX-Ball moment lives.
-const ORIGIN := Vector2(27.0, 230.0)
+## Centred horizontally. 12 * PITCH.x + Brick.SIZE.x is 336, and
+## (390 - 336) / 2 is exactly 27.
+const ORIGIN_X := 27.0
+
+## Section 20 hung the wall's lowest row on a line 57 per cent down the
+## field. On a portrait screen that reads badly for a shallow level: a
+## seven-row wall ends up with 274 px of sky above it and 300 px below,
+## and half the empty screen sits where nothing ever happens.
+##
+## So the sky is fixed and short, and the 57 per cent line becomes a
+## guard rather than the rule: a wall deep enough to reach past it gets
+## pulled up instead. The slack lands under the wall, between the bricks
+## and the paddle, which is the half of the screen the player is
+## actually looking at.
+const SKY := 120.0
+const WALL_LINE_FRACTION := 0.57
+## Never less than this, whatever a level's gridAnchor asks for.
+const MIN_SKY := 90.0
 
 ## The chain has to be seen, not only heard.
 const CHAIN_DELAY := 0.04
@@ -37,17 +51,66 @@ const NEIGHBOUR_SPIRAL := [
 var rows := 0
 var blind := false
 
+## Set per level by build(), from the row count and the level's gridAnchor.
+var origin_y := 0.0
+
 var _bricks: Array = []
 var _pending: Array[Dictionary] = []
 var _time := 0.0
 var _clear_emitted := false
 
 
-func build(grid: Array) -> void:
+static func field_top() -> float:
+	return Arena.HUD_HEIGHT + Arena.WALL
+
+
+## The deepest the wall's underside may reach: 57 per cent down the
+## field. A wall that would cross it is pulled up.
+static func wall_line_y() -> float:
+	return field_top() + WALL_LINE_FRACTION * (Arena.SCREEN.y - field_top())
+
+
+## The lowest row in the grid that actually holds a brick. A level whose
+## last rows are empty must still hang its visible wall on the line.
+static func last_brick_row(grid: Array) -> int:
+	for row in range(grid.size() - 1, -1, -1):
+		var line: String = str(grid[row])
+		for col in COLUMNS:
+			if col < line.length() and line[col] != "." and Brick.SYMBOLS.has(line[col]):
+				return row
+	return maxi(grid.size() - 1, 0)
+
+
+## Height from the top of the first row to the underside of the last.
+static func wall_height(grid: Array) -> float:
+	return float(last_brick_row(grid)) * PITCH.y + Brick.SIZE.y
+
+
+## Where the wall's top row starts. A short sky by default, and the wall
+## line as the guard that keeps a deep wall off the paddle.
+static func origin_for(grid: Array, anchor := 0.0) -> float:
+	var by_sky := field_top() + SKY
+	var by_line := wall_line_y() - wall_height(grid)
+	return minf(by_sky, by_line) + anchor
+
+
+## Sky between the inside of the frame and the topmost brick row.
+static func sky_for(grid: Array, anchor := 0.0) -> float:
+	var top := origin_for(grid, anchor)
+	for row in grid.size():
+		var line: String = str(grid[row])
+		for col in COLUMNS:
+			if col < line.length() and line[col] != "." and Brick.SYMBOLS.has(line[col]):
+				return top + float(row) * PITCH.y - field_top()
+	return top - field_top()
+
+
+func build(grid: Array, anchor := 0.0) -> void:
 	_bricks.clear()
 	_pending.clear()
 	_clear_emitted = false
 	rows = grid.size()
+	origin_y = origin_for(grid, anchor)
 	for row in rows:
 		var line: String = str(grid[row])
 		for col in COLUMNS:
@@ -55,7 +118,7 @@ func build(grid: Array) -> void:
 			if symbol == "." or not Brick.SYMBOLS.has(symbol):
 				_bricks.append(null)
 				continue
-			var rect := Rect2(ORIGIN + Vector2(col * PITCH.x, row * PITCH.y), Brick.SIZE)
+			var rect := Rect2(Vector2(ORIGIN_X + col * PITCH.x, origin_y + row * PITCH.y), Brick.SIZE)
 			_bricks.append(Brick.new(Brick.SYMBOLS[symbol], col, row, rect))
 	queue_redraw()
 
@@ -73,18 +136,19 @@ func brick_at(col: int, row: int) -> Brick:
 	return _bricks[i]
 
 
-## Bottom edge of the grid. Keeps power-ups clear of the bricks.
+## Underside of the lowest row. Not origin_y + rows * PITCH.y: that
+## counts the trailing 2 px of spacing and sits 2 px too low.
 func bottom_y() -> float:
-	return ORIGIN.y + float(rows) * PITCH.y
+	return origin_y + float(maxi(rows - 1, 0)) * PITCH.y + Brick.SIZE.y
 
 
 ## Bricks whose rect overlaps the given area. Broad phase.
 func bricks_in(area: Rect2) -> Array[Brick]:
 	var found: Array[Brick] = []
-	var first_col := int(floor((area.position.x - ORIGIN.x) / PITCH.x)) - 1
-	var last_col := int(floor((area.end.x - ORIGIN.x) / PITCH.x)) + 1
-	var first_row := int(floor((area.position.y - ORIGIN.y) / PITCH.y)) - 1
-	var last_row := int(floor((area.end.y - ORIGIN.y) / PITCH.y)) + 1
+	var first_col := int(floor((area.position.x - ORIGIN_X) / PITCH.x)) - 1
+	var last_col := int(floor((area.end.x - ORIGIN_X) / PITCH.x)) + 1
+	var first_row := int(floor((area.position.y - origin_y) / PITCH.y)) - 1
+	var last_row := int(floor((area.end.y - origin_y) / PITCH.y)) + 1
 	for row in range(maxi(first_row, 0), mini(last_row + 1, rows)):
 		for col in range(maxi(first_col, 0), mini(last_col + 1, COLUMNS)):
 			var brick: Brick = _bricks[row * COLUMNS + col]

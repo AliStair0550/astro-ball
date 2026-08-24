@@ -48,7 +48,7 @@ func _process(_delta: float) -> void:
 			if int(game.level_data.get("id", 0)) != 3:
 				game._load_level(2)
 				game._set_state(Game.State.PLAYING)
-				game.grid.brick_at(6, 9).revealed = true
+				if game.grid.brick_at(6, 8): game.grid.brick_at(6, 8).revealed = true
 				for brick in game.grid.live_bricks():
 					if brick.type == Brick.Type.BLAST:
 						brick.proximity = 1.0
@@ -73,6 +73,18 @@ func _process(_delta: float) -> void:
 			game.paddle._left_light = 1.0
 			game.paddle._scale_y = 0.9
 		6:
+			for child in game.powerups.get_children():
+				child.queue_free()
+			game.powerups._capsules.clear()
+			var cap_a := Powerup.new()
+			game.powerups.add_child(cap_a)
+			cap_a.setup("giant", Vector2(105.0, 590.0), 900.0)
+			var cap_b := Powerup.new()
+			game.powerups.add_child(cap_b)
+			cap_b.setup("multi", Vector2(215.0, 660.0), 900.0)
+			var cap_c := Powerup.new()
+			game.powerups.add_child(cap_c)
+			cap_c.setup("narrow", Vector2(310.0, 620.0), 900.0)
 			game.paddle.set_width(Paddle.WIDTH_WIDE)
 			game.paddle.laser = true
 			game.paddle._bolts = [

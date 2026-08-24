@@ -1,11 +1,11 @@
 {
   "id": 2,
   "name": "The Capsule",
-  "zone": "the-belt",
+  "zone": "baeltet",
   "grid": [
     ".S.........S.",
     ".VVVVVVVVVVV.",
-    ".VHHHHHHHHHV.",
+    ".VFFFFEFFFFV.",
     ".V.........V.",
     ".V.IIIIIII.V.",
     ".V.I.....I.V.",
@@ -15,11 +15,13 @@
     ".VVVVVVVVVVV."
   ],
   "ballSpeed": 360,
+  "gridAnchor": 0,
   "powerups": {
-    "fireball": 25,
     "multi": 25,
+    "fireball": 20,
     "laser": 20,
-    "wide": 20,
+    "wide": 15,
+    "giant": 10,
     "narrow": 10
   },
   "forcedFirstPowerup": null,

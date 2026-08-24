@@ -20,7 +20,7 @@ signal brick_hit(brick: Brick, damage: int, pos: Vector2, passed_through: bool)
 signal launched()
 signal lost(ball: Ball)
 
-enum Look { NORMAL, FIREBALL, SLOW, FAST, ZAP }
+enum Look { NORMAL, FIREBALL, GIANT, SLOW, FAST, ZAP }
 
 const BONE := Color("F2EFE6")
 const VOLT := Color("D6FF3D")
@@ -28,7 +28,12 @@ const ICE := Color("4DD8FF")
 const EMBER := Color("FF4D2E")
 const FLARE := Color("FF9F1C")
 
-const RADIUS := 4.0
+## The resting radius. Giant doubles it, so the live value is the
+## instance variable below, not this constant.
+const BASE_RADIUS := 4.0
+const GIANT_SCALE := 2.0
+## How many times the depenetration pass will push before giving up.
+const FREE_PASSES := 6
 const BASE_SPEED := 320.0
 ## Speed rises 4 per cent per 10 bricks and stops here.
 const MAX_SPEED := 520.0
@@ -49,6 +54,24 @@ const SWEET_BONUS_TIME := 2.0
 const TRAIL_LENGTH := 12
 const SKIN := 0.01
 const MAX_SUBSTEPS := 16
+
+## The live radius. Assigning it never embeds the ball: growth that
+## would put the ball inside the frame, the paddle or a brick is held
+## until there is room. A frame or two of delay is invisible. A ball
+## stuck inside four bricks is not.
+var radius := BASE_RADIUS:
+	set(value):
+		if is_equal_approx(value, radius):
+			return
+		var previous := radius
+		radius = value
+		if value > previous and not _free_from_overlaps():
+			radius = previous
+			_pending_radius = value
+		else:
+			_pending_radius = 0.0
+
+var _pending_radius := 0.0
 
 var arena: Arena
 var paddle: Paddle
@@ -76,6 +99,11 @@ var speed_scale := 1.0:
 		speed_scale = value
 		_renormalize()
 var fireball := false
+## Section 20: 200 per cent ball, breaks Hardened in one hit.
+var giant := false:
+	set(value):
+		giant = value
+		radius = BASE_RADIUS * (GIANT_SCALE if value else 1.0)
 var zap := false
 var last_exit_angle := 0.0
 
@@ -102,6 +130,8 @@ func current_speed() -> float:
 func look() -> Look:
 	if fireball:
 		return Look.FIREBALL
+	if giant:
+		return Look.GIANT
 	if zap:
 		return Look.ZAP
 	if speed_scale < 1.0:
@@ -116,7 +146,7 @@ func stick_to_paddle() -> void:
 	velocity = Vector2.ZERO
 	_bonus_left = 0.0
 	if paddle:
-		global_position = paddle.ball_anchor(RADIUS)
+		global_position = paddle.ball_anchor(radius)
 	_fill_trail()
 
 
@@ -168,13 +198,17 @@ func _physics_process(delta: float) -> void:
 
 	if stuck:
 		if paddle:
-			global_position = paddle.ball_anchor(RADIUS)
+			global_position = paddle.ball_anchor(radius)
 		_fill_trail()
 		queue_redraw()
 		return
 
 	if velocity.length() > 0.0001:
 		velocity = velocity.normalized() * current_speed()
+
+	# Growth that had no room last tick tries again now.
+	if _pending_radius > 0.0:
+		radius = _pending_radius
 
 	_advance(delta)
 	_resolve_paddle_overlap()
@@ -183,7 +217,7 @@ func _physics_process(delta: float) -> void:
 	if _trail.size() > TRAIL_LENGTH:
 		_trail.resize(TRAIL_LENGTH)
 
-	if arena and global_position.y - RADIUS > arena.death_y:
+	if arena and global_position.y - radius > arena.death_y:
 		lost.emit(self)
 		return
 
@@ -193,6 +227,7 @@ func _physics_process(delta: float) -> void:
 func _advance(delta: float) -> void:
 	var remaining := delta
 	var guard := 0
+	var stalls := 0
 	while remaining > 0.00001 and guard < MAX_SUBSTEPS:
 		guard += 1
 		var motion := velocity * remaining
@@ -203,7 +238,7 @@ func _advance(delta: float) -> void:
 
 		if arena:
 			for seg in arena.wall_segments():
-				var hit := _sweep_circle_segment(global_position, motion, RADIUS, seg["a"], seg["b"])
+				var hit := _sweep_circle_segment(global_position, motion, radius, seg["a"], seg["b"])
 				if hit["hit"] and hit["t"] < best_t:
 					best_t = hit["t"]
 					best_normal = hit["normal"]
@@ -220,7 +255,7 @@ func _advance(delta: float) -> void:
 				[top_right, r.end, "paddle_side"],
 			]
 			for face in faces:
-				var hit := _sweep_circle_segment(global_position, motion, RADIUS, face[0], face[1])
+				var hit := _sweep_circle_segment(global_position, motion, radius, face[0], face[1])
 				if hit["hit"] and hit["t"] < best_t:
 					best_t = hit["t"]
 					best_normal = hit["normal"]
@@ -229,9 +264,9 @@ func _advance(delta: float) -> void:
 
 		if grid:
 			var swept := Rect2(global_position, Vector2.ZERO)
-			swept = swept.expand(global_position + motion).grow(RADIUS + 1.0)
+			swept = swept.expand(global_position + motion).grow(radius + 1.0)
 			for brick in grid.bricks_in(swept):
-				var hit := _sweep_circle_rect(global_position, motion, RADIUS, brick.rect)
+				var hit := _sweep_circle_rect(global_position, motion, radius, brick.rect)
 				if hit["hit"] and hit["t"] < best_t:
 					best_t = hit["t"]
 					best_normal = hit["normal"]
@@ -242,11 +277,26 @@ func _advance(delta: float) -> void:
 			global_position += motion
 			return
 
+		# A contact at t == 0 moves the ball nowhere. Three of those in a
+		# row means it is wedged, and burning the remaining substeps
+		# reflecting in place leaves the tick with a garbage velocity.
+		if best_t <= 0.0:
+			stalls += 1
+			if stalls >= 3:
+				_free_from_overlaps()
+				return
+		else:
+			stalls = 0
+
 		var pass_through := false
 		var damage := 1
 		if best_kind == "brick":
 			if fireball and best_brick.is_breakable():
 				pass_through = true
+				damage = best_brick.hits_left
+			elif giant and best_brick.is_breakable():
+				# Section 20: Giant breaks Hardened in one hit, but it
+				# does not go through. It is heavy, not a ghost.
 				damage = best_brick.hits_left
 			elif best_brick.lets_ball_pass():
 				pass_through = true
@@ -324,14 +374,109 @@ func _enforce_min_angle(v: Vector2) -> Vector2:
 func _resolve_paddle_overlap() -> void:
 	if paddle == null or stuck:
 		return
-	var r := paddle.world_rect().grow(RADIUS)
-	if not r.has_point(global_position):
+	# A real circle against the rectangle. grow() on all four sides turns
+	# the radius into a sideways magnet: a giant ball passing beside the
+	# paddle would be teleported onto its top and bounced.
+	if _rect_push(paddle.world_rect()) == Vector2.ZERO:
 		return
 	if global_position.y > paddle.global_position.y:
 		return
-	global_position.y = paddle.top_y() - RADIUS - SKIN
+	global_position.y = paddle.top_y() - radius - SKIN
 	if velocity.y > 0.0:
 		_bounce_off_paddle()
+
+
+## Pushes the ball out of anything it is currently inside. Returns true
+## when it ends up free. Growth calls this, and so does a sweep that has
+## stalled, because both leave the ball somewhere it cannot legally be.
+func _free_from_overlaps() -> bool:
+	for pass_index in FREE_PASSES:
+		var push := Vector2.ZERO
+		var deepest := 0.0
+
+		if arena:
+			for seg in arena.wall_segments():
+				var closest := _closest_point_on_segment(global_position, seg["a"], seg["b"])
+				var away := global_position - closest
+				var distance := away.length()
+				if distance < radius:
+					var normal: Vector2 = seg["inward"]
+					if distance > 0.001 and away.dot(normal) > 0.0:
+						normal = away / distance
+					var depth := radius - distance
+					if depth > deepest:
+						deepest = depth
+					push += normal * depth
+
+		if paddle:
+			var overlap := _rect_push(paddle.world_rect())
+			if overlap != Vector2.ZERO:
+				deepest = maxf(deepest, overlap.length())
+				push += overlap
+
+		if grid:
+			var area := Rect2(global_position, Vector2.ZERO).grow(radius + 1.0)
+			for brick in grid.bricks_in(area):
+				var overlap_brick := _rect_push(brick.rect)
+				if overlap_brick != Vector2.ZERO:
+					deepest = maxf(deepest, overlap_brick.length())
+					push += overlap_brick
+
+		if deepest <= 0.001:
+			return true
+		if push.length() < 0.0001:
+			return false
+		global_position += push.normalized() * (deepest + SKIN)
+	return not _is_overlapping()
+
+
+func _is_overlapping() -> bool:
+	if arena:
+		for seg in arena.wall_segments():
+			if global_position.distance_to(_closest_point_on_segment(global_position, seg["a"], seg["b"])) < radius - 0.01:
+				return true
+	if paddle and _rect_push(paddle.world_rect()) != Vector2.ZERO:
+		return true
+	if grid:
+		for brick in grid.bricks_in(Rect2(global_position, Vector2.ZERO).grow(radius + 1.0)):
+			if _rect_push(brick.rect) != Vector2.ZERO:
+				return true
+	return false
+
+
+## The vector that would free the ball from one rectangle, or zero if it
+## is already clear of it.
+func _rect_push(rect: Rect2) -> Vector2:
+	var closest := Vector2(
+		clampf(global_position.x, rect.position.x, rect.end.x),
+		clampf(global_position.y, rect.position.y, rect.end.y))
+	var away := global_position - closest
+	var distance := away.length()
+	if distance >= radius:
+		return Vector2.ZERO
+	if distance > 0.001:
+		return (away / distance) * (radius - distance)
+	# Dead centre inside the rect: leave along the shortest way out.
+	var left := global_position.x - rect.position.x
+	var right := rect.end.x - global_position.x
+	var up := global_position.y - rect.position.y
+	var down := rect.end.y - global_position.y
+	var least := minf(minf(left, right), minf(up, down))
+	if least == left:
+		return Vector2(-(left + radius), 0.0)
+	if least == right:
+		return Vector2(right + radius, 0.0)
+	if least == up:
+		return Vector2(0.0, -(up + radius))
+	return Vector2(0.0, down + radius)
+
+
+static func _closest_point_on_segment(p: Vector2, a: Vector2, b: Vector2) -> Vector2:
+	var ab := b - a
+	var length_sq := ab.length_squared()
+	if length_sq < 0.0001:
+		return a
+	return a + ab * clampf((p - a).dot(ab) / length_sq, 0.0, 1.0)
 
 
 # --- Swept circle ------------------------------------------------------
@@ -427,27 +572,39 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	match look():
 		Look.FIREBALL:
-			_draw_tail(10, EMBER, FLARE, 3.6, 0.55)
-			draw_circle(Vector2.ZERO, RADIUS, FLARE)
-			draw_circle(Vector2.ZERO, RADIUS - 2.0, EMBER)
+			_draw_tail(10, EMBER, FLARE, 3.6 * _scale(), 0.55)
+			draw_circle(Vector2.ZERO, radius, FLARE)
+			draw_circle(Vector2.ZERO, radius * 0.5, EMBER)
 		Look.SLOW:
-			_draw_tail(4, ICE, ICE, 4.2, 0.5)
+			_draw_tail(4, ICE, ICE, 4.2 * _scale(), 0.5)
 			# A faint ring of frost.
-			draw_arc(Vector2.ZERO, RADIUS + 2.5, 0.0, TAU, 20, Color(ICE, 0.35), 1.0, true)
-			draw_circle(Vector2.ZERO, RADIUS, ICE)
-			draw_circle(Vector2.ZERO, RADIUS - 2.0, BONE)
+			draw_arc(Vector2.ZERO, radius + 2.5, 0.0, TAU, 20, Color(ICE, 0.35), 1.0, true)
+			draw_circle(Vector2.ZERO, radius, ICE)
+			draw_circle(Vector2.ZERO, radius * 0.5, BONE)
 		Look.FAST:
 			_draw_streak(12, VOLT)
-			draw_circle(Vector2.ZERO, RADIUS, VOLT)
-			draw_circle(Vector2.ZERO, RADIUS - 2.0, BONE)
+			draw_circle(Vector2.ZERO, radius, VOLT)
+			draw_circle(Vector2.ZERO, radius * 0.5, BONE)
 		Look.ZAP:
-			_draw_tail(3, Color.WHITE, Color.WHITE, 3.0, 0.6)
-			draw_circle(Vector2.ZERO, RADIUS, Color.WHITE)
-			draw_circle(Vector2.ZERO, RADIUS - 2.0, VOLT)
+			_draw_tail(3, Color.WHITE, Color.WHITE, 3.0 * _scale(), 0.6)
+			draw_circle(Vector2.ZERO, radius, Color.WHITE)
+			draw_circle(Vector2.ZERO, radius * 0.5, VOLT)
+		Look.GIANT:
+			# The comet grows with the ball, tail and all.
+			_draw_tail(8, BONE, VOLT, 3.4 * _scale(), 0.5)
+			draw_circle(Vector2.ZERO, radius, BONE)
+			draw_circle(Vector2.ZERO, radius * 0.68, VOLT)
+			draw_circle(Vector2.ZERO, radius * 0.3, BONE)
 		_:
-			_draw_tail(6, VOLT, VOLT, 3.4, 0.45)
-			draw_circle(Vector2.ZERO, RADIUS, VOLT)
-			draw_circle(Vector2.ZERO, RADIUS - 2.0, BONE)
+			_draw_tail(6, VOLT, VOLT, 3.4 * _scale(), 0.45)
+			draw_circle(Vector2.ZERO, radius, VOLT)
+			draw_circle(Vector2.ZERO, radius * 0.5, BONE)
+
+
+## How far the ball is from its resting size. The tail scales with it,
+## so a giant comet does not trail a thread behind a boulder.
+func _scale() -> float:
+	return radius / BASE_RADIUS
 
 
 func _draw_tail(links: int, near: Color, far: Color, start_size: float, start_alpha: float) -> void:

@@ -8,12 +8,43 @@ Designdokumentet ligger i [CLAUDE.md](CLAUDE.md).
 ## Status
 
 Punkt 1 til 7 i byggerækkefølgen er bygget: bold, paddle og
-containment-felt, alle ti klodstyper fra Bæltet, level-loader med
+containment-felt, alle ti klodstyper fra The Drift, level-loader med
 validering, level 1 til 3 spilbare fra start til clear, HUD, baggrund
-med alle reaktioner, og lyd.
+med alle reaktioner, lyd, skærme, stjerner og progression.
 
-Ikke bygget endnu: touch-styring, level 4 til 12 og de power-ups, som
-level 1 til 3 ikke kalder på.
+Ikke bygget endnu: touch-styring, level 4 til 12, konstellationskortet
+og de power-ups, som level 1 til 3 ikke kalder på.
+
+### Murens placering
+
+Bundankeret fra afsnit 20 flyttede problemet i stedet for at løse det:
+en mur på syv rækker fik 274 px himmel over sig og 300 px under, og
+halvdelen af den tomme skærm lå, hvor der aldrig sker noget.
+
+Reglen nu: en kort, fast himmel under en høj HUD, med murlinjen som
+værn for dybe mure.
+
+```
+HUD             196 px, brugt aktivt
+himmel          120 px fast mellem HUD og øverste klodsrække
+murlinje        57 % nede i feltet, et værn en mur aldrig krydser
+faldzone        344 til 380 px i de tre første levels
+gridAnchor      valgfrit px-offset i leveldata, positivt = længere ned
+```
+
+Level-loaderen afviser et anker, der æder himlen eller fører muren
+forbi murlinjen.
+
+### Stjerner og progression
+
+Afsnit 15 giver tre stjerner pr. level: gennemført, gennemført under
+parTime, gennemført uden at miste bolden. De er uafhængige, så den
+tredje kan tjenes uden den anden, og de lægges sammen på tværs af
+forsøg i stedet for at blive erstattet. Gemmes i `user://progress.json`.
+
+Den stille hjælper: tre fejl i træk på samme bane flytter 15
+procentpoint fra de dårlige power-ups til de gode. Intet på skærmen,
+intet i lyden. Nulstilles ved gennemførelse.
 
 ### Skærme
 
@@ -76,6 +107,7 @@ Alle tre er bevidste og lette at rulle tilbage.
 | Boldens grundfart | 320 px/s | 360, 360, 380 pr. level | Dokumentets forventede leveltider (45 til 70 sekunder for level 1) kan ikke nås på et 698 px højt felt ved 320 px/s. Farten står i hver levelfil og kan ændres uden at røre kode. |
 | Langsom i level 1 til 3 | Level 1 og 2 havde den | Fjernet | En bremse er en straf, når banen er let. Langsom hører til, når det bliver svært. Ildkugle, Laser og Multi fylder pladsen. |
 | Den fjerne planet | Lag 2 havde en planet i nederste hjørne | Fjernet | Den lå, hvor paddlen arbejder, og læste som en cirkel frem for en verden. Baggrunden holder sig til stjerner, støv og et fjernt lysvask, der skifter farve fra bane til bane. |
+| Murens højde | Gridet lå hvor det så bedst ud | Bundanker fra afsnit 20 | Samme faldzone i hvert level, uanset rækkeantal. Muren rykkede 172 px ned i level 1. |
 | Lydens form | Syntetiseret i kode ved opstart | Syntetiseret af `tools/make_audio.py` og lagt i repoet | Samme idé, ingen uigennemsigtige aktiver: hver WAV kan regenereres fra scriptet. Forskellen er, at spillet ikke bruger et sekund på at regne bølgeformer ud, hver gang det starter på en telefon. |
 | Klodsen som node | `scenes/brick.tscn` pr. klods | `brick.gd` er data, gridet tegner dem alle i ét `_draw` | 140 klodser bliver ikke til 140 noder. Anatomi, skadestadier og kollision er uændrede. |
 
@@ -153,17 +185,21 @@ scripts/background.gd     stjernefelt, planet, asteroider, parallax, reaktioner
 scripts/game_feel.gd      screen shake, hitstop, squash
 scripts/hud.gd            provisorisk HUD
 scripts/hud.gd            instrumentpanelet i toppen
+scripts/level_state.gd    liv, score, kombo, ure og stjerner
+scripts/progress.gd       stjerner, rekord og fejltæller, gemt i user://
+scripts/strings.gd        alt spillervendt tekst, afsnit 14
 scripts/screens.gd        titel, indstillinger, intro, clear, game over
 scripts/settings.gd       indstillinger der overlever et genstart
 scripts/audio.gd          buser med rumklang, stemmer, drone
 scripts/crt.gd            CRT-tilstanden
-levels/01_afgang.json     level 1, 47 klodser
-levels/02_kapslen.json    level 2, 68 klodser plus 2 Sten
-levels/03_kaeden.json     level 3, 53 klodser
+levels/level_01.json      Liftoff, 47 klodser
+levels/level_02.json      The Capsule, 68 klodser plus 2 Sten
+levels/level_03.json      The Chain, 53 klodser
 assets/fonts/             Unbounded og Space Grotesk, begge under OFL
 assets/audio/             18 syntetiserede lyde
 assets/shaders/crt.gdshader
 tools/make_audio.py       genererer lydbanken
+tools/validate_levels.gd  validerer alle levels headless, exit-kode
 tests/                    regressionssuite, køres med tests/run.sh
 ```
 
@@ -177,8 +213,10 @@ Tre suiter, alle headless:
 
 | Suite | Hvad den dækker |
 |---|---|
+| `validate_levels` | alle levelfiler mod afsnit 11 og 20, med exit-kode |
 | `mechanics` | gridet, klodserne, level-validering, power-up-reglerne, boldens sweep |
-| `brick_feel` | refleksion på alle fire flader og hjørner ved 320 og 520 px/s, 10 000 gennemløb uden tunnelering, splinterantal, oprydning inden 400 ms, pitch-loft |
+| `brick_feel` | refleksion på alle fire flader og hjørner ved 320 og 520 px/s **og ved begge boldstørrelser**, 20 000 gennemløb uden tunnelering, splinterantal, oprydning inden 400 ms, pitch-loft |
+| `phase3` | strengfilen, loaderens afvisninger, gridAnchor, level-tilstand, stjerner, persistens, den stille hjælper, power-up-ure, Giant |
 | `lifecycle` | liv, SIGNAL LOST, RE-ENTRY, level-progression, fartstigning, score, indstillinger |
 | `play` | autopilot spiller alle tre levels igennem og tjekker invarianter hver frame |
 

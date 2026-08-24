@@ -10,7 +10,7 @@ extends Node2D
 
 enum State { TITLE, SETTINGS, LEVEL_INTRO, PLAYING, BALL_LOST, LEVEL_CLEAR, SIGNAL_LOST }
 
-const START_LIVES := 3
+const START_LIVES := LevelState.START_LIVES
 const MAX_BALLS := 6
 const BALL_LOST_PAUSE := 0.5
 const LEVEL_INTRO_PAUSE := 2.2
@@ -40,24 +40,37 @@ const SHAKE_BLAST := Vector2(6.0, 0.12)
 @onready var _debug_label: Label = $HUDLayer/Debug
 
 var state := State.TITLE
-var score := 0
-var lives := START_LIVES
-var combo := 0
-var best_combo := 0
+
+## The numbers live in LevelState. These stay as the conductor's public
+## surface so nothing else has to know where they moved to.
+var run := LevelState.new()
+
+var score: int:
+	get:
+		return run.score
+	set(value):
+		run.score = value
+var lives: int:
+	get:
+		return run.lives
+	set(value):
+		run.lives = value
+var combo: int:
+	get:
+		return run.combo
+	set(value):
+		run.combo = value
+var best_combo: int:
+	get:
+		return run.best_combo
+	set(value):
+		run.best_combo = value
 
 var level_index := 0
 var level_data: Dictionary = {}
 var level_paths: PackedStringArray
 
 var _balls: Array[Ball] = []
-## Telemetry for the SIGNAL LOST readout.
-var run_bricks := 0
-var run_time := 0.0
-var _level_start_score := 0
-## Section 16: one re-entry per field.
-var _re_entry_used := false
-## Bricks broken in this level. The ball speeds up with them.
-var _bricks_this_level := 0
 ## Where the ball last touched a brick. The shards fly away from it.
 var _last_impact := Vector2.INF
 var _state_timer := 0.0
@@ -123,11 +136,12 @@ func _set_state(new_state: State) -> void:
 
 	screens.level_number = int(level_data.get("id", 1))
 	screens.level_title = str(level_data.get("name", ""))
+	screens.zone_slug = str(level_data.get("zone", "baeltet"))
 	screens.final_score = score
-	screens.bricks_cleared = run_bricks
-	screens.best_combo = best_combo
-	screens.run_time = run_time
-	screens.can_re_enter = not _re_entry_used
+	screens.bricks_cleared = run.run_bricks
+	screens.best_combo = run.best_combo
+	screens.run_time = run.run_time
+	screens.can_re_enter = not run.re_entry_used
 	screens.show_screen(overlay)
 
 	# Section 16: SIGNAL LOST is a black screen with the star field at
@@ -167,23 +181,20 @@ func _on_screen_action(name: String) -> void:
 			# Section 16: one extra life, continue exactly where it stood.
 			# The bricks, the score and the clock are all untouched.
 			audio.play("ui_select")
-			_re_entry_used = true
-			lives = 1
+			run.on_re_entry()
 			_spawn_ball(true)
 			_set_state(State.PLAYING)
 		"restart":
 			# The field from the start, three lives, level score cleared.
 			audio.play("ui_select")
-			score = _level_start_score
-			lives = START_LIVES
-			_re_entry_used = false
+			run.restart_level()
 			_load_level(level_index)
 			_set_state(State.LEVEL_INTRO)
 		"arm_reset":
 			audio.play("ui_move")
 		"reset_progress":
 			audio.play("ui_back")
-			GameSettings.reset_progress()
+			GameProgress.reset()
 		"settings":
 			audio.play("ui_select")
 			_set_state(State.SETTINGS)
@@ -221,12 +232,7 @@ func _on_screen_action(name: String) -> void:
 
 
 func _start_new_game() -> void:
-	score = 0
-	lives = START_LIVES
-	best_combo = 0
-	run_bricks = 0
-	run_time = 0.0
-	_re_entry_used = false
+	run.start_run()
 	_load_level(0)
 	_set_state(State.LEVEL_INTRO)
 
@@ -246,12 +252,15 @@ func _load_level(index: int) -> void:
 		return
 
 	level_data = result["data"]
-	grid.build(level_data.get("grid", []))
+	grid.build(level_data.get("grid", []), float(level_data.get("gridAnchor", 0)))
 	grid.blind = false
 	arena.reset()
 	effects.clear_all()
 	powerups.reset_level()
 	powerups.configure(level_data)
+	# Section 15, the quiet helper. Three fails on this field and the
+	# good drops get more generous. Nothing says so on screen.
+	powerups.set_good_bonus(GameProgress.helper_points(int(level_data.get("id", 1))))
 	background.set_level_mood(int(level_data.get("id", 1)))
 
 	paddle.set_width(Paddle.WIDTH_NORMAL)
@@ -262,14 +271,12 @@ func _load_level(index: int) -> void:
 	_clear_balls()
 	_spawn_ball(true)
 
-	combo = 0
-	_bricks_this_level = 0
-	_level_start_score = score
+	run.start_level()
 	_refresh_hud()
 
 
 func _next_level() -> void:
-	_re_entry_used = false
+	run.re_entry_used = false
 	_load_level(level_index + 1)
 	_set_state(State.LEVEL_INTRO)
 
@@ -339,7 +346,7 @@ func _on_wall_hit(pos: Vector2, _normal: Vector2) -> void:
 func _on_paddle_hit(pos: Vector2, _angle: float, sweet: bool) -> void:
 	# The combo resets on paddle contact. That is what makes a long run
 	# up behind the wall worth chasing.
-	combo = 0
+	run.on_paddle_hit()
 	audio.set_drone_intensity(0)
 	effects.sparks(pos, Vector2.UP, 2, Paddle.VOLT if sweet else Paddle.BONE)
 	audio.play("paddle", 1.12 if sweet else randf_range(0.97, 1.03), -2.0)
@@ -363,14 +370,8 @@ func _on_brick_damaged(brick: Brick) -> void:
 
 
 func _on_brick_destroyed(brick: Brick, by_chain: bool) -> void:
-	combo += 1
-	best_combo = maxi(best_combo, combo)
-	_bricks_this_level += 1
-	run_bricks += 1
+	var points := run.on_brick_destroyed(brick.score_value())
 	_apply_ball_speed()
-
-	var points := brick.score_value() * _combo_multiplier()
-	score += points
 
 	effects.brick_smashed(brick.rect, brick.color(), brick.shard_count(),
 		brick.type == Brick.Type.GLASS, _last_impact)
@@ -423,6 +424,12 @@ func _on_stone_popped(brick: Brick) -> void:
 func _on_level_cleared() -> void:
 	if state != State.PLAYING:
 		return
+	# Section 15: cleared, cleared under par, cleared without losing the
+	# ball. Independent, and merged with what earlier attempts earned.
+	var level_id := int(level_data.get("id", 1))
+	var par := float(level_data.get("parTime", 0))
+	GameProgress.record_clear(level_id, run.stars(par), run.level_time)
+	GameProgress.submit_score(run.score)
 	arena.celebrate()
 	background.blitz()
 	audio.play("level_clear")
@@ -436,8 +443,7 @@ func _on_ball_lost(ball: Ball) -> void:
 	if state != State.PLAYING:
 		return
 
-	lives -= 1
-	combo = 0
+	var final := run.on_ball_lost()
 	effects.ball_lost(Vector2(ball.global_position.x, arena.death_y - 6.0))
 	arena.set_danger(1.0)
 	background.dim()
@@ -448,9 +454,10 @@ func _on_ball_lost(ball: Ball) -> void:
 	paddle.laser = false
 	powerups.guarantee_good()
 
-	if lives <= 0:
-		screens.high_score = GameSettings.high_score
-		screens.new_record = GameSettings.submit_score(score)
+	if final:
+		GameProgress.record_fail(int(level_data.get("id", 1)))
+		screens.high_score = GameProgress.high_score
+		screens.new_record = GameProgress.submit_score(run.score)
 		audio.play("game_over")
 		_set_state(State.SIGNAL_LOST)
 	else:
@@ -468,14 +475,14 @@ func _on_laser_fired(from: Vector2) -> void:
 func _on_powerup_collected(id: String) -> void:
 	var info := Powerup.info(id)
 	paddle.on_powerup_caught(info["color"])
-	effects.powerup_icon(paddle.global_position - Vector2(0.0, 22.0), str(info["name"]), info["color"])
+	effects.powerup_icon(paddle.global_position - Vector2(0.0, 22.0), Strings.powerup_name(id), info["color"])
 	audio.play("powerup_good" if Powerup.is_good(id) else "powerup_bad", 1.0, -2.0)
 
 	match id:
 		"multi":
 			_split_balls()
 		"life":
-			lives += 1
+			run.add_life()
 	_sync_powerup_state()
 	_refresh_hud()
 
@@ -505,6 +512,7 @@ func _sync_powerup_state() -> void:
 	for ball in _balls:
 		ball.speed_scale = scale
 		ball.fireball = active.has("fireball")
+		ball.giant = active.has("giant")
 		ball.zap = active.has("zap")
 
 
@@ -526,13 +534,7 @@ func _split_balls() -> void:
 
 
 func _combo_multiplier() -> int:
-	if combo >= 20:
-		return 4
-	if combo >= 10:
-		return 3
-	if combo >= 5:
-		return 2
-	return 1
+	return run.combo_multiplier()
 
 
 ## Speed starts at the level's own and rises 4 per cent per 10 bricks,
@@ -540,7 +542,7 @@ func _combo_multiplier() -> int:
 ## begins.
 func level_ball_speed() -> float:
 	var base := float(level_data.get("ballSpeed", Ball.BASE_SPEED))
-	var steps := _bricks_this_level / Ball.SPEED_STEP_BRICKS
+	var steps := run.level_bricks / Ball.SPEED_STEP_BRICKS
 	return minf(base * pow(Ball.SPEED_STEP, float(steps)), Ball.MAX_SPEED)
 
 
@@ -554,7 +556,7 @@ func _apply_ball_speed() -> void:
 
 func _process(delta: float) -> void:
 	if state == State.PLAYING:
-		run_time += delta
+		run.tick(delta)
 	background.set_focus_x(paddle.position.x)
 	_update_danger()
 	_update_lasers()
@@ -615,10 +617,13 @@ func _refresh_hud() -> void:
 	hud.score = score
 	hud.level_number = int(level_data.get("id", level_index + 1))
 	hud.level_name = str(level_data.get("name", ""))
+	hud.zone_slug = str(level_data.get("zone", "baeltet"))
 	hud.lives = maxi(lives, 0)
 	hud.max_lives = maxi(START_LIVES, lives)
 	hud.combo = combo
 	hud.active = powerups.active_effects()
+	hud.stars = GameProgress.stars_for(int(level_data.get("id", 1)))
+	hud.best_score = GameProgress.high_score
 	hud.visible = state != State.TITLE and state != State.SETTINGS \
 		and state != State.SIGNAL_LOST
 

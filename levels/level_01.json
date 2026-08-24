@@ -1,23 +1,26 @@
 {
   "id": 1,
   "name": "Liftoff",
-  "zone": "the-belt",
+  "zone": "baeltet",
   "grid": [
     ".............",
     ".VVVVVVVVVVV.",
     ".IIIIIIIIIII.",
-    "..FFFFFFFFF..",
-    "...PPPPPPP...",
+    "..FFEFFFEFF..",
+    "...PPPEPPP...",
     "....VVVVV....",
     ".....III.....",
     "......X......"
   ],
   "ballSpeed": 360,
+  "gridAnchor": 0,
   "powerups": {
-    "multi": 30,
-    "fireball": 30,
-    "laser": 20,
-    "wide": 20
+    "multi": 25,
+    "fireball": 25,
+    "wide": 15,
+    "laser": 15,
+    "life": 10,
+    "giant": 10
   },
   "forcedFirstPowerup": "wide",
   "parTime": 60

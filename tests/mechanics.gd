@@ -48,7 +48,7 @@ func _test_level_validation() -> void:
 	for path in paths:
 		var result := LevelLoader.load_level(path)
 		ok(result["ok"], "%s validates: %s" % [path, ", ".join(result["errors"])])
-	var one: Dictionary = LevelLoader.load_level("res://levels/01_afgang.json")["data"]
+	var one: Dictionary = LevelLoader.load_level("res://levels/level_01.json")["data"]
 	eq(LevelLoader.breakable_count(one["grid"]), 47, "level 1 has 47 bricks")
 	eq(str(one["forcedFirstPowerup"]), "wide", "level 1 forces Wide first")
 	# Slow belongs where it gets hard, not in the opening fields.
@@ -96,23 +96,82 @@ func _test_broken_levels() -> void:
 
 
 func _test_geometry() -> void:
-	var left := BrickGrid.ORIGIN.x
-	var right := BrickGrid.ORIGIN.x + 12.0 * BrickGrid.PITCH.x + Brick.SIZE.x
+	var left := BrickGrid.ORIGIN_X
+	var right := BrickGrid.ORIGIN_X + 12.0 * BrickGrid.PITCH.x + Brick.SIZE.x
 	var inner := Rect2(Arena.WALL, Arena.HUD_HEIGHT + Arena.WALL,
 		Arena.SCREEN.x - Arena.WALL * 2.0, Arena.SCREEN.y - Arena.HUD_HEIGHT - Arena.WALL)
 	ok(left > inner.position.x, "the grid starts inside the field (%.1f > %.1f)" % [left, inner.position.x])
 	ok(right < inner.end.x, "the grid ends inside the field (%.1f < %.1f)" % [right, inner.end.x])
 	eq(Brick.SIZE, Vector2(24.0, 16.0), "the brick is 24x16")
 	eq(BrickGrid.SPACING, 2.0, "2 px between bricks")
-	ok(BrickGrid.ORIGIN.y > Arena.HUD_HEIGHT + Arena.WALL, "the grid starts below the frame")
-
-	# Even a level with all 12 rows must keep clear of the paddle.
-	var deepest := BrickGrid.ORIGIN.y + 12.0 * BrickGrid.PITCH.y
-	var paddle_top := Arena.SCREEN.y - 64.0 - Paddle.HEIGHT * 0.5
-	ok(paddle_top - deepest > 300.0,
-		"12 rows leave at least 300 px to the paddle (%.0f)" % (paddle_top - deepest))
-	# And the HUD must fill enough that the bricks are not up top.
 	ok(Arena.HUD_HEIGHT >= 120.0, "the HUD fills the top (%.0f px)" % Arena.HUD_HEIGHT)
+
+	# The wall hangs from a short, fixed sky, and the 57 per cent line is
+	# the guard that stops a deep wall from reaching the paddle. Section
+	# 20 anchored from the bottom alone, which left a shallow level with
+	# more dead sky above it than fall zone below.
+	var field_top := BrickGrid.field_top()
+	var expected_line := field_top + 0.57 * (Arena.SCREEN.y - field_top)
+	ok(absf(BrickGrid.wall_line_y() - expected_line) < 0.01,
+		"the wall line guard is at %.2f" % BrickGrid.wall_line_y())
+	ok(Arena.HUD_HEIGHT >= 180.0,
+		"the HUD carries the space the sky gave up (%.0f px)" % Arena.HUD_HEIGHT)
+
+	var paddle_top := Arena.SCREEN.y - 64.0 - Paddle.HEIGHT * 0.5
+	for row_count in range(1, 13):
+		var grid: Array = []
+		for i in row_count:
+			grid.append(".VVVVVVVVVVV.")
+		var top := BrickGrid.origin_for(grid)
+		var bottom := top + BrickGrid.wall_height(grid)
+		var sky := BrickGrid.sky_for(grid)
+		ok(absf(sky - BrickGrid.SKY) < 0.01,
+			"%d rows leave exactly the sky we asked for (%.1f)" % [row_count, sky])
+		ok(sky >= BrickGrid.MIN_SKY,
+			"%d rows clear the minimum sky" % row_count)
+		ok(bottom <= BrickGrid.wall_line_y() + 0.01,
+			"%d rows stay above the wall line guard (%.1f)" % [row_count, bottom])
+		ok(paddle_top - bottom > 200.0,
+			"%d rows leave the ball room to fall (%.1f px)" % [row_count, paddle_top - bottom])
+		var fall := Arena.SCREEN.y - bottom
+		ok(fall / Ball.BASE_SPEED > 0.8,
+			"%d rows leave at least eight tenths of a second (%.2f s)"
+				% [row_count, fall / Ball.BASE_SPEED])
+
+	# The sky never collapses even for a wall deep enough that the guard
+	# would bind, which is the case section 20 was actually protecting.
+	var deep: Array = []
+	for i in 12:
+		deep.append(".VVVVVVVVVVV.")
+	ok(BrickGrid.origin_for(deep) + BrickGrid.wall_height(deep) <= BrickGrid.wall_line_y() + 0.01,
+		"the deepest legal wall still clears the guard")
+
+	# An empty trailing row must not lift the wall off its sky.
+	var padded: Array = [".VVVVVVVVVVV.", ".VVVVVVVVVVV.", "............."]
+	eq(BrickGrid.last_brick_row(padded), 1, "the lowest brick row ignores empty rows below it")
+	ok(absf(BrickGrid.sky_for(padded) - BrickGrid.SKY) < 0.01,
+		"a trailing empty row still leaves the same sky")
+
+	# gridAnchor moves the wall down.
+	ok(absf(BrickGrid.origin_for(padded, 40.0) - BrickGrid.origin_for(padded) - 40.0) < 0.01,
+		"a positive gridAnchor pushes the wall down")
+
+	# bottom_y() is the underside of the lowest row, not one spacing below.
+	var g := _make_grid([".VVVVVVVVVVV.", ".VVVVVVVVVVV."])
+	ok(absf(g.bottom_y() - (BrickGrid.origin_for([".VVVVVVVVVVV.", ".VVVVVVVVVVV."])
+		+ BrickGrid.PITCH.y + Brick.SIZE.y)) < 0.01,
+		"bottom_y is the underside of the lowest row (%.2f)" % g.bottom_y())
+	g.queue_free()
+
+	# And the shipped levels must land where the rule says.
+	for path in LevelLoader.level_paths():
+		var data: Dictionary = LevelLoader.load_level(path)["data"]
+		var rows_data: Array = data["grid"]
+		var anchor := float(data.get("gridAnchor", 0))
+		var low := BrickGrid.origin_for(rows_data, anchor) + BrickGrid.wall_height(rows_data)
+		ok(low <= BrickGrid.wall_line_y() + 0.01, "%s stays above the guard" % path)
+		ok(BrickGrid.sky_for(rows_data, anchor) >= BrickGrid.MIN_SKY,
+			"%s keeps its sky" % path)
 
 
 func _make_grid(rows: Array) -> BrickGrid:
@@ -131,7 +190,7 @@ func _pump(g: BrickGrid, seconds: float) -> void:
 
 
 func _test_grid_counts() -> void:
-	var data: Dictionary = LevelLoader.load_level("res://levels/02_kapslen.json")["data"]
+	var data: Dictionary = LevelLoader.load_level("res://levels/level_02.json")["data"]
 	var g := _make_grid(data["grid"])
 	eq(g.rows, 10, "level 2 has 10 rows")
 	eq(g.remaining_breakable(), 68, "level 2 has 68 breakable bricks")
@@ -252,7 +311,7 @@ func _test_powerup_rules() -> void:
 	paddle.position = Vector2(195.0, 780.0)
 	add_child(paddle)
 	pm.paddle = paddle
-	pm.configure(LevelLoader.load_level("res://levels/01_afgang.json")["data"])
+	pm.configure(LevelLoader.load_level("res://levels/level_01.json")["data"])
 
 	eq(pm._pick_id(), "wide", "level 1 forces Wide as the first power-up")
 	pm.spawn(Vector2(195.0, 300.0))
@@ -260,7 +319,7 @@ func _test_powerup_rules() -> void:
 	pm.spawn(Vector2(160.0, 300.0))
 	eq(pm._capsules.size(), 2, "at most 2 capsules on screen")
 
-	pm.configure(LevelLoader.load_level("res://levels/03_kaeden.json")["data"])
+	pm.configure(LevelLoader.load_level("res://levels/level_03.json")["data"])
 	var bad_in_a_row := 0
 	var worst := 0
 	for i in 400:
@@ -285,7 +344,7 @@ func _test_powerup_rules() -> void:
 	eq(Brick.DATA[Brick.Type.SPARK]["powerup"], 1.0, "Spark guarantees a power-up")
 
 	# The distribution must follow the table, or a power-up is dead in
-	pm.configure(LevelLoader.load_level("res://levels/01_afgang.json")["data"])
+	pm.configure(LevelLoader.load_level("res://levels/level_01.json")["data"])
 	var counts := {}
 	for i in 4000:
 		pm.reset_level()

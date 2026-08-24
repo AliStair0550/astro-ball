@@ -94,26 +94,26 @@ func _test_opening() -> void:
 ## Section 4: speed rises 4 per cent per 10 bricks, capped at 520.
 func _test_speed_ramp() -> void:
 	var base := float(game.level_data["ballSpeed"])
-	game._bricks_this_level = 0
+	game.run.level_bricks = 0
 	about(game.level_ball_speed(), base, 0.01, "speed starts at the level own")
-	game._bricks_this_level = 9
+	game.run.level_bricks = 9
 	about(game.level_ball_speed(), base, 0.01, "nine bricks still give the base speed")
-	game._bricks_this_level = 10
+	game.run.level_bricks = 10
 	about(game.level_ball_speed(), base * 1.04, 0.01, "ten bricks give 4 per cent more")
-	game._bricks_this_level = 30
+	game.run.level_bricks = 30
 	about(game.level_ball_speed(), base * pow(1.04, 3), 0.01, "thirty bricks give three steps")
-	game._bricks_this_level = 10000
+	game.run.level_bricks = 10000
 	about(game.level_ball_speed(), 520.0, 0.01, "speed stops at the 520 cap")
 
 	# The ball corrects its speed at once, not a frame later.
-	game._bricks_this_level = 0
+	game.run.level_bricks = 0
 	game._apply_ball_speed()
 	var ball := game._balls[0]
 	ball.launch()
-	game._bricks_this_level = 50
+	game.run.level_bricks = 50
 	game._apply_ball_speed()
 	about(ball.velocity.length(), ball.current_speed(), 0.01, "the ball speed follows in the same frame")
-	game._bricks_this_level = 0
+	game.run.level_bricks = 0
 	game._apply_ball_speed()
 
 
@@ -192,12 +192,12 @@ func _test_level_progression() -> void:
 	eq(game.screens.level_title, "The Capsule", "the intro shows level 2 name")
 	eq(game.grid.remaining_breakable(), 68, "level 2 has 68 bricks")
 	eq(game.paddle.width, Paddle.WIDTH_NORMAL, "a new level gives a normal paddle")
-	eq(game._bricks_this_level, 0, "the speed ramp resets on a new level")
+	eq(game.run.level_bricks, 0, "the speed ramp resets on a new level")
 	game._begin_level()
 	game._next_level()
 	eq(int(game.level_data["id"]), 3, "level 3 loads")
 	eq(game.screens.level_title, "The Chain", "the intro shows level 3 name")
-	eq(game.grid.remaining_breakable(), 53, "level 3 has 53 bricks")
+	eq(game.grid.remaining_breakable(), 48, "level 3 has 48 bricks")
 	game._begin_level()
 	game._next_level()
 	eq(int(game.level_data["id"]), 1, "after level 3 the zone starts over")
@@ -250,16 +250,17 @@ func _test_settings() -> void:
 	# Afsnit 17: listen er lukket. Praecis disse seks.
 	for field in ["sound", "music", "haptics", "crt", "left_handed"]:
 		ok(field in s, "the setting '%s' exists" % field)
-	ok(s.has_method("reset_progress"), "Reset Progress exists")
+	ok(get_node("/root/GameProgress").has_method("reset"), "Reset Progress exists")
 
-	# Rekorden slaas kun, naar den faktisk slaas.
-	var was_high: int = s.high_score
-	s.high_score = 1000
-	ok(not s.submit_score(500), "a lower score does not beat the record")
-	ok(s.submit_score(1500), "a higher score beats the record")
-	eq(s.high_score, 1500, "the record is updated")
-	s.high_score = was_high
-	s.save_settings()
+	# The record lives in progress, not in settings.
+	var progress := get_node("/root/GameProgress")
+	var was_high: int = progress.high_score
+	progress.high_score = 1000
+	ok(not progress.submit_score(500), "a lower score does not beat the record")
+	ok(progress.submit_score(1500), "a higher score beats the record")
+	eq(progress.high_score, 1500, "the record is updated")
+	progress.high_score = was_high
+	progress.save_progress()
 
 
 ## The whole sound bank must load, or some sound is silently missing.
@@ -284,7 +285,10 @@ func _test_english() -> void:
 			if name.contains(ch):
 				clean = false
 		ok(clean and not name.is_empty(), "%s has an English name (%s)" % [path, name])
-	eq(game.hud.zone_name, "THE BELT", "the zone reads THE BELT in the HUD")
+	eq(game.hud.zone_slug, "baeltet", "the level data keeps the zone slug")
+	eq(Strings.zone_name("baeltet"), "THE DRIFT", "the player reads THE DRIFT")
+	eq(Strings.universe_line("baeltet"), "UNIVERSE 1 · THE DRIFT",
+		"and the zone is presented as a universe")
 
 	# Afsnit 14: de officielle engelske navne.
 	var official := {1: "Liftoff", 2: "The Capsule", 3: "The Chain"}

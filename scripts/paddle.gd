@@ -296,7 +296,7 @@ func _spans() -> Array[Dictionary]:
 ## Corners are rounded by pulling the top and bottom rows inward.
 static func _row_inset(row: int, rows: int) -> float:
 	if row == 0 or row == rows - 1:
-		return 2.0
+		return 3.0
 	if row == 1 or row == rows - 2:
 		return 1.0
 	return 0.0
@@ -347,13 +347,20 @@ func _draw_body(top: float, h: float, hw: float) -> void:
 			var c := base.lightened(shade * 0.6) if shade > 0.0 else base.darkened(-shade * 0.62)
 			draw_rect(Rect2(x0, y, x1 - x0, row_h + 0.5), c)
 
-	# The specular. One narrow band high up, like light on a tube.
-	var spec_row := maxi(int(float(rows) * 0.18), 1)
+	# The specular. DX-Ball's paddle reads as chrome because the highlight
+	# is a hard bright line, not a soft wash: one bright row with a
+	# dimmer one under it, and nothing above.
+	var spec_row := maxi(int(float(rows) * 0.16), 1)
 	var spec := Color.WHITE
-	spec.a = 0.30
-	draw_rect(Rect2(-hw + 2.0, top + float(spec_row) * row_h, width - 4.0, maxf(row_h, 1.0)), spec)
-	spec.a = 0.12
-	draw_rect(Rect2(-hw + 2.0, top + float(spec_row + 1) * row_h, width - 4.0, maxf(row_h, 1.0)), spec)
+	spec.a = 0.46
+	draw_rect(Rect2(-hw + 3.0, top + float(spec_row) * row_h, width - 6.0, maxf(row_h, 1.0)), spec)
+	spec.a = 0.18
+	draw_rect(Rect2(-hw + 3.0, top + float(spec_row + 1) * row_h, width - 6.0, maxf(row_h, 1.0)), spec)
+	# And a dark line right at the bottom, which is what makes the tube
+	# look like it turns away from you rather than stopping flat.
+	var underside := Color("07070C")
+	underside.a = 0.5
+	draw_rect(Rect2(-hw + 3.0, top + h - 1.0, width - 6.0, 1.0), underside)
 
 	# Seams between the segments.
 	for seam_x in _seam_positions():

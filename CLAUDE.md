@@ -55,7 +55,7 @@ Lag 1  Baggrund       Tre parallax-lag, langsom bevægelse, reagerer på spil.
 Tre lag med forskellig parallax, når paddlen flytter sig. Forskydning 2 til 8 px, dybde uden at det bliver en effekt.
 
 - Bagerst: Stjernefelt. 80 til 120 stjerner i tre størrelser (1, 2, 3 px) på #07070C. De mindste flimrer svagt og asynkront, aldrig mere end 2 ad gangen. Et stjerneskud krydser hjørnet af skærmen hvert 40. til 70. sekund. Ingen parallax.
-- Midten: En fjern planet i nederste hjørne, ca. 120 px, i dæmpede toner (#1A2030 med en tynd #2A3448 atmosfærelinje). To til tre asteroide-silhuetter (#12121A) driver ekstremt langsomt, 1 px per 2 sekunder, og roterer umærkeligt. Parallax 3 px.
+- Midten: To til fire asteroide-silhuetter (#12121A) driver ekstremt langsomt, 1 px per 2 sekunder, og roterer umærkeligt. Parallax 3 px. (Rettet under bygning: den fjerne planet er fjernet, se afsnit 21.)
 - Forrest: Fint støv og småsten, 6 til 10 mørke fragmenter (#1C1C26), der flytter 8 px med paddlen. Det er laget, der giver følelsen af at være i feltet, ikke foran det.
 
 Reaktioner. Det er dem, der gør rummet levende:
@@ -229,13 +229,13 @@ Spawn-regler:
 
 ## 8. HUD
 
-Øverst, 44 px høj. Void-baggrund med 1 px linje under i #232330.
+Øverst, 140 px høj. Grafit-panel med en Pulse-linje under. (Rettet under bygning fra 44 px, se afsnit 21.)
 
-Venstre: ASTRO BALL i Unbounded 13 px, Bone, letter-spacing 2. Under: LEVEL 7 i Space Grotesk 9 px, Slate.
-Højre: Score i Space Grotesk 14 px, Volt, tabular, mellemrum som tusindtalsseparator. Under: tre prikker for liv. Fulde er Bone, tabte er #444441.
+Venstre: ASTRO BALL i Unbounded 900, 28 px, Pulse-lilla med mørk forskydning. Under: UNIVERSE 1 · LEVEL 7 · LIFTOFF i Space Grotesk 9 px, Slate.
+Højre: Score i Space Grotesk 700, 32 px, Volt, tabular, mellemrum som tusindtalsseparator. Under: tre små kometer for liv. Fulde er Bone, tabte er #444441.
 Midt: Kombo-tal fra 3+. Unbounded, Volt, vokser med komboen.
 
-Aktive power-ups som små ikoner under HUD med tidsbjælke. Maks 4.
+Aktive power-ups i en dock med fire faste pladser nederst i panelet, hver med ikon, navn og tidsbjælke. Tomme pladser tegnes svagt.
 
 ---
 
@@ -276,7 +276,7 @@ Hvorfor det virker:
 - Spidsen er en Gnist. Nem at ramme først, garanteret power-up, tvunget til Bred i level 1. Succes inden for 5 sekunder.
 - Farverne skifter pr. række, så grid og pointsystem læres visuelt.
 
-Power-up-tabel: Bred 40 %, Multi 30 %, Langsom 20 %, Liv 10 %. Ingen dårlige.
+Power-up-tabel: Multi 25 %, Ildkugle 25 %, Bred 15 %, Laser 15 %, Liv 10 %, Giant 10 %. Ingen dårlige. (Rettet under bygning: Langsom er ude af de tre første levels, se afsnit 21.)
 
 Visuelt øjeblik: Ved sidste klods lyser rammen op, og hele stjernefeltet blitzer i ét frame. Stilhed i 1 sekund. Så clear-lyden. Spillerens første bekræftelse af, at rummet ser dig.
 
@@ -299,14 +299,14 @@ Lærer: Hærdet tager flere slag. Sten kan ikke smadres, men bruges.
 .VVVVVVVVVVV.
 ```
 
-66 smadrelige klodser plus 2 Sten. Hærdet-rækken kræver 27 slag alene. Forventet tid 90 til 130 sekunder.
+68 smadrelige klodser plus 2 Sten. Hærdet-rækken kræver 27 slag alene. Forventet tid 90 til 130 sekunder.
 
 Hvorfor det virker:
 - En kapsel i en kapsel. Ydre Volt-skal, indre Ice-skal, Pulse-kerne. Tre små sejre i ét level.
 - Hærdet-rækken øverst ryger sidst. Spilleren lærer skadestadierne ved at se dem langsomt.
 - De to Sten-kerner i hjørnerne kaster bolden ind mod midten i stedet for at fange den. Sten er aldrig dekoration. De styrer altid bolden.
 
-Power-up-tabel: Bred 25 %, Multi 25 %, Ildkugle 15 %, Laser 15 %, Langsom 10 %, Smal 10 %. Første dårlige, men kun én.
+Power-up-tabel: Multi 25 %, Ildkugle 20 %, Laser 20 %, Bred 15 %, Giant 10 %, Smal 10 %. Første dårlige, men kun én.
 
 Visuelt øjeblik: Når Pulse-kernen smadres, sender den en større lysbølge end normalt, alle Ice-klodser flimrer, og planeten i baggrunden får et kort lysglimt på atmosfærelinjen.
 
@@ -329,7 +329,7 @@ Lærer: Sprængklodser smadrer naboer. Glas lader bolden gå igennem.
 ......?......
 ```
 
-52 smadrelige plus 5 Sprængklodser. Forventet tid 60 til 100 sekunder, kan gøres på 30 med de rigtige slag.
+53 smadrelige plus 6 Sprængklodser. Forventet tid 60 til 100 sekunder, kan gøres på 30 med de rigtige slag.
 
 Hvorfor det virker:
 - De tre Sprængklodser nederst ligger lige over paddlen. Kædereaktionen ses inden for 10 sekunder.
@@ -337,7 +337,7 @@ Hvorfor det virker:
 - Hærdet-kassen øverst har én Sprængklods i midten. Det eneste, der rydder de 24 Hærdet hurtigt. Den, der opdager det, føler sig klog.
 - Den skjulte klods i bunden viser sig, når en Volt over den ryger. Lille overraskelse.
 
-Power-up-tabel: Multi 30 %, Ildkugle 20 %, Zap 15 %, Bred 15 %, Hurtig 10 %, Smal 10 %.
+Power-up-tabel: Multi 20 %, Ildkugle 20 %, Giant 15 %, Laser 15 %, Zap 10 %, Bred 10 %, Hurtig 5 %, Smal 5 %.
 
 Visuelt øjeblik: Sprængklodsen i Hærdet-kassen tager alle 8 naboer i spiral med 40 ms forsinkelse hver. Screen shake 6 px. Stjernerne omkring blinker Ember. Det er spillets første wow og skal sidde perfekt.
 
@@ -401,7 +401,7 @@ Valideringsregler:
 
 ## 12. Lyd og rumfølelse
 
-- Alle lyde har en kort, mørk rumklang, som om feltet er et stort kammer. Det er den billigste vej til at føle sig inde i rummet i stedet for foran en skærm. DX-Balls lyde var tørre. Vores er i et rum.
+- Lydbanken er syntetiseret af tools/make_audio.py og lagt i repoet som WAV. Alle lyde har en kort, mørk rumklang, lagt på af en bus ("Space", wet 0.15), som om feltet er et stort kammer. Det er den billigste vej til at føle sig inde i rummet i stedet for foran en skærm. DX-Balls lyde var tørre. Vores er i et rum.
 - Under spil ingen musik, kun en dyb, næsten uhørlig drone, der stiger en anelse i intensitet med komboen.
 - Klods-klik stiger i tonehøjde med komboen. Nulstilles ved paddle-ramt.
 - Valgfri CRT-tilstand i indstillinger (scanlines, vignette, 1 px fringing), slået fra som standard. Nostalgi som tilvalg, moderne som standard.
@@ -526,8 +526,111 @@ Giant og Ildkugle kan ikke være aktive samtidig; senest opsamlede vinder.
 
 Lodret placering af muren (bundanker). Skærmen er 390x844 logisk. Reglerne:
 
-Murens nederste række ligger med underkant på murlinjen: 57 % nede af spilfeltet (under HUD). Rækker vokser opad fra linjen.
+Murens nederste række ligger med underkant på murlinjen: 57 % nede af spilfeltet (under HUD). Rækker vokser opad fra linjen. (Rettet under bygning: bundankeret alene efterlod en lav mur med mere dødt rum over sig end under. Se afsnit 21, "Murens placering".)
 Minimum 100 px himmel mellem HUD og øverste række, garanteret af maks 12 rækker.
 Faldzonen fra murlinje til paddle er ca. 300 px, svarende til ca. 1 sekunds reaktionstid ved starthastighed.
 Leveldata får valgfrit felt "gridAnchor" (px-offset fra standardlinjen, positiv = længere ned). Standard er 0.
 Implementeres i level-loaderen i fase 3. Finjusteres i fase
+
+
+---
+
+21. Beslutninger truffet under bygningen
+
+Alt herunder afviger fra et tidligere afsnit i dette dokument. Hver
+afvigelse er truffet efter at have spillet spillet, og hver af dem står
+ved magt, indtil den omgøres bevidst.
+
+Layout og tempo
+
+- HUD'en er 140 px, ikke 44 (afsnit 8). Skærmen er dobbelt så høj som
+  bred. Et højere panel skubber muren ned i spillerens rækkevidde i
+  stedet for at efterlade en halv skærm dødt rum, og det er der,
+  brandet får plads.
+- Boldens grundfart står i hver levelfil: 360, 360, 380 (afsnit 4 siger
+  320). Dokumentets egne forventede leveltider kan ikke nås på et 698 px
+  højt felt ved 320 px/s. Farten er data, ikke kode.
+- Fartstigningen fra afsnit 4 er implementeret: 4 procent per 10 klodser
+  med loft ved 520 px/s.
+
+Baggrund
+
+- Den fjerne planet er fjernet fra Lag 2 (afsnit 2). Den lå, hvor
+  paddlen arbejder, og læste som en cirkel frem for en verden.
+  Baggrunden er stjerner, støv og asteroider, og hvert level får sin
+  egen anelse af temperatur gennem stjernefarven og et fjernt lysvask.
+
+Power-ups
+
+- Langsom er ude af level 1 til 3 (afsnit 9). En bremse er en straf, når
+  banen er let. Den hører til, når det bliver svært.
+- Liv er tilbage i level 1. Den røg ud sammen med Langsom, men et ekstra
+  liv er ikke en straf.
+- Giant (afsnit 20) er i alle tre levels. Den er mest værd, hvor der er
+  Hærdet, altså level 2 og 3.
+
+Skærme og tekst
+
+- SIGNAL LOST har både RE-ENTRY og RESTART FIELD, som afsnit 16
+  foreskriver. Betalingsporten på RE-ENTRY hører til efter fase 8, så
+  den er gratis og kan bruges én gang pr. bane.
+- Zone-sluggen i leveldata er "baeltet", spilleren læser
+  "Universe 1: The Drift" (afsnit 14). Alle spillervendte strenge ligger
+  i scripts/strings.gd.
+
+Struktur
+
+- Klodsen er data, ikke en scene. brick.gd holder anatomi og
+  skadestadier, og brick_grid.gd tegner hele gridet i ét _draw. 140
+  klodser bliver ikke til 140 noder.
+- Power-up-systemet hedder powerup_manager.gd. Et andet navn ville koste
+  redigeringer i scene, spil, tests og README uden at ændre noget.
+- Score: 100 point for en standardklods, 200 for Pulse, 300 for Hærdet,
+  ganget med en kombo-multiplikator på x1, x2 ved kombo 5, x3 ved 10 og
+  x4 ved 20. Dokumentet siger "dobbelt" og "triple", men aldrig hvad
+  grundtallet er.
+
+Test
+
+- tests/run.sh kører fem suiter og level-validatoren headless, og fejler
+  også, hvis en suite råber op i konsollen uden at fejle et tjek.
+
+Murens placering, som den faktisk blev
+
+Bundankeret alene løste ikke problemet, det flyttede det. En mur på syv
+rækker endte med 274 px himmel over sig og 300 px under. Halvdelen af
+den tomme skærm lå der, hvor der aldrig sker noget.
+
+Reglen som den er nu:
+
+- HUD'en er 196 px og bruges aktivt: brand, univers, level, score, liv,
+  stjerner, rekord og power-up-dock. Hver pixel den tager er en pixel,
+  muren ikke skal svæve over.
+- Himlen mellem HUD og øverste klodsrække er fast på 120 px. Nok til at
+  komme op bag muren, ikke mere.
+- Murlinjen på 57 % er nu et værn, ikke reglen: en mur, der er dyb nok
+  til at nå forbi den, trækkes op i stedet.
+- Slacken lander under muren, mellem klodserne og paddlen. Det er den
+  halvdel af skærmen, spilleren rent faktisk kigger på.
+
+Resultatet for de tre første levels: himmel 120 til 138 px mod 238 til
+274 før, faldzone 344 til 380 px.
+
+Klodser i de første baner
+
+Sprængklodser hører til fra level 1, ikke fra level 3. Kædereaktionen er
+den mest belønnende ting i spillet, og den skal opdages, mens man stadig
+er ved at blive fanget. Level 1 har tre, level 2 én, level 3 fire.
+
+Hærdet er ude af level 1 til 3. Man skal fanges af at smadre klodser,
+før de bliver svære at smadre. Den kommer tilbage i level 6, som
+progressionstabellen i afsnit 10 siger.
+
+Silhuetterne: level 1 er en pilespids, level 2 en kapsel, level 3 en
+vinge. Alle tre kan navngives med ét ord, som afsnit 20 kræver.
+
+Kapslerne
+
+34x22 px, ikke 20x12, og med power-uppens navn under sig. På en telefon
+skal en kapsel kunne læses tværs over feltet, ikke først når den er
+fanget.

@@ -125,7 +125,7 @@ func _apply_settings() -> void:
 	AudioServer.set_bus_volume_db(_drone_bus, -4.0)
 
 
-## Spiller en lyd. pitch er en faktor, ikke halvtoner.
+## Plays a sound. pitch is a factor, not semitones.
 func play(id: String, pitch := 1.0, volume_db := 0.0) -> void:
 	if not _streams.has(id):
 		return

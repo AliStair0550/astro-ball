@@ -31,6 +31,7 @@ var current := Screen.NONE
 
 var level_number := 1
 var level_title := ""
+var zone_slug := "baeltet"
 var final_score := 0
 var high_score := 0
 var new_record := false
@@ -73,6 +74,10 @@ func _settings() -> Node:
 	return get_node_or_null("/root/GameSettings")
 
 
+func _progress() -> Node:
+	return get_node_or_null("/root/GameProgress")
+
+
 # --- Buttons -----------------------------------------------------------
 
 func _layout() -> void:
@@ -80,33 +85,33 @@ func _layout() -> void:
 	var cx := screen_size.x * 0.5
 	match current:
 		Screen.TITLE:
-			_add_button("play", "PLAY", Vector2(cx, 520.0), Vector2(220.0, 52.0), VOLT)
-			_add_button("settings", "SETTINGS", Vector2(cx, 586.0), Vector2(220.0, 44.0), PULSE)
+			_add_button("play", Strings.text("BTN_PLAY"), Vector2(cx, 520.0), Vector2(220.0, 52.0), VOLT)
+			_add_button("settings", Strings.text("BTN_SETTINGS"), Vector2(cx, 586.0), Vector2(220.0, 44.0), PULSE)
 		Screen.SETTINGS:
 			var s := _settings()
 			var y := 262.0
 			var step := 50.0
 			var w := Vector2(300.0, 42.0)
-			_add_button("toggle_sound", "SOUND", Vector2(cx, y), w, VOLT,
-				_on_off(s and s.sound))
-			_add_button("toggle_music", "MUSIC", Vector2(cx, y + step), w, VOLT,
-				_on_off(s and s.music))
-			_add_button("toggle_haptics", "HAPTICS", Vector2(cx, y + step * 2.0), w, VOLT,
-				_on_off(s and s.haptics))
-			_add_button("toggle_crt", "CRT MODE", Vector2(cx, y + step * 3.0), w, VOLT,
-				_on_off(s and s.crt))
-			_add_button("toggle_handed", "LEFT-HANDED UI", Vector2(cx, y + step * 4.0), w, VOLT,
-				_on_off(s and s.left_handed))
+			_add_button("toggle_sound", Strings.text("SET_SOUND"), Vector2(cx, y), w, VOLT,
+				_on_off(s and s.sound), s != null and bool(s.sound))
+			_add_button("toggle_music", Strings.text("SET_MUSIC"), Vector2(cx, y + step), w, VOLT,
+				_on_off(s and s.music), s != null and bool(s.music))
+			_add_button("toggle_haptics", Strings.text("SET_HAPTICS"), Vector2(cx, y + step * 2.0), w, VOLT,
+				_on_off(s and s.haptics), s != null and bool(s.haptics))
+			_add_button("toggle_crt", Strings.text("SET_CRT"), Vector2(cx, y + step * 3.0), w, VOLT,
+				_on_off(s and s.crt), s != null and bool(s.crt))
+			_add_button("toggle_handed", Strings.text("SET_LEFT_HANDED"), Vector2(cx, y + step * 4.0), w, VOLT,
+				_on_off(s and s.left_handed), s != null and bool(s.left_handed))
 			_add_button("reset_progress",
-				"CONFIRM RESET" if _reset_armed else "RESET PROGRESS",
+				Strings.text("SET_RESET_ARMED") if _reset_armed else Strings.text("SET_RESET"),
 				Vector2(cx, y + step * 5.0), w, EMBER if _reset_armed else SLATE)
-			_add_button("back", "BACK", Vector2(cx, y + step * 6.4), Vector2(180.0, 42.0), SLATE)
+			_add_button("back", Strings.text("BTN_BACK"), Vector2(cx, y + step * 6.4), Vector2(180.0, 42.0), SLATE)
 		Screen.SIGNAL_LOST:
 			# Two ways on. There is no way back to a main menu from here.
 			var order := ["re_entry", "restart"]
 			if _settings() and _settings().left_handed:
 				order.reverse()
-			var labels := {"re_entry": "RE-ENTRY", "restart": "RESTART FIELD"}
+			var labels := {"re_entry": Strings.text("BTN_RE_ENTRY"), "restart": Strings.text("BTN_RESTART_FIELD")}
 			var tints := {"re_entry": VOLT, "restart": SLATE}
 			for i in order.size():
 				var id: String = order[i]
@@ -117,14 +122,20 @@ func _layout() -> void:
 
 
 static func _on_off(value: bool) -> String:
-	return "ON" if value else "OFF"
+	return Strings.text("ON") if value else Strings.text("OFF")
 
 
-func _add_button(id: String, label: String, center: Vector2, size: Vector2, tint: Color, value := "") -> void:
+func _add_button(id: String, label: String, center: Vector2, size: Vector2, tint: Color,
+		value := "", value_on := false) -> void:
 	_buttons.append({
 		"id": id,
 		"label": label,
 		"value": value,
+		# Carried, not re-derived from the text. Comparing the rendered
+		# word against a literal would break the moment that word is
+		# renamed in the strings file, which is the one file a rename is
+		# supposed to touch.
+		"value_on": value_on,
 		"rect": Rect2(center - size * 0.5, size),
 		"tint": tint,
 	})
@@ -215,52 +226,53 @@ func _draw_curtain(strength: float) -> void:
 
 func _draw_title() -> void:
 	var cx := screen_size.x * 0.5
-	_centered(FONT_BRAND, "ASTRO", cx, 268.0, 52, PULSE, 3.0, true)
-	_centered(FONT_BRAND, "BALL", cx, 326.0, 52, PULSE, 3.0, true)
+	_centered(FONT_BRAND, Strings.text("BRAND_LINE_1"), cx, 268.0, 52, PULSE, 3.0, true)
+	_centered(FONT_BRAND, Strings.text("BRAND_LINE_2"), cx, 326.0, 52, PULSE, 3.0, true)
 	_rule(cx, 348.0, 150.0, PULSE, 0.55)
-	_centered(FONT_UI, "BREAK THROUGH THE BELT", cx, 378.0, 11, SLATE, 2.4, false)
+	_centered(FONT_UI, Strings.text("TAGLINE"), cx, 378.0, 11, SLATE, 2.4, false)
 
-	var s := _settings()
-	if s and s.high_score > 0:
-		_centered(FONT_UI, "BEST", cx, 664.0, 9, SLATE, 2.0, false)
-		_centered(FONT_SCORE, HUD.group_digits(s.high_score), cx, 692.0, 20, VOLT, 0.0, false)
+	var p := _progress()
+	if p and int(p.high_score) > 0:
+		_centered(FONT_UI, Strings.text("BEST"), cx, 664.0, 9, SLATE, 2.0, false)
+		_centered(FONT_SCORE, HUD.group_digits(int(p.high_score)), cx, 692.0, 20, VOLT, 0.0, false)
 
 	var blink := 0.55 + 0.45 * sin(_time * 3.0)
 	var hint := SLATE
 	hint.a = blink * 0.8
-	_centered(FONT_UI, "CLICK TO AIM · MOVE TO STEER", cx, 760.0, 9, hint, 1.8, false)
+	_centered(FONT_UI, Strings.text("HINT_TITLE"), cx, 760.0, 9, hint, 1.8, false)
 
 
 func _draw_settings() -> void:
 	var cx := screen_size.x * 0.5
-	_centered(FONT_BRAND, "SETTINGS", cx, 208.0, 28, PULSE, 2.4, true)
+	_centered(FONT_BRAND, Strings.text("SETTINGS_TITLE"), cx, 208.0, 28, PULSE, 2.4, true)
 	_rule(cx, 228.0, 120.0, PULSE, 0.45)
 
-	var note := "CRT MODE ADDS SCANLINES AND VIGNETTE"
+	var note := Strings.text("NOTE_CRT")
 	if _reset_armed:
-		note = "PRESS AGAIN TO ERASE ALL PROGRESS"
+		note = Strings.text("NOTE_RESET")
 	_centered(FONT_UI, note, cx, 640.0, 8, EMBER if _reset_armed else SLATE, 1.4, false)
 
 
 func _draw_level_intro() -> void:
 	var cx := screen_size.x * 0.5
-	# "LEVEL" med stort, derefter banens navn.
+	# "LEVEL" large, then the field's name.
 	var rise := (1.0 - ease(minf(_time / 0.35, 1.0), 0.35)) * 14.0
-	_centered(FONT_BRAND, "LEVEL %d" % level_number, cx, 392.0 - rise, 40, BONE, 3.0, true)
+	_centered(FONT_UI, Strings.universe_line(zone_slug), cx, 344.0, 10, SLATE, 2.2, false)
+	_centered(FONT_BRAND, Strings.fmt("LEVEL_NUMBER", [level_number]), cx, 392.0 - rise, 40, BONE, 3.0, true)
 	_rule(cx, 414.0, 110.0, VOLT, 0.7)
 	_centered(FONT_DISPLAY, level_title.to_upper(), cx, 456.0 + rise * 0.5, 22, VOLT, 3.0, true)
 
 	var blink := 0.4 + 0.6 * sin(_time * 4.0)
 	var hint := SLATE
 	hint.a = blink * 0.7
-	_centered(FONT_UI, "CLICK TO BEGIN", cx, 540.0, 9, hint, 2.0, false)
+	_centered(FONT_UI, Strings.text("HINT_BEGIN"), cx, 540.0, 9, hint, 2.0, false)
 
 
 func _draw_level_clear() -> void:
 	var cx := screen_size.x * 0.5
-	_centered(FONT_BRAND, "FIELD CLEARED", cx, 400.0, 26, VOLT, 2.6, true)
+	_centered(FONT_BRAND, Strings.text("FIELD_CLEARED"), cx, 400.0, 26, VOLT, 2.6, true)
 	_rule(cx, 420.0, 130.0, VOLT, 0.6)
-	_centered(FONT_UI, "LEVEL %d · %s" % [level_number, level_title.to_upper()], cx, 448.0, 10, SLATE, 2.0, false)
+	_centered(FONT_UI, Strings.fmt("LEVEL_AND_NAME", [level_number, level_title.to_upper()]), cx, 448.0, 10, SLATE, 2.0, false)
 	_centered(FONT_SCORE, HUD.group_digits(final_score), cx, 496.0, 26, BONE, 0.0, false)
 
 
@@ -268,14 +280,14 @@ func _draw_level_clear() -> void:
 ## stopped transmitting, and two ways to get it back.
 func _draw_signal_lost() -> void:
 	var cx := screen_size.x * 0.5
-	_centered(FONT_BRAND, "SIGNAL LOST", cx, 296.0, 33, EMBER, 3.0, true)
+	_centered(FONT_BRAND, Strings.text("SIGNAL_LOST"), cx, 296.0, 33, EMBER, 3.0, true)
 	_rule(cx, 318.0, 150.0, EMBER, 0.6)
 
 	var rows := [
-		["BRICKS CLEARED", str(bricks_cleared)],
-		["BEST COMBO", str(best_combo)],
-		["TIME", format_time(run_time)],
-		["SCORE", HUD.group_digits(final_score)],
+		[Strings.text("STAT_BRICKS"), str(bricks_cleared)],
+		[Strings.text("STAT_COMBO"), str(best_combo)],
+		[Strings.text("STAT_TIME"), format_time(run_time)],
+		[Strings.text("STAT_SCORE"), HUD.group_digits(final_score)],
 	]
 	var left := cx - 120.0
 	var right := cx + 120.0
@@ -295,9 +307,9 @@ func _draw_signal_lost() -> void:
 		var glow := 0.6 + 0.4 * sin(_time * 5.0)
 		var c := PULSE
 		c.a = glow
-		_centered(FONT_DISPLAY, "NEW RECORD", cx, y + 24.0, 15, c, 2.4, false)
+		_centered(FONT_DISPLAY, Strings.text("NEW_RECORD"), cx, y + 24.0, 15, c, 2.4, false)
 	elif high_score > 0:
-		_centered(FONT_UI, "BEST  %s" % HUD.group_digits(high_score), cx, y + 22.0, 10, SLATE, 1.8, false)
+		_centered(FONT_UI, Strings.fmt("BEST_VALUE", [HUD.group_digits(high_score)]), cx, y + 22.0, 10, SLATE, 1.8, false)
 
 
 static func format_time(seconds: float) -> String:
@@ -339,7 +351,7 @@ func _draw_button(button: Dictionary, hovered: bool) -> void:
 	if value.is_empty():
 		_centered(FONT_DISPLAY, label, rect.get_center().x, baseline, 15, text_color, 2.2, false)
 	else:
-		var value_color := VOLT if value == "ON" else SLATE
+		var value_color := VOLT if bool(button.get("value_on", false)) else SLATE
 		var vw := _tracked_width(FONT_DISPLAY, value, 13, 2.0)
 		var mirrored: bool = _settings() != null and bool(_settings().left_handed)
 		if mirrored:

@@ -109,9 +109,9 @@ func _check_invariants() -> void:
 		if not is_finite(p.x) or not is_finite(p.y):
 			_err("boldposition er ikke et tal")
 			continue
-		if p.x < Arena.WALL + Ball.RADIUS - 0.8 or p.x > Arena.SCREEN.x - Arena.WALL - Ball.RADIUS + 0.8:
+		if p.x < Arena.WALL + ball.radius - 0.8 or p.x > Arena.SCREEN.x - Arena.WALL - ball.radius + 0.8:
 			_err("ball outside the field in x: %.2f" % p.x)
-		if p.y < Arena.HUD_HEIGHT + Arena.WALL + Ball.RADIUS - 0.8:
+		if p.y < Arena.HUD_HEIGHT + Arena.WALL + ball.radius - 0.8:
 			_err("ball outside the field in y: %.2f" % p.y)
 		if not ball.stuck and not ball.frozen:
 			var speed := ball.velocity.length()
