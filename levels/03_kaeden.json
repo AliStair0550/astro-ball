@@ -1,0 +1,24 @@
+{
+  "id": 3,
+  "name": "Kæden",
+  "zone": "baeltet",
+  "grid": [
+    ".............",
+    ".HHHHHHHHHHH.",
+    ".H....E....H.",
+    ".HHHHHHHHHHH.",
+    ".............",
+    ".GGEGG.GGEGG.",
+    "..PPPPPPPPP..",
+    "...E..E..E...",
+    "....VVVVV....",
+    "......?......"
+  ],
+  "ballSpeed": 320,
+  "powerups": {
+    "multi": 30, "fireball": 20, "zap": 15,
+    "wide": 15, "fast": 10, "narrow": 10
+  },
+  "forcedFirstPowerup": null,
+  "parTime": 80
+}

@@ -1,0 +1,24 @@
+{
+  "id": 2,
+  "name": "Kapslen",
+  "zone": "baeltet",
+  "grid": [
+    ".S.........S.",
+    ".VVVVVVVVVVV.",
+    ".VHHHHHHHHHV.",
+    ".V.........V.",
+    ".V.IIIIIII.V.",
+    ".V.I.....I.V.",
+    ".V.I.PPP.I.V.",
+    ".V.I.....I.V.",
+    ".V.IIIIIII.V.",
+    ".VVVVVVVVVVV."
+  ],
+  "ballSpeed": 320,
+  "powerups": {
+    "wide": 25, "multi": 25, "fireball": 15,
+    "laser": 15, "slow": 10, "narrow": 10
+  },
+  "forcedFirstPowerup": null,
+  "parTime": 110
+}

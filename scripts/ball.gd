@@ -3,9 +3,10 @@ extends CharacterBody2D
 
 ## Lag 4: kometen.
 ##
-## Egen kollision. Ingen RigidBody, ingen move_and_slide. Bolden er en
-## swept circle mod linjesegmenter: rammens tre inderflader og paddlens
-## tre yderflader. Farten er konstant, refleksionen er manuel.
+## Egen kollision. Ingen RigidBody, ingen move_and_slide. Hver fysik-tick
+## sveeper en cirkel mod rammens tre inderflader, paddlens tre yderflader
+## og de klodser, bevægelsen faktisk rører. Refleksionen er manuel, så
+## farten kan holdes konstant.
 ##
 ## Udgangsvinklen fra paddlen bestemmes af rammepunktet:
 ##   yderste kant 25 grader fra vandret, midte 80 grader, lineært imellem.
@@ -15,10 +16,16 @@ extends CharacterBody2D
 
 signal wall_hit(pos: Vector2, normal: Vector2)
 signal paddle_hit(pos: Vector2, exit_angle_deg: float, sweet: bool)
-signal lost()
+signal brick_hit(brick: Brick, damage: int, pos: Vector2, passed_through: bool)
+signal lost(ball: Ball)
+
+enum Look { NORMAL, FIREBALL, SLOW, FAST, ZAP }
 
 const BONE := Color("F2EFE6")
 const VOLT := Color("D6FF3D")
+const ICE := Color("4DD8FF")
+const EMBER := Color("FF4D2E")
+const FLARE := Color("FF9F1C")
 
 const RADIUS := 4.0
 const BASE_SPEED := 320.0
@@ -34,32 +41,57 @@ const SWEET_HALF_WIDTH := 4.0
 const SWEET_BONUS := 0.10
 const SWEET_BONUS_TIME := 2.0
 
-const TRAIL_LENGTH := 6
+const TRAIL_LENGTH := 12
 const SKIN := 0.01
-const MAX_SUBSTEPS := 8
+const MAX_SUBSTEPS := 16
 
 var arena: Arena
 var paddle: Paddle
+var grid: BrickGrid
 var game_feel: GameFeel
+var effects: Effects
 
 var stuck := true
+## Frosset ved level clear: bolden holder sin retning og fart, men
+## bevæger sig ikke. Så er tilstanden stadig sand, når HUD og debug
+## kigger på den.
+var frozen := false
 var speed_base := BASE_SPEED
+## Langsom sætter den til 0.7, Hurtig til 1.4. Farten rettes med det
+## samme, så bolden aldrig hænger en frame bagud efter en power-up.
+var speed_scale := 1.0:
+	set(value):
+		speed_scale = value
+		if velocity.length() > 0.0001:
+			velocity = velocity.normalized() * current_speed()
+var fireball := false
+var zap := false
 var last_exit_angle := 0.0
 
 var _bonus_left := 0.0
 var _trail: Array[Vector2] = []
-var _segments: Array[Dictionary] = []
+var _spark_drip := 0.0
 
 
 func _ready() -> void:
-	for i in TRAIL_LENGTH:
-		_trail.append(global_position)
+	_fill_trail()
 
 
-## Den fart, bolden faktisk har lige nu, inklusive sweet spot-bonus.
 func current_speed() -> float:
 	var bonus := SWEET_BONUS * (_bonus_left / SWEET_BONUS_TIME)
-	return speed_base * (1.0 + maxf(bonus, 0.0))
+	return speed_base * speed_scale * (1.0 + maxf(bonus, 0.0))
+
+
+func look() -> Look:
+	if fireball:
+		return Look.FIREBALL
+	if zap:
+		return Look.ZAP
+	if speed_scale < 1.0:
+		return Look.SLOW
+	if speed_scale > 1.0:
+		return Look.FAST
+	return Look.NORMAL
 
 
 func stick_to_paddle() -> void:
@@ -99,7 +131,17 @@ func launch() -> void:
 	velocity = Vector2(cos(a) * dir_x, -sin(a)) * current_speed()
 
 
+## Bruges af Multi: en ny bold sendes ud i en ny retning med samme fart.
+func launch_at(angle_deg: float) -> void:
+	stuck = false
+	var a := deg_to_rad(angle_deg)
+	velocity = Vector2(cos(a), -sin(a)) * current_speed()
+	velocity = _enforce_min_angle(velocity)
+
+
 func _physics_process(delta: float) -> void:
+	if frozen:
+		return
 	if game_feel and game_feel.is_frozen():
 		return
 
@@ -113,11 +155,9 @@ func _physics_process(delta: float) -> void:
 		queue_redraw()
 		return
 
-	# Konstant fart. Retningen bærer al information, længden er styret.
 	if velocity.length() > 0.0001:
 		velocity = velocity.normalized() * current_speed()
 
-	_rebuild_segments()
 	_advance(delta)
 	_resolve_paddle_overlap()
 
@@ -126,24 +166,10 @@ func _physics_process(delta: float) -> void:
 		_trail.resize(TRAIL_LENGTH)
 
 	if arena and global_position.y - RADIUS > arena.death_y:
-		lost.emit()
-		stick_to_paddle()
+		lost.emit(self)
+		return
 
 	queue_redraw()
-
-
-func _rebuild_segments() -> void:
-	_segments.clear()
-	if arena:
-		for seg in arena.wall_segments():
-			_segments.append(seg)
-	if paddle:
-		var r := paddle.world_rect()
-		var top_left := r.position
-		var top_right := Vector2(r.end.x, r.position.y)
-		_segments.append({"a": top_left, "b": top_right, "kind": "paddle_top"})
-		_segments.append({"a": top_left, "b": Vector2(r.position.x, r.end.y), "kind": "paddle_side"})
-		_segments.append({"a": top_right, "b": r.end, "kind": "paddle_side"})
 
 
 func _advance(delta: float) -> void:
@@ -155,36 +181,92 @@ func _advance(delta: float) -> void:
 		var best_t := 1.0
 		var best_normal := Vector2.ZERO
 		var best_kind := ""
-		for seg in _segments:
-			var hit := _sweep_circle_segment(global_position, motion, RADIUS, seg["a"], seg["b"])
-			if hit["hit"] and hit["t"] < best_t:
-				best_t = hit["t"]
-				best_normal = hit["normal"]
-				best_kind = seg["kind"]
+		var best_brick: Brick = null
+
+		if arena:
+			for seg in arena.wall_segments():
+				var hit := _sweep_circle_segment(global_position, motion, RADIUS, seg["a"], seg["b"])
+				if hit["hit"] and hit["t"] < best_t:
+					best_t = hit["t"]
+					best_normal = hit["normal"]
+					best_kind = "wall"
+					best_brick = null
+
+		if paddle:
+			var r := paddle.world_rect()
+			var top_left := r.position
+			var top_right := Vector2(r.end.x, r.position.y)
+			var faces := [
+				[top_left, top_right, "paddle_top"],
+				[top_left, Vector2(r.position.x, r.end.y), "paddle_side"],
+				[top_right, r.end, "paddle_side"],
+			]
+			for face in faces:
+				var hit := _sweep_circle_segment(global_position, motion, RADIUS, face[0], face[1])
+				if hit["hit"] and hit["t"] < best_t:
+					best_t = hit["t"]
+					best_normal = hit["normal"]
+					best_kind = face[2]
+					best_brick = null
+
+		if grid:
+			var swept := Rect2(global_position, Vector2.ZERO)
+			swept = swept.expand(global_position + motion).grow(RADIUS + 1.0)
+			for brick in grid.bricks_in(swept):
+				var hit := _sweep_circle_rect(global_position, motion, RADIUS, brick.rect)
+				if hit["hit"] and hit["t"] < best_t:
+					best_t = hit["t"]
+					best_normal = hit["normal"]
+					best_kind = "brick"
+					best_brick = brick
 
 		if best_kind == "":
 			global_position += motion
 			return
 
-		global_position += motion * best_t + best_normal * SKIN
+		var pass_through := false
+		var damage := 1
+		if best_kind == "brick":
+			if fireball and best_brick.is_breakable():
+				pass_through = true
+				damage = best_brick.hits_left
+			elif best_brick.lets_ball_pass():
+				pass_through = true
+
+		global_position += motion * best_t
+		if not pass_through:
+			global_position += best_normal * SKIN
 		remaining *= (1.0 - best_t)
 
-		if best_kind == "paddle_top" and best_normal.y < -0.5:
-			_bounce_off_paddle()
-		else:
-			velocity = velocity - 2.0 * best_normal * velocity.dot(best_normal)
-			velocity = _enforce_min_angle(velocity)
-			if best_kind == "wall":
+		match best_kind:
+			"wall":
+				_reflect(best_normal)
 				wall_hit.emit(global_position, best_normal)
-			else:
+			"paddle_top":
+				if best_normal.y < -0.5:
+					_bounce_off_paddle()
+				else:
+					_reflect(best_normal)
+					paddle.on_ball_hit(global_position.x)
+			"paddle_side":
+				_reflect(best_normal)
 				paddle.on_ball_hit(global_position.x)
+			"brick":
+				if not pass_through:
+					_reflect(best_normal)
+				brick_hit.emit(best_brick, damage, global_position, pass_through)
+
+
+func _reflect(normal: Vector2) -> void:
+	velocity = velocity - 2.0 * normal * velocity.dot(normal)
+	velocity = _enforce_min_angle(velocity)
 
 
 func _bounce_off_paddle() -> void:
 	var half := paddle.half_width()
 	var dx := global_position.x - paddle.global_position.x
 	var offset := clampf(dx / half, -1.0, 1.0)
-	var sweet := absf(dx) <= SWEET_HALF_WIDTH
+	var sweet := paddle.is_sweet(dx)
 
 	var angle_deg := SWEET_ANGLE_DEG if sweet else lerpf(CENTER_ANGLE_DEG, EDGE_ANGLE_DEG, absf(offset))
 	var dir_x := signf(offset)
@@ -221,10 +303,8 @@ func _enforce_min_angle(v: Vector2) -> Vector2:
 	return Vector2(cos(minimum) * sx, sin(minimum) * sy) * speed
 
 
-## Paddlen kan bevæge sig ind over bolden, hurtigere end bolden kan
-## flygte. Så skubber vi den fri i stedet for at lade den sidde fast.
 func _resolve_paddle_overlap() -> void:
-	if paddle == null:
+	if paddle == null or stuck:
 		return
 	var r := paddle.world_rect().grow(RADIUS)
 	if not r.has_point(global_position):
@@ -237,6 +317,19 @@ func _resolve_paddle_overlap() -> void:
 
 
 # --- Swept circle ------------------------------------------------------
+
+static func _sweep_circle_rect(p0: Vector2, d: Vector2, r: float, rect: Rect2) -> Dictionary:
+	var best := {"hit": false, "t": 1.0, "normal": Vector2.ZERO}
+	var tl := rect.position
+	var tr := Vector2(rect.end.x, rect.position.y)
+	var br := rect.end
+	var bl := Vector2(rect.position.x, rect.end.y)
+	for face in [[tl, tr], [tr, br], [br, bl], [bl, tl]]:
+		var hit := _sweep_circle_segment(p0, d, r, face[0], face[1])
+		if hit["hit"] and hit["t"] < best["t"]:
+			best = hit
+	return best
+
 
 ## Cirkel med radius r flyttes fra p0 med vektoren d mod segmentet a-b.
 ## Returnerer {"hit": bool, "t": float, "normal": Vector2}, hvor t er
@@ -257,7 +350,6 @@ static func _sweep_circle_segment(p0: Vector2, d: Vector2, r: float, a: Vector2,
 	var approach := d.dot(normal)
 	var t := -1.0
 	if dist <= r:
-		# Starter allerede inde i fladen. Kun gyldigt, hvis vi trænger dybere ind.
 		if approach < 0.0:
 			t = 0.0
 	elif approach < 0.0:
@@ -269,7 +361,6 @@ static func _sweep_circle_segment(p0: Vector2, d: Vector2, r: float, a: Vector2,
 		if along >= 0.0 and along <= seg_len:
 			return {"hit": true, "t": t, "normal": normal}
 
-	# Uden for fladen: prøv de to endepunkter som cirkler.
 	var hit_a := _sweep_circle_point(p0, d, r, a)
 	var hit_b := _sweep_circle_point(p0, d, r, b)
 	if hit_a["hit"] and hit_b["hit"]:
@@ -305,13 +396,58 @@ static func _sweep_circle_point(p0: Vector2, d: Vector2, r: float, c: Vector2) -
 
 # --- Tegning -----------------------------------------------------------
 
-func _draw() -> void:
-	# Komethalen: de sidste 6 positioner, faldende størrelse og opacity.
-	for i in range(_trail.size() - 1, 0, -1):
-		var f := float(i) / float(TRAIL_LENGTH - 1)
-		var c := VOLT
-		c.a = lerpf(0.45, 0.04, f)
-		draw_circle(to_local(_trail[i]), lerpf(3.4, 1.0, f), c)
+func _process(delta: float) -> void:
+	if look() == Look.FIREBALL and not stuck:
+		_spark_drip -= delta
+		if _spark_drip <= 0.0:
+			_spark_drip = 0.04
+			if effects:
+				effects.sparks(global_position, Vector2.DOWN, 1, FLARE)
+	queue_redraw()
 
-	draw_circle(Vector2.ZERO, RADIUS, VOLT)
-	draw_circle(Vector2.ZERO, RADIUS - 2.0, BONE)
+
+func _draw() -> void:
+	match look():
+		Look.FIREBALL:
+			_draw_tail(10, EMBER, FLARE, 3.6, 0.55)
+			draw_circle(Vector2.ZERO, RADIUS, FLARE)
+			draw_circle(Vector2.ZERO, RADIUS - 2.0, EMBER)
+		Look.SLOW:
+			_draw_tail(4, ICE, ICE, 4.2, 0.5)
+			# Svag frostring.
+			draw_arc(Vector2.ZERO, RADIUS + 2.5, 0.0, TAU, 20, Color(ICE, 0.35), 1.0, true)
+			draw_circle(Vector2.ZERO, RADIUS, ICE)
+			draw_circle(Vector2.ZERO, RADIUS - 2.0, BONE)
+		Look.FAST:
+			_draw_streak(12, VOLT)
+			draw_circle(Vector2.ZERO, RADIUS, VOLT)
+			draw_circle(Vector2.ZERO, RADIUS - 2.0, BONE)
+		Look.ZAP:
+			_draw_tail(3, Color.WHITE, Color.WHITE, 3.0, 0.6)
+			draw_circle(Vector2.ZERO, RADIUS, Color.WHITE)
+			draw_circle(Vector2.ZERO, RADIUS - 2.0, VOLT)
+		_:
+			_draw_tail(6, VOLT, VOLT, 3.4, 0.45)
+			draw_circle(Vector2.ZERO, RADIUS, VOLT)
+			draw_circle(Vector2.ZERO, RADIUS - 2.0, BONE)
+
+
+func _draw_tail(links: int, near: Color, far: Color, start_size: float, start_alpha: float) -> void:
+	var count := mini(links, _trail.size() - 1)
+	for i in range(count, 0, -1):
+		var f := float(i) / float(maxi(links - 1, 1))
+		var c := near.lerp(far, f)
+		c.a = lerpf(start_alpha, 0.03, f)
+		draw_circle(to_local(_trail[i]), lerpf(start_size, 0.8, f), c)
+
+
+## Hurtig tegner en streg i stedet for cirkler.
+func _draw_streak(links: int, color: Color) -> void:
+	var count := mini(links, _trail.size() - 1)
+	if count < 2:
+		return
+	for i in range(count, 0, -1):
+		var f := float(i) / float(maxi(links - 1, 1))
+		var c := color
+		c.a = lerpf(0.4, 0.02, f)
+		draw_line(to_local(_trail[i]), to_local(_trail[i - 1]), c, lerpf(2.4, 0.6, f))

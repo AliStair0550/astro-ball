@@ -1,0 +1,21 @@
+{
+  "id": 1,
+  "name": "Afgang",
+  "zone": "baeltet",
+  "grid": [
+    ".............",
+    ".VVVVVVVVVVV.",
+    ".IIIIIIIIIII.",
+    "..FFFFFFFFF..",
+    "...PPPPPPP...",
+    "....VVVVV....",
+    ".....III.....",
+    "......X......"
+  ],
+  "ballSpeed": 320,
+  "powerups": {
+    "wide": 40, "multi": 30, "slow": 20, "life": 10
+  },
+  "forcedFirstPowerup": "wide",
+  "parTime": 60
+}

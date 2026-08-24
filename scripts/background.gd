@@ -51,6 +51,12 @@ var _planet_radius := 60.0
 var _focus_x := 195.0
 var _time := 0.0
 
+## Reaktioner fra afsnit 2.
+var _dim := 0.0
+var _blitz := 0.0
+var _glint := 0.0
+var _combo := 0
+
 
 func _ready() -> void:
 	_build()
@@ -123,6 +129,38 @@ func set_focus_x(x: float) -> void:
 	_focus_x = x
 
 
+## Ved tab af liv dimmer stjernefeltet til 50 procent i 800 ms, og
+## planeten mister sin atmosfærelinje et øjeblik.
+func dim() -> void:
+	_dim = 1.0
+
+
+## Ved level clear tændes alle stjerner 100 procent i ét frame.
+func blitz() -> void:
+	_blitz = 1.0
+
+
+## Pulse-kernen giver planetens atmosfærelinje et kort lysglimt.
+func planet_glint() -> void:
+	_glint = 1.0
+
+
+## Kombo 5+ giver flere stjerneskud. Kombo 10+ får asteroiderne til at
+## drive mærkbart hurtigere. Rummet mærker, at det går godt.
+func set_intensity(combo: int) -> void:
+	_combo = combo
+
+
+func _drift_scale() -> float:
+	return 3.2 if _combo >= 10 else 1.0
+
+
+func _shooting_interval() -> float:
+	if _combo >= 5:
+		return 8.0
+	return randf_range(SHOOTING_STAR_MIN, SHOOTING_STAR_MAX)
+
+
 ## Bolden ramte rammen: de nærmeste stjerner blinker svagt op i 300 ms.
 func flash_near(world_pos: Vector2, count := 5, color := STAR) -> void:
 	var order: Array[int] = []
@@ -146,9 +184,18 @@ func _process(delta: float) -> void:
 		if star["flash"] > 0.0:
 			star["flash"] = maxf(0.0, star["flash"] - delta / FLASH_TIME)
 
+	if _dim > 0.0:
+		_dim = maxf(0.0, _dim - delta / 0.8)
+	if _blitz > 0.0:
+		# Ét frame, ikke en fade. Det er en blitz, ikke et lys der tændes.
+		_blitz = 0.0 if _blitz < 1.0 else 0.999
+	if _glint > 0.0:
+		_glint = maxf(0.0, _glint - delta / 0.35)
+
+	var drift := _drift_scale()
 	for rock in _asteroids:
-		rock["pos"] += rock["drift"] * delta
-		rock["rot"] += rock["rot_speed"] * delta
+		rock["pos"] += rock["drift"] * drift * delta
+		rock["rot"] += rock["rot_speed"] * drift * delta
 		var p: Vector2 = rock["pos"]
 		if p.y < -40.0:
 			rock["pos"] = Vector2(randf_range(60.0, screen_size.x - 60.0), screen_size.y + 40.0)
@@ -184,7 +231,7 @@ func _update_shooting_star(delta: float) -> void:
 		_shooting["t"] += delta
 		if _shooting["t"] >= _shooting["duration"]:
 			_shooting["active"] = false
-			_shooting_wait = randf_range(SHOOTING_STAR_MIN, SHOOTING_STAR_MAX)
+			_shooting_wait = _shooting_interval()
 		return
 	_shooting_wait -= delta
 	if _shooting_wait > 0.0:
@@ -229,6 +276,7 @@ func _draw() -> void:
 
 
 func _draw_stars() -> void:
+	var dim_factor := 1.0 - 0.5 * _dim
 	for star in _stars:
 		var size: int = star["size"]
 		var alpha: float = clampf(star["base"] + star["twinkle"], 0.0, 1.0)
@@ -237,6 +285,10 @@ func _draw_stars() -> void:
 		if flash > 0.0:
 			color = STAR.lerp(star["flash_color"], flash)
 			alpha = clampf(alpha + flash * 0.5, 0.0, 1.0)
+		alpha *= dim_factor
+		if _blitz > 0.0:
+			color = Color.WHITE
+			alpha = 1.0
 		color.a = alpha
 		# Firkantede. Samme sprog som partiklerne.
 		draw_rect(Rect2(star["pos"].floor(), Vector2(size, size)), color)
@@ -264,8 +316,11 @@ func _draw_shooting_star() -> void:
 func _draw_mid_layer(offset: Vector2) -> void:
 	var c := _planet_center + offset
 	draw_circle(c, _planet_radius, PLANET)
-	# Tynd atmosfærelinje. Den slukker et øjeblik ved tab af liv i fase 2.
-	draw_arc(c, _planet_radius + 1.0, 0.0, TAU, 64, ATMOSPHERE, 1.0, true)
+	# Tynd atmosfærelinje. Den slukker et øjeblik ved tab af liv.
+	if _dim < 0.5:
+		var atmosphere := ATMOSPHERE.lerp(Color("8FA8D8"), _glint)
+		atmosphere.a = 1.0 - _dim * 2.0
+		draw_arc(c, _planet_radius + 1.0, 0.0, TAU, 64, atmosphere, 1.0 + _glint, true)
 
 	for rock in _asteroids:
 		var pts := PackedVector2Array()
