@@ -25,7 +25,11 @@ const SCREEN := Vector2(390.0, 844.0)
 ## it, and everything below follows: the wall's sky is measured from the
 ## frame, so the whole field simply starts lower. That keeps one layout
 ## instead of two.
-const HUD_BASE_HEIGHT := 196.0
+const HUD_BASE_HEIGHT := 164.0
+## Where the panel's content starts. The front camera and the Dynamic
+## Island own the top of the screen, and a logo behind them is a logo
+## nobody reads. Measured, not guessed: 59 logical px on a 15 Pro.
+const CONTENT_TOP := 60.0
 static var HUD_HEIGHT := HUD_BASE_HEIGHT
 ## How far the Ember line sits above the bottom of the field, so it never
 ## hides under the home indicator.
@@ -41,12 +45,17 @@ const HIT_WAVE := 20.0
 
 const PULSE_PERIOD := 4.0
 const EMBER_WARN_DISTANCE := 100.0
-const EMBER_LINE_BASE := SCREEN.y - 4.0
+## The field ends above the bottom of the screen. What is left below is
+## where the thumb goes: with relative steering the finger never has to
+## be near the paddle, but it does have to be somewhere, and that
+## somewhere must not be on top of the thing you are watching.
+const FIELD_BOTTOM := 800.0
+const EMBER_LINE_BASE := FIELD_BOTTOM - 4.0
 
 const CELEBRATE_TIME := 0.9
 
 ## Bottom edge of the field. Below it is a fall.
-var death_y := SCREEN.y
+var death_y := FIELD_BOTTOM
 
 var _walls: Array[Dictionary] = []
 var _hits: Array[Dictionary] = []
@@ -60,7 +69,9 @@ var _time := 0.0
 ## out from under it. A no-op on desktop.
 static func apply_safe_area() -> void:
 	var insets := SafeArea.insets()
-	HUD_HEIGHT = HUD_BASE_HEIGHT + insets.x
+	# The panel already keeps its content clear of a 60 px island. Only a
+	# device that wants more than that moves the layout.
+	HUD_HEIGHT = HUD_BASE_HEIGHT + maxf(insets.x - CONTENT_TOP, 0.0)
 	BOTTOM_INSET = insets.y
 
 
@@ -78,11 +89,11 @@ func _build_walls() -> void:
 	var top := HUD_HEIGHT + WALL
 	_walls = [
 		{
-			"a": Vector2(left, HUD_HEIGHT), "b": Vector2(left, SCREEN.y),
+			"a": Vector2(left, HUD_HEIGHT), "b": Vector2(left, FIELD_BOTTOM),
 			"inward": Vector2(1.0, 0.0), "kind": "wall",
 		},
 		{
-			"a": Vector2(right, HUD_HEIGHT), "b": Vector2(right, SCREEN.y),
+			"a": Vector2(right, HUD_HEIGHT), "b": Vector2(right, FIELD_BOTTOM),
 			"inward": Vector2(-1.0, 0.0), "kind": "wall",
 		},
 		{
@@ -97,7 +108,7 @@ func wall_segments() -> Array[Dictionary]:
 
 
 func inner_rect() -> Rect2:
-	return Rect2(WALL, HUD_HEIGHT + WALL, SCREEN.x - WALL * 2.0, SCREEN.y - HUD_HEIGHT - WALL)
+	return Rect2(WALL, HUD_HEIGHT + WALL, SCREEN.x - WALL * 2.0, FIELD_BOTTOM - HUD_HEIGHT - WALL)
 
 
 ## The ball hit the field. The segment lights, the emitters blink.
@@ -177,10 +188,18 @@ func _draw() -> void:
 
 
 func _draw_frame() -> void:
-	var h := SCREEN.y - HUD_HEIGHT
+	# The top bar is the ceiling, and it is the only line up there. The
+	# panel used to end in a rule of its own two pixels above it, which
+	# read as two ceilings when only one of them was solid.
+	var h := FIELD_BOTTOM - HUD_HEIGHT
 	draw_rect(Rect2(0.0, HUD_HEIGHT, SCREEN.x, WALL), FRAME)
 	draw_rect(Rect2(0.0, HUD_HEIGHT, WALL, h), FRAME)
 	draw_rect(Rect2(SCREEN.x - WALL, HUD_HEIGHT, WALL, h), FRAME)
+	# A lit inner edge on the ceiling, so it reads as the surface the
+	# ball actually bounces off.
+	var lip := ENERGY
+	lip.a = 0.7
+	draw_rect(Rect2(WALL, HUD_HEIGHT + WALL - 1.0, SCREEN.x - WALL * 2.0, 1.0), lip)
 
 
 func _draw_energy_line() -> void:
@@ -189,8 +208,8 @@ func _draw_energy_line() -> void:
 	c.a = pulse
 	var top := HUD_HEIGHT + WALL
 	draw_rect(Rect2(WALL, top, SCREEN.x - WALL * 2.0, 1.0), c)
-	draw_rect(Rect2(WALL, top, 1.0, SCREEN.y - top), c)
-	draw_rect(Rect2(SCREEN.x - WALL - 1.0, top, 1.0, SCREEN.y - top), c)
+	draw_rect(Rect2(WALL, top, 1.0, FIELD_BOTTOM - top), c)
+	draw_rect(Rect2(SCREEN.x - WALL - 1.0, top, 1.0, FIELD_BOTTOM - top), c)
 
 
 func _draw_hits() -> void:
@@ -238,8 +257,8 @@ func _draw_celebration() -> void:
 	c.a = f * 0.85
 	var top := HUD_HEIGHT + WALL
 	draw_rect(Rect2(WALL, top, SCREEN.x - WALL * 2.0, 3.0), c)
-	draw_rect(Rect2(WALL, top, 3.0, SCREEN.y - top), c)
-	draw_rect(Rect2(SCREEN.x - WALL - 3.0, top, 3.0, SCREEN.y - top), c)
+	draw_rect(Rect2(WALL, top, 3.0, FIELD_BOTTOM - top), c)
+	draw_rect(Rect2(SCREEN.x - WALL - 3.0, top, 3.0, FIELD_BOTTOM - top), c)
 
 
 func _draw_emitters() -> void:

@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+#
+# Astro Ball to the phone in one command.
+#
+#   ./tools/deploy.sh              export, build, install, launch
+#   ./tools/deploy.sh --build      stop after building, do not install
+#   ./tools/deploy.sh --release    release configuration
+#
+# Three things this refuses to do quietly, because each of them cost an
+# afternoon once:
+#
+#   - Run while the Godot editor is open. The editor owns project.godot
+#     and export_presets.cfg while it lives, and writes its own memory
+#     over anything changed on disk underneath it. Without a warning.
+#   - Start a build with no room for it. Xcode fills a disk and then
+#     fails in ways that read like code problems.
+#   - Report success when the install step never ran.
+
+set -uo pipefail
+
+GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BUILD="$ROOT/build/ios"
+DERIVED="$BUILD/DerivedData"
+SCHEME="AstroBall"
+CONFIG="Debug"
+EXPORT_MODE="--export-debug"
+INSTALL=1
+MIN_FREE_GB=4
+
+for arg in "$@"; do
+  case "$arg" in
+    --release) CONFIG="Release"; EXPORT_MODE="--export-release" ;;
+    --build) INSTALL=0 ;;
+    -h|--help) sed -n '2,20p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    *) echo "unknown option: $arg"; exit 2 ;;
+  esac
+done
+
+step() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
+fail() { printf '\033[31m%s\033[0m\n' "$1" >&2; exit 1; }
+
+# --- 0. The two things that make everything else lie ------------------
+
+if pgrep -f "Godot.app/Contents/MacOS/Godot .*--path" >/dev/null 2>&1; then
+  fail "The Godot editor is open. Close it with Cmd-Q first: while it runs it
+owns project.godot and export_presets.cfg, and it will write its own
+copy over anything this script changes, without saying so."
+fi
+
+FREE_GB=$(df -g "$ROOT" | awk 'NR==2 {print $4}')
+if [ "${FREE_GB:-0}" -lt "$MIN_FREE_GB" ]; then
+  fail "Only ${FREE_GB} GB free and a build needs about ${MIN_FREE_GB}. Free some up:
+  rm -rf ~/Library/Developer/Xcode/DerivedData/*
+  rm -rf ~/Library/Developer/Xcode/iOS\\ DeviceSupport/*
+The second one is symbols for every iOS version this phone has ever run.
+Xcode fetches what it needs again next time."
+fi
+
+[ -x "$GODOT" ] || fail "Godot not found at $GODOT. Set GODOT=/path/to/Godot."
+
+# --- 1. Export --------------------------------------------------------
+
+step "Exporting from Godot ($CONFIG)"
+rm -rf "$BUILD"
+mkdir -p "$BUILD"
+if ! "$GODOT" --headless --path "$ROOT" "$EXPORT_MODE" "iOS" "$BUILD/$SCHEME.xcodeproj" 2>&1 \
+    | grep -vE '^\[|^$|^Godot Engine'; then
+  true
+fi
+[ -d "$BUILD/$SCHEME.xcodeproj" ] || fail "The export produced no Xcode project.
+If Godot printed 'configuration errors:' with nothing after it, open
+Project -> Export in the editor: the dialog shows the reason in red."
+
+# --- 2. Build ---------------------------------------------------------
+
+step "Building with Xcode ($CONFIG)"
+DEST="generic/platform=iOS"
+if [ "$INSTALL" = "1" ]; then
+  DEVICE_ID=$(xcrun devicectl list devices 2>/dev/null \
+    | awk '/connected/ && /iPhone|iPad/ {print $(NF-2); exit}')
+  [ -n "${DEVICE_ID:-}" ] && DEST="id=$DEVICE_ID"
+fi
+
+xcodebuild \
+  -project "$BUILD/$SCHEME.xcodeproj" \
+  -scheme "$SCHEME" \
+  -configuration "$CONFIG" \
+  -destination "$DEST" \
+  -derivedDataPath "$DERIVED" \
+  -allowProvisioningUpdates \
+  build 2>&1 | tail -25
+[ "${PIPESTATUS[0]}" -eq 0 ] || fail "The build failed. The lines above are Xcode's, not ours."
+
+APP=$(find "$DERIVED/Build/Products" -maxdepth 2 -name "$SCHEME.app" -type d 2>/dev/null | head -1)
+[ -n "$APP" ] || fail "Built, but no $SCHEME.app came out of it."
+step "Built: $APP"
+
+[ "$INSTALL" = "1" ] || { echo "Stopping before install, as asked."; exit 0; }
+
+# --- 3. Install and launch -------------------------------------------
+
+if [ -z "${DEVICE_ID:-}" ]; then
+  fail "No connected iPhone found. Plug it in, unlock it, answer Trust, then
+run this again. Or use --build to stop after building."
+fi
+
+step "Installing on $DEVICE_ID"
+xcrun devicectl device install app --device "$DEVICE_ID" "$APP" || \
+  fail "Install failed. If the phone says the developer is untrusted:
+Settings -> General -> VPN & Device Management -> your profile -> Trust."
+
+BUNDLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist" 2>/dev/null)
+step "Launching $BUNDLE"
+xcrun devicectl device process launch --device "$DEVICE_ID" "$BUNDLE" \
+  || echo "Installed, but could not launch it from here. Open it on the phone."
+
+printf '\n\033[32mOn the phone.\033[0m\n'

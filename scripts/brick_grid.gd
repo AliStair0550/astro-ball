@@ -31,7 +31,7 @@ const ORIGIN_X := 27.0
 ## pulled up instead. The slack lands under the wall, between the bricks
 ## and the paddle, which is the half of the screen the player is
 ## actually looking at.
-const SKY := 120.0
+const SKY := 100.0
 const WALL_LINE_FRACTION := 0.57
 ## Never less than this, whatever a level's gridAnchor asks for.
 const MIN_SKY := 90.0
@@ -67,7 +67,7 @@ static func field_top() -> float:
 ## The deepest the wall's underside may reach: 57 per cent down the
 ## field. A wall that would cross it is pulled up.
 static func wall_line_y() -> float:
-	return field_top() + WALL_LINE_FRACTION * (Arena.SCREEN.y - field_top())
+	return field_top() + WALL_LINE_FRACTION * (Arena.FIELD_BOTTOM - field_top())
 
 
 ## The lowest row in the grid that actually holds a brick. A level whose

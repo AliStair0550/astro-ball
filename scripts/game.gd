@@ -96,7 +96,7 @@ func _ready() -> void:
 	crt.screen_size = Arena.SCREEN
 
 	paddle.set_bounds(arena.inner_rect().position.x, arena.inner_rect().end.x)
-	paddle.position = Vector2(Arena.SCREEN.x * 0.5, Arena.SCREEN.y - 64.0)
+	paddle.position = Vector2(Arena.SCREEN.x * 0.5, Arena.FIELD_BOTTOM - 65.0)
 
 	powerups.paddle = paddle
 	powerups.kill_y = arena.death_y

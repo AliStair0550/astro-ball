@@ -13,8 +13,10 @@ extends Node2D
 ## as tall as it is wide it pushes the bricks down into reach instead
 ## of leaving half a screen of dead room.
 
-const HEIGHT := 196.0
-const RULE_Y := HEIGHT - 2.0
+const HEIGHT := Arena.HUD_BASE_HEIGHT
+## The camera owns the top of the screen. Nothing readable goes above this.
+const TOP := Arena.CONTENT_TOP
+
 
 const VOID := Color("07070C")
 const GRAPHITE_TOP := Color("13131C")
@@ -32,16 +34,16 @@ const FONT_DISPLAY := preload("res://assets/fonts/Unbounded-700.ttf")
 const FONT_SCORE := preload("res://assets/fonts/SpaceGrotesk-700.ttf")
 const FONT_UI := preload("res://assets/fonts/SpaceGrotesk-500.ttf")
 
-const BRAND_SIZE := 30
+const BRAND_SIZE := 26
 const BRAND_TRACKING := 2.0
-const SCORE_SIZE := 34
+const SCORE_SIZE := 28
 const LABEL_SIZE := 9
 
 ## The dock always has four slots. Empty ones are drawn faintly, so the
 ## top reads as an instrument and not as a hole waiting to be filled.
 const DOCK_SLOTS := 4
-const DOCK_Y := 152.0
-const DOCK_HEIGHT := 28.0
+const DOCK_Y := 116.0
+const DOCK_HEIGHT := 26.0
 const DOCK_GAP := 6.0
 const DOCK_MARGIN := 10.0
 
@@ -87,53 +89,35 @@ func _draw() -> void:
 	_draw_panel()
 	_draw_brand()
 	_draw_score()
-	_draw_universe_line()
-	_draw_level_line()
-	_draw_lives()
-	_draw_stars()
-	_draw_best()
-	_draw_combo()
+	_draw_status_row()
 	_draw_dock()
 
 
-## Graphite: a vertical tone from near black to a little lighter, with a
-## handful of faint lines so the surface is not dead.
+## Graphite, and nothing at the bottom edge. The frame's top bar below is
+## the ceiling; a second line two pixels above it read as two.
 func _draw_panel() -> void:
-	var bands := 20
+	var bands := 18
 	for i in bands:
 		var f := float(i) / float(bands - 1)
 		var c := GRAPHITE_TOP.lerp(GRAPHITE_BOTTOM, f * f)
 		draw_rect(Rect2(0.0, HEIGHT * f, screen_size.x, HEIGHT / float(bands) + 1.0), c)
 
 	var etch := Color("1B1B26")
-	etch.a = 0.45
-	for i in 8:
-		draw_rect(Rect2(0.0, 16.0 + float(i) * 22.0, screen_size.x, 1.0), etch)
+	etch.a = 0.4
+	for i in 4:
+		draw_rect(Rect2(0.0, TOP + 6.0 + float(i) * 26.0, screen_size.x, 1.0), etch)
 
 	# A violet glow behind the name, so the brand sits in its own light.
 	for i in 6:
 		var glow := PULSE_DEEP
 		glow.a = 0.05
-		draw_rect(Rect2(4.0 - float(i) * 4.0, 6.0 - float(i) * 3.0,
-			280.0 + float(i) * 10.0, 42.0 + float(i) * 6.0), glow)
-
-	# A divider between the readout and the dock, so the panel reads as
-	# two instruments rather than one crowded one.
-	var split := Color("232330")
-	draw_rect(Rect2(12.0, DOCK_Y - 12.0, screen_size.x - 24.0, 1.0), split)
-
-	var rule := PULSE
-	rule.a = 0.6
-	draw_rect(Rect2(0.0, RULE_Y, screen_size.x, 1.0), rule)
-	rule.a = 0.14
-	draw_rect(Rect2(0.0, RULE_Y - 3.0, screen_size.x, 3.0), rule)
-	draw_rect(Rect2(0.0, HEIGHT - 1.0, screen_size.x, 1.0), RULE)
+		draw_rect(Rect2(4.0 - float(i) * 4.0, TOP - float(i) * 3.0,
+			270.0 + float(i) * 10.0, 36.0 + float(i) * 6.0), glow)
 
 
 func _draw_brand() -> void:
-	var at := Vector2(14.0, 42.0)
+	var at := Vector2(14.0, TOP + 28.0)
 	var brand := Strings.text("BRAND")
-	# A dark offset behind gives the name depth without an outline.
 	_tracked(FONT_BRAND, brand, at + Vector2(2.0, 3.0), BRAND_SIZE, PULSE_DEEP, BRAND_TRACKING)
 	_tracked(FONT_BRAND, brand, at, BRAND_SIZE, PULSE, BRAND_TRACKING)
 
@@ -141,60 +125,49 @@ func _draw_brand() -> void:
 func _draw_score() -> void:
 	var text := group_digits(int(round(displayed_score)))
 	var width := FONT_SCORE.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, SCORE_SIZE).x
-	var at := Vector2(screen_size.x - 15.0 - width, 78.0)
-	var shadow := VOLT.darkened(0.78)
-	draw_string(FONT_SCORE, at + Vector2(0.0, 2.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, SCORE_SIZE, shadow)
+	var at := Vector2(screen_size.x - 15.0 - width, TOP + 28.0)
+	draw_string(FONT_SCORE, at + Vector2(0.0, 2.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0,
+		SCORE_SIZE, VOLT.darkened(0.78))
 	draw_string(FONT_SCORE, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, SCORE_SIZE, VOLT)
 
 
-func _draw_universe_line() -> void:
-	_tracked(FONT_UI, Strings.universe_line(zone_slug), Vector2(15.0, 64.0), 9, SLATE, 2.0)
+## One row under the brand: where you are on the left, what you have on
+## the right. A running combo takes the middle, and the left shortens to
+## make room, because a combo is urgent and a level name is not.
+func _draw_status_row() -> void:
+	var y := TOP + 46.0
+	var running := combo >= 3
 
-
-func _draw_level_line() -> void:
 	var text := Strings.fmt("LEVEL_AND_NAME", [level_number, level_name.to_upper()])
-	_tracked(FONT_UI, text, Vector2(15.0, 88.0), 12, BONE, 1.8)
+	if running:
+		text = Strings.fmt("LEVEL_NUMBER", [level_number])
+	else:
+		text = "%s · %s" % [Strings.universe_short(zone_slug), text]
+	_tracked(FONT_UI, text, Vector2(15.0, y), 9, SLATE, 1.4)
 
+	if running:
+		_draw_combo(y)
 
-## The lives are small comets, not dots. They are what you are.
-func _draw_lives() -> void:
 	var right := screen_size.x - 15.0
-	var y := 94.0
+	for i in 3:
+		_draw_star_mark(Vector2(right - 8.0 - float(2 - i) * 15.0, y - 4.0),
+			(stars & (1 << i)) != 0)
+	var lives_right := right - 3.0 * 15.0 - 10.0
 	for i in max_lives:
 		var alive := i < lives
 		var c := BONE if alive else LOST_LIFE
-		var x := right - float(max_lives - i) * 15.0
+		var x := lives_right - float(max_lives - i) * 13.0
 		var tail := c
 		tail.a = 0.4 if alive else 0.2
-		draw_rect(Rect2(x - 6.0, y + 1.0, 6.0, 2.0), tail)
-		draw_rect(Rect2(x, y, 6.0, 6.0), c)
-		if alive:
-			var spark := VOLT
-			spark.a = 0.8
-			draw_rect(Rect2(x + 1.0, y + 1.0, 2.0, 2.0), spark)
+		draw_rect(Rect2(x - 5.0, y - 5.0, 5.0, 2.0), tail)
+		draw_rect(Rect2(x, y - 6.0, 5.0, 5.0), c)
 
 
-## Section 15. Three marks, earned independently, shown as you go.
-func _draw_stars() -> void:
-	var right := screen_size.x - 15.0
-	var y := 122.0
-	_tracked(FONT_UI, Strings.text("HUD_STARS"),
-		Vector2(right - 100.0, y + 4.0), 8, SLATE, 1.6)
-	for i in 3:
-		var earned := (stars & (1 << i)) != 0
-		var cx := right - 9.0 - float(2 - i) * 16.0
-		_draw_star_mark(Vector2(cx, y), earned)
-
-
-## A diamond: a square turned forty-five degrees, so it stays in the
-## same language as the bricks and the shards.
+## A diamond: a square turned forty-five degrees, so it stays in the same
+## language as the bricks and the shards.
 func _draw_star_mark(at: Vector2, earned: bool) -> void:
-	var size := 5.5 if earned else 4.0
+	var size := 5.0 if earned else 3.5
 	var color := VOLT if earned else Color("2E2E3C")
-	var points := PackedVector2Array([
-		at + Vector2(0.0, -size), at + Vector2(size, 0.0),
-		at + Vector2(0.0, size), at + Vector2(-size, 0.0),
-	])
 	if earned:
 		var glow := VOLT
 		glow.a = 0.18
@@ -202,38 +175,27 @@ func _draw_star_mark(at: Vector2, earned: bool) -> void:
 			at + Vector2(0.0, -size - 3.0), at + Vector2(size + 3.0, 0.0),
 			at + Vector2(0.0, size + 3.0), at + Vector2(-size - 3.0, 0.0),
 		]), glow)
-	draw_colored_polygon(points, color)
+	draw_colored_polygon(PackedVector2Array([
+		at + Vector2(0.0, -size), at + Vector2(size, 0.0),
+		at + Vector2(0.0, size), at + Vector2(-size, 0.0),
+	]), color)
 
 
-func _draw_best() -> void:
-	if best_score <= 0 or combo >= 3:
-		return
-	_tracked(FONT_UI, Strings.fmt("BEST_VALUE", [group_digits(best_score)]),
-		Vector2(15.0, 126.0), 9, SLATE, 1.6)
-
-
-## Combo from 3 up, centred in the panel, growing with the count.
-func _draw_combo() -> void:
-	if combo < 3:
-		return
-	var size := int(clampf(18.0 + float(combo) * 1.2, 18.0, 36.0))
+func _draw_combo(y: float) -> void:
+	var size := int(clampf(15.0 + float(combo) * 0.9, 15.0, 26.0))
 	var text := "%d" % combo
 	var width := FONT_BRAND.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x
-	var at := Vector2(screen_size.x * 0.5 - width * 0.5, 132.0)
+	var at := Vector2(screen_size.x * 0.5 - width * 0.5, y + 3.0)
 	var pulse := 0.75 + 0.25 * sin(_time * 9.0)
-	# A tight halo, not a panel. Wide soft rects over graphite read as a
-	# lighter box rather than as light.
-	for i in 4:
+	for i in 3:
 		var glow := VOLT
-		glow.a = 0.055 * pulse * (1.0 - float(i) * 0.22)
-		var pad := 2.0 + float(i) * 3.5
+		glow.a = 0.06 * pulse * (1.0 - float(i) * 0.28)
+		var pad := 3.0 + float(i) * 4.0
 		draw_rect(Rect2(at.x - pad, at.y - float(size) - pad * 0.3,
 			width + pad * 2.0, float(size) + pad * 0.6), glow)
-	draw_string(FONT_BRAND, at + Vector2(1.0, 2.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size, VOLT.darkened(0.72))
+	draw_string(FONT_BRAND, at + Vector2(1.0, 2.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0,
+		size, VOLT.darkened(0.72))
 	draw_string(FONT_BRAND, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size, VOLT)
-	var label_w := _tracked_width(FONT_UI, Strings.text("HUD_COMBO"), 8, 1.6)
-	_tracked(FONT_UI, Strings.text("HUD_COMBO"),
-		Vector2(screen_size.x * 0.5 - label_w * 0.5, 108.0), 8, SLATE, 1.6)
 
 
 ## Four slots along the bottom. Active power-ups fill them from the left.
@@ -244,7 +206,6 @@ func _draw_dock() -> void:
 	for id in active:
 		if ids.size() < DOCK_SLOTS:
 			ids.append(str(id))
-
 	for i in DOCK_SLOTS:
 		var box := Rect2(DOCK_MARGIN + float(i) * (slot_w + DOCK_GAP), DOCK_Y, slot_w, DOCK_HEIGHT)
 		if i < ids.size():
@@ -254,8 +215,7 @@ func _draw_dock() -> void:
 
 
 func _draw_dock_empty(box: Rect2) -> void:
-	var idle := Color("1A1A25")
-	draw_rect(box, idle)
+	draw_rect(box, Color("1A1A25"))
 	var edge := Color("232330")
 	draw_rect(Rect2(box.position, Vector2(2.0, box.size.y)), edge)
 	edge.a = 0.6
@@ -275,8 +235,8 @@ func _draw_dock_chip(box: Rect2, id: String) -> void:
 	bg.a = 0.65
 	draw_rect(Rect2(box.position, Vector2(2.0, box.size.y)), bg)
 
-	Powerup.draw_icon_into(self, str(info["icon"]), box.position + Vector2(16.0, 13.0), 0.9, color)
-	_tracked(FONT_UI, Strings.powerup_name(id), box.position + Vector2(27.0, 17.0), 9,
+	Powerup.draw_icon_into(self, str(info["icon"]), box.position + Vector2(15.0, 12.0), 0.85, color)
+	_tracked(FONT_UI, Strings.powerup_name(id), box.position + Vector2(26.0, 16.0), 9,
 		color.lightened(0.3), 0.6)
 
 	var bar := clampf(left / total, 0.0, 1.0)

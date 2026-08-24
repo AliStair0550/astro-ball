@@ -99,7 +99,7 @@ func _test_geometry() -> void:
 	var left := BrickGrid.ORIGIN_X
 	var right := BrickGrid.ORIGIN_X + 12.0 * BrickGrid.PITCH.x + Brick.SIZE.x
 	var inner := Rect2(Arena.WALL, Arena.HUD_HEIGHT + Arena.WALL,
-		Arena.SCREEN.x - Arena.WALL * 2.0, Arena.SCREEN.y - Arena.HUD_HEIGHT - Arena.WALL)
+		Arena.SCREEN.x - Arena.WALL * 2.0, Arena.FIELD_BOTTOM - Arena.HUD_HEIGHT - Arena.WALL)
 	ok(left > inner.position.x, "the grid starts inside the field (%.1f > %.1f)" % [left, inner.position.x])
 	ok(right < inner.end.x, "the grid ends inside the field (%.1f < %.1f)" % [right, inner.end.x])
 	eq(Brick.SIZE, Vector2(24.0, 16.0), "the brick is 24x16")
@@ -111,13 +111,21 @@ func _test_geometry() -> void:
 	# 20 anchored from the bottom alone, which left a shallow level with
 	# more dead sky above it than fall zone below.
 	var field_top := BrickGrid.field_top()
-	var expected_line := field_top + 0.57 * (Arena.SCREEN.y - field_top)
+	var expected_line := field_top + 0.57 * (Arena.FIELD_BOTTOM - field_top)
 	ok(absf(BrickGrid.wall_line_y() - expected_line) < 0.01,
 		"the wall line guard is at %.2f" % BrickGrid.wall_line_y())
-	ok(Arena.HUD_HEIGHT >= 180.0,
-		"the HUD carries the space the sky gave up (%.0f px)" % Arena.HUD_HEIGHT)
+	# The panel keeps its content clear of the front camera, and the field
+	# stops above the bottom of the screen so a thumb has somewhere to be.
+	ok(Arena.CONTENT_TOP >= 55.0,
+		"the panel's content starts below the camera (%.0f px)" % Arena.CONTENT_TOP)
+	ok(Arena.SCREEN.y - Arena.FIELD_BOTTOM >= 40.0,
+		"the field stops above the bottom of the screen (%.0f px below)"
+			% (Arena.SCREEN.y - Arena.FIELD_BOTTOM))
+	var below_paddle := Arena.SCREEN.y - (Arena.FIELD_BOTTOM - 65.0 + Paddle.HEIGHT * 0.5)
+	ok(below_paddle >= 95.0,
+		"and there is room for a thumb below the paddle (%.0f px)" % below_paddle)
 
-	var paddle_top := Arena.SCREEN.y - 64.0 - Paddle.HEIGHT * 0.5
+	var paddle_top := Arena.FIELD_BOTTOM - 65.0 - Paddle.HEIGHT * 0.5
 	for row_count in range(1, 13):
 		var grid: Array = []
 		for i in row_count:
@@ -133,7 +141,7 @@ func _test_geometry() -> void:
 			"%d rows stay above the wall line guard (%.1f)" % [row_count, bottom])
 		ok(paddle_top - bottom > 200.0,
 			"%d rows leave the ball room to fall (%.1f px)" % [row_count, paddle_top - bottom])
-		var fall := Arena.SCREEN.y - bottom
+		var fall := Arena.FIELD_BOTTOM - bottom
 		ok(fall / Ball.BASE_SPEED > 0.8,
 			"%d rows leave at least eight tenths of a second (%.2f s)"
 				% [row_count, fall / Ball.BASE_SPEED])

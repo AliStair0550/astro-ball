@@ -272,6 +272,9 @@ func _test_safe_area() -> void:
 	# The panel and the warning line move with it, and the whole layout
 	# follows because the sky is measured from the frame.
 	eq(Arena.HUD_HEIGHT, Arena.HUD_BASE_HEIGHT, "on desktop the panel is its designed height")
+	# A 59 px island is already inside the panel's own content margin, so
+	# it must not move the layout. Only something bigger should.
+	ok(Arena.CONTENT_TOP >= 59.0, "the content margin already clears a Dynamic Island")
 	about(Arena.ember_line_y(), Arena.EMBER_LINE_BASE, 0.01,
 		"and the warning line sits where it was drawn")
 
