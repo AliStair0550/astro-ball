@@ -1193,3 +1193,29 @@ siger "kort" godt nok.
 START HERE har fået jord under sig: et mærke med kant, en pil der falder
 ned mod stjernen og tilbage, og to ringe der ånder i forskellig takt. Det
 er nu det højeste på skærmen, hvilket det skal være.
+
+---
+
+## Finalen
+
+Level 12 er ikke bare den sidste bane. Når hele universet er ryddet,
+lukkes kapitlet med et billede.
+
+Feltet går ud. Så tændes de tolv stjerner, én ad gangen i den rækkefølge
+de blev fløjet, hver med sin tone og sit tik i hånden. Derefter tegnes
+de fjorten linjer imellem dem, og kometen står færdig. Der er ingen tekst
+i det overhovedet.
+
+**Det er de samme koordinater, kortet bruger.** Når kortet åbner
+bagefter, flytter figuren sig ikke en eneste pixel: billedet, spilleren
+lige har set blive tegnet, *er* kortet, de lander på. Det er hele
+pointen med at tegne den i banen i stedet for på kortet.
+
+Et tryk kører billedet færdigt, det næste lander på kortet, og gør man
+ingenting, går den selv videre to sekunder efter figuren er hel. Samme
+regel som ceremonien: der findes ingen tilstand mellem "kør den ud" og
+"gå videre".
+
+Har man sprunget en bane over og klarer level 12 alligevel, er der ingen
+konstellation at tegne, og man lander på kortet som før. Billedet er
+universet, der er færdigt, ikke level 12, der er færdigt.

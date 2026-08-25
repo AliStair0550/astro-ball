@@ -8,7 +8,7 @@ extends Node2D
 ## do not know what a level is, and the background only knows that
 ## something happened somewhere. It all meets here.
 
-enum State { TITLE, UNIVERSES, SETTINGS, STAR_MAP, PAUSED, LEVEL_INTRO, PLAYING, BALL_LOST, LEVEL_CLEAR, SIGNAL_LOST }
+enum State { TITLE, UNIVERSES, SETTINGS, STAR_MAP, PAUSED, LEVEL_INTRO, PLAYING, BALL_LOST, LEVEL_CLEAR, FINALE, SIGNAL_LOST }
 
 const START_LIVES := LevelState.START_LIVES
 const MAX_BALLS := 6
@@ -79,6 +79,10 @@ var _settings_from_pause := false
 var _meta_cache: Array[Dictionary] = []
 ## Section 18. Debug builds only, and off unless somebody asks for it.
 var recording := false
+## How much of the finale has already been heard, so the notes are not
+## played twice when it is run to the end by a press.
+var _finale_stars := 0
+var _finale_lines := 0
 
 var _balls: Array[Ball] = []
 ## Section 16 and 19: a re-entry is free in the paid version and costs a
@@ -166,6 +170,10 @@ func _set_state(new_state: State) -> void:
 			overlay = Screens.Screen.LEVEL_CLEAR
 			_state_timer = LEVEL_CLEAR_PAUSE
 			_star_sound_timer = 0.0
+		State.FINALE:
+			overlay = Screens.Screen.FINALE
+			_finale_stars = 0
+			_finale_lines = 0
 		State.SIGNAL_LOST:
 			overlay = Screens.Screen.SIGNAL_LOST
 		State.BALL_LOST:
@@ -208,7 +216,8 @@ func _set_state(new_state: State) -> void:
 	# the field.
 	var suspended := state == State.TITLE or state == State.UNIVERSES \
 		or state == State.SETTINGS or state == State.STAR_MAP \
-		or state == State.PAUSED or state == State.SIGNAL_LOST
+		or state == State.PAUSED or state == State.SIGNAL_LOST \
+		or state == State.FINALE
 	# process_mode, not set_process: the capsules are children of the
 	# manager and have their own _process. Switching off the parent's
 	# left them falling exactly as before, which is the bug this is here
@@ -286,7 +295,12 @@ func _on_screen_action(name: String) -> void:
 			else:
 				_set_state(State.TITLE)
 		"skip":
-			if state == State.LEVEL_INTRO:
+			if state == State.FINALE:
+				if screens.finale_done():
+					_open_chart(false)
+				else:
+					screens.finish_finale()
+			elif state == State.LEVEL_INTRO:
 				_begin_level()
 			elif state == State.LEVEL_CLEAR:
 				# One press runs the ceremony out, the next goes on. A
@@ -348,6 +362,14 @@ func _first_unfinished() -> int:
 			continue
 		return i
 	return 0
+
+
+## True when every level in the universe has been cleared at least once.
+func _universe_complete() -> bool:
+	for entry in _level_meta():
+		if not (GameProgress.stars_for(int(entry["id"])) & GameProgress.STAR_CLEARED):
+			return false
+	return true
 
 
 ## The five universes, as the select screen needs them. Only The Drift
@@ -485,9 +507,14 @@ func _finish_ceremony() -> void:
 func _next_level() -> void:
 	run.re_entry_used = false
 	if level_index + 1 >= level_paths.size():
-		# The end of the zone is the chart, with the constellation
-		# drawing itself. Wrapping round to level 1 said nothing.
-		_open_chart(true)
+		# The end of a universe. If every level in it has fallen, the
+		# constellation is drawn where it was played, before the chart
+		# opens underneath it. If some are still standing, there is no
+		# figure to draw and the chart is the right place to go.
+		if _universe_complete():
+			_set_state(State.FINALE)
+		else:
+			_open_chart(true)
 		return
 	_load_level(level_index + 1)
 	_set_state(State.LEVEL_INTRO)
@@ -913,6 +940,9 @@ func _process(delta: float) -> void:
 		positions.append(ball.global_position)
 	grid.update_proximity(positions)
 
+	if state == State.FINALE:
+		_run_finale()
+
 	if state == State.LEVEL_CLEAR and _star_sounds != 0:
 		_star_sound_timer += delta
 		var due: float = float(Screens.CEREMONY["first_star"])
@@ -942,6 +972,27 @@ func _advance_state() -> void:
 			_begin_level()
 		State.LEVEL_CLEAR:
 			_next_level()
+
+
+## The finale's sound and its ending. Twelve stars, each a note higher
+## than the last, then the lines, then the chart.
+func _run_finale() -> void:
+	var t := screens.time_on_screen()
+	while _finale_stars < StarMap.NODES.size() and t >= Screens.finale_star_at(_finale_stars):
+		_finale_stars += 1
+		audio.play("star_%d" % (1 + _finale_stars % 3), 0.82 + 0.03 * float(_finale_stars), -4.0)
+		game_feel.pulse(GameFeel.HAPTIC_STAR)
+	while _finale_lines < StarMap.EDGES.size() and t >= Screens.finale_line_at(_finale_lines):
+		_finale_lines += 1
+		audio.play("combo", 0.9 + 0.02 * float(_finale_lines), -8.0)
+	if _finale_lines == StarMap.EDGES.size():
+		_finale_lines += 1
+		audio.play("level_clear", 0.9, -2.0)
+		game_feel.pulse_pattern([[GameFeel.HAPTIC_LEVEL_CLEAR, 120.0],
+			[GameFeel.HAPTIC_LEVEL_CLEAR, 120.0], [GameFeel.HAPTIC_LEVEL_CLEAR, 0.0]])
+	# It ends on its own if nobody presses anything.
+	if t >= Screens.finale_length() + 2.0:
+		_open_chart(false)
 
 
 func _update_danger() -> void:
@@ -984,7 +1035,7 @@ func _refresh_hud() -> void:
 	hud.best_score = GameProgress.high_score
 	hud.visible = state != State.TITLE and state != State.SETTINGS \
 		and state != State.SIGNAL_LOST and state != State.STAR_MAP \
-		and state != State.UNIVERSES and not recording
+		and state != State.UNIVERSES and state != State.FINALE and not recording
 
 
 ## The pause control sits in the panel, above the field. TouchInput

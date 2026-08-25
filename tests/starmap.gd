@@ -220,12 +220,43 @@ func _test_flow() -> void:
 	game._on_map_action("back")
 	eq(game.state, Game.State.UNIVERSES, "back goes where the player came from")
 
-	# The zone ends on the chart rather than wrapping round to field one.
+	# A universe finished ends with its own picture, drawn where it was
+	# played, before the chart opens underneath it.
+	for id in range(1, 13):
+		progress.record_clear(id, GameProgress.STAR_CLEARED, 40.0)
 	game._load_level(11)
 	game._begin_level()
 	game._next_level()
-	eq(game.state, Game.State.STAR_MAP, "the field after the last one is the chart")
-	ok(game.star_map.visible, "which is where the zone ends")
+	eq(game.state, Game.State.FINALE, "a finished universe closes with the constellation")
+	ok(not game.hud.visible, "with the panel out of the way")
+	ok(not game.star_map.visible, "and the chart not yet open")
+	ok(not game.screens.finale_done(), "it takes its time")
+	# Every star and every line has a moment, and the whole thing fits in
+	# a reasonable one.
+	ok(Screens.finale_star_at(StarMap.NODES.size() - 1) < Screens.finale_line_at(0),
+		"every star is lit before the first line is drawn")
+	ok(Screens.finale_length() < 12.0,
+		"and the whole picture takes %.1f seconds" % Screens.finale_length())
+	# A press runs it out; the next press lands on the chart.
+	game._on_screen_action("skip")
+	ok(game.screens.finale_done(), "a press runs the picture out")
+	eq(game.state, Game.State.FINALE, "and stays on it")
+	game._on_screen_action("skip")
+	eq(game.state, Game.State.STAR_MAP, "the next press lands on the chart")
+	ok(game.star_map.reveal >= 1.0, "with the figure already whole, so nothing moves")
+
+	# A universe with a level still standing has no picture to draw.
+	progress.reset()
+	for id in range(1, 12):
+		progress.record_clear(id, GameProgress.STAR_CLEARED, 40.0)
+	game._load_level(11)
+	game._begin_level()
+	game._next_level()
+	eq(game.state, Game.State.STAR_MAP, "an unfinished universe goes to the chart instead")
+
+	# Either way, the level after the last one is never level one again.
+	ok(int(game.level_data["id"]) == 12,
+		"the zone does not wrap round to its first level")
 
 	progress.reset()
 	await get_tree().process_frame

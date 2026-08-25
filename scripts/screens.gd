@@ -9,7 +9,7 @@ extends Node2D
 
 signal action(name: String)
 
-enum Screen { NONE, TITLE, UNIVERSES, SETTINGS, PAUSED, LEVEL_INTRO, LEVEL_CLEAR, SIGNAL_LOST }
+enum Screen { NONE, TITLE, UNIVERSES, SETTINGS, PAUSED, LEVEL_INTRO, LEVEL_CLEAR, FINALE, SIGNAL_LOST }
 
 const FONT_BRAND := preload("res://assets/fonts/Unbounded-900.ttf")
 const FONT_DISPLAY := preload("res://assets/fonts/Unbounded-700.ttf")
@@ -251,7 +251,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if point == Vector2.INF:
 		return
 
-	if current == Screen.LEVEL_INTRO or current == Screen.LEVEL_CLEAR:
+	if current == Screen.LEVEL_INTRO or current == Screen.LEVEL_CLEAR \
+			or current == Screen.FINALE:
 		action.emit("skip")
 		get_viewport().set_input_as_handled()
 		return
@@ -313,6 +314,8 @@ func _draw() -> void:
 			# thin curtain let the field argue with it.
 			_draw_curtain(0.78)
 			_draw_level_clear()
+		Screen.FINALE:
+			_draw_finale()
 		Screen.SIGNAL_LOST:
 			# Section 16: the star field drops to 20 per cent behind it.
 			_draw_curtain(0.8)
@@ -609,6 +612,101 @@ static func _diamond(at: Vector2, size: float) -> PackedVector2Array:
 		at + Vector2(0.0, -size), at + Vector2(size, 0.0),
 		at + Vector2(0.0, size), at + Vector2(-size, 0.0),
 	])
+
+
+## The end of a universe, drawn where it was played.
+##
+## Twelve levels, twelve stars, lit one at a time in the order they were
+## flown, and then the lines between them. It is the same figure and the
+## same coordinates the chart uses, so when the chart opens underneath it
+## nothing moves: the picture the player just watched being drawn is the
+## map they land on.
+##
+## There is no text in it on purpose. The first chapter of the journey
+## closes with a picture.
+const FINALE := {
+	"dark": 0.45,
+	"first_star": 0.55,
+	"star_gap": 0.19,
+	"first_line": 3.0,
+	"line_gap": 0.115,
+	"hold": 1.5,
+}
+
+
+static func finale_star_at(index: int) -> float:
+	return float(FINALE["first_star"]) + float(index) * float(FINALE["star_gap"])
+
+
+static func finale_line_at(index: int) -> float:
+	return float(FINALE["first_line"]) + float(index) * float(FINALE["line_gap"])
+
+
+static func finale_length() -> float:
+	return finale_line_at(StarMap.EDGES.size() - 1) + float(FINALE["hold"])
+
+
+## How long the screen that is up has been up.
+func time_on_screen() -> float:
+	return _time
+
+
+func finale_done() -> bool:
+	return current != Screen.FINALE or _time >= finale_length()
+
+
+func finish_finale() -> void:
+	if current != Screen.FINALE:
+		return
+	_time = maxf(_time, finale_length())
+	queue_redraw()
+
+
+func _draw_finale() -> void:
+	# The field goes out first. Whatever is still falling out there is
+	# not part of this.
+	var dark := VOID
+	dark.a = clampf(_time / float(FINALE["dark"]), 0.0, 1.0) * 0.97
+	draw_rect(Rect2(-20.0, -20.0, screen_size.x + 40.0, screen_size.y + 40.0), dark)
+
+	var tint := Cosmos.tint_of(0)
+	Cosmos.draw_wash(self, Vector2(screen_size.x * 0.42, 430.0), 300.0, tint,
+		0.07 * clampf((_time - 1.0) / 2.0, 0.0, 1.0))
+
+	# The lines, drawn in the same order the figure was walked.
+	for i in StarMap.EDGES.size():
+		var t := clampf((_time - finale_line_at(i)) / float(FINALE["line_gap"]), 0.0, 1.0)
+		if t <= 0.0:
+			break
+		var a: Vector2 = StarMap.NODES[StarMap.EDGES[i].x]
+		var b: Vector2 = StarMap.NODES[StarMap.EDGES[i].y]
+		var line := PULSE
+		line.a = 0.22 * t
+		draw_line(a, a.lerp(b, t), line, 5.0)
+		line.a = 0.8 * t
+		draw_line(a, a.lerp(b, t), line, 1.0)
+
+	# The stars, lit one at a time in the order they were flown.
+	for i in StarMap.NODES.size():
+		var due := finale_star_at(i)
+		if _time < due:
+			continue
+		var age := _time - due
+		# A flare on arrival that settles into a steady star.
+		var pop := clampf(age / 0.30, 0.0, 1.0)
+		var size := lerpf(17.0, 6.5, ease(pop, 0.35))
+		var at: Vector2 = StarMap.NODES[i]
+		var glow := VOLT
+		for ring in 3:
+			glow.a = (0.20 - float(ring) * 0.055) * (0.55 + 0.45 * (1.0 - pop))
+			draw_colored_polygon(_diamond(at, size + 5.0 + float(ring) * 6.0), glow)
+		draw_colored_polygon(_diamond(at, size), VOLT if pop >= 1.0 else BONE)
+		if pop >= 1.0:
+			var reach := 13.0 + 2.0 * sin(_time * 1.6 + float(i))
+			var flare := VOLT
+			flare.a = 0.4
+			draw_line(at - Vector2(reach, 0.0), at + Vector2(reach, 0.0), flare, 1.0)
+			draw_line(at - Vector2(0.0, reach), at + Vector2(0.0, reach), flare, 1.0)
 
 
 ## The star bits, mirrored so the screens do not need the autoload.
