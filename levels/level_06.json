@@ -4,11 +4,12 @@
   "zone": "baeltet",
   "grid": [
     ".............",
-    "..HHHHHHHHH..",
-    "..H.EEE...H..",
-    "..HHHHHHHHH..",
-    "....FIVIF....",
-    "...FIVVVIF..."
+    "..HHHHHHHHHH.",
+    "..HHHHHHHH...",
+    ".....HEEH....",
+    ".....H..H....",
+    "...FFFFFFF...",
+    "..FFIIVIIFF.."
   ],
   "ballSpeed": 360,
   "gridAnchor": 0,
@@ -26,5 +27,5 @@
     "blind": 6
   },
   "forcedFirstPowerup": null,
-  "parTime": 135
+  "parTime": 130
 }

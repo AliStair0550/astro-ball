@@ -4,13 +4,14 @@
   "zone": "baeltet",
   "grid": [
     ".............",
-    ".V.I.F.V.I.F.",
-    ".V.F.F.F.F.F.",
-    ".V.I.F.V.I.F.",
-    ".V.I.F.V.I.F.",
-    ".V.F.F.F.F.F.",
-    ".VIEEEEEEEFF.",
-    "..X.......X.."
+    "....IIIII....",
+    "...IV...VI...",
+    "...IV...VI...",
+    ".FFFFFFFFFFF.",
+    ".FFVVEEEVVFF.",
+    ".FFVPPPPPVFF.",
+    ".FFVVXPXVVFF.",
+    ".FFFFFFFFFFF."
   ],
   "ballSpeed": 380,
   "gridAnchor": 0,
@@ -31,5 +32,5 @@
     "laser"
   ],
   "forcedFirstPowerup": null,
-  "parTime": 75
+  "parTime": 85
 }

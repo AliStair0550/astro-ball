@@ -195,6 +195,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		fire_laser()
 
 
+## Fires on its own while the power-up is up. It used to want a tap, and
+## a tap is a second job for the hand that is already steering: the
+## player should be aiming the shield, not operating it.
 func fire_laser() -> void:
 	if not laser or _laser_cooldown > 0.0:
 		return
@@ -242,6 +245,9 @@ func _process(delta: float) -> void:
 		_right_light = maxf(0.0, _right_light - delta / END_LIGHT_TIME)
 	if _catch_flash > 0.0:
 		_catch_flash = maxf(0.0, _catch_flash - delta * 4.0)
+	# While the laser is up it keeps firing at its own cadence.
+	if laser and input_enabled:
+		fire_laser()
 	if _laser_cooldown > 0.0:
 		_laser_cooldown = maxf(0.0, _laser_cooldown - delta)
 
@@ -304,11 +310,12 @@ func _cap_color(light: float) -> Color:
 
 ## The shield is projected. The field above the edge is what the ball
 ## strikes, and the faint shadow below is what holds it up.
+## What holds the shield up. The three rows of Volt that used to sit
+## above the top edge are gone: on a phone they read as a smudge over
+## the field rather than as a projection, and the edge the ball strikes
+## is clearer without anything hovering over it. The shadow underneath
+## stays, because it is what stops the shield floating.
 func _draw_projection(top: float, h: float, hw: float) -> void:
-	var field := VOLT
-	for i in 3:
-		field.a = 0.13 - float(i) * 0.04
-		draw_rect(Rect2(-hw + float(i), top - 3.0 + float(i), width - float(i) * 2.0, 3.0 - float(i) * 0.5), field)
 	var shadow := Color("07070C")
 	shadow.a = 0.5
 	draw_rect(Rect2(-hw + 2.0, top + h, width - 4.0, 2.0), shadow)

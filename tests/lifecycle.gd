@@ -403,7 +403,7 @@ func _test_level_progression() -> void:
 	game._next_level()
 	eq(int(game.level_data["id"]), 3, "level 3 loads")
 	eq(game.screens.level_title, "The Chain", "the intro shows level 3 name")
-	eq(game.grid.remaining_breakable(), 49, "level 3 has 49 bricks")
+	eq(game.grid.remaining_breakable(), 57, "level 3 has 57 bricks")
 	game._begin_level()
 	game._next_level()
 	eq(int(game.level_data["id"]), 4, "and the zone keeps going")

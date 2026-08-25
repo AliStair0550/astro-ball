@@ -627,18 +627,17 @@ func _on_steered(delta_x: float) -> void:
 
 
 ## A tap does whatever the moment calls for: launch a waiting ball, or
-## fire the laser. A drag does neither.
+## A tap launches a waiting ball, and that is all it does now: the laser
+## fires itself, and the Magnet lets go on the same tap that a serve
+## uses. A drag does neither.
 func _on_tapped() -> void:
 	if state != State.PLAYING:
 		return
-	var launched := false
 	for ball in _balls:
 		if ball.stuck:
 			ball.launch()
-			launched = true
-			break
-	if not launched and paddle.laser:
-		paddle.fire_laser()
+			return
+
 
 
 func _on_ball_launched() -> void:

@@ -313,13 +313,13 @@ virker står under dem.
 
 ```
 .............
-.FF.......FF.
-.FFIP...PPFF.
-.FFIEEEEEIFF.
-..GGGGGGGGG..
-...FPPPPPF...
-....FPEPF....
-....?FPF?....
+..FFF...FFF..
+.FI.IF.FI.IF.
+.F.GEEEEEG.F.
+.FI.IF.FI.IF.
+..FFF...FFF..
+.GGGGGGGGGGG.
+..VVIPPPIVV..
 ```
 
 ### Level 4: The Constellation
@@ -341,24 +341,26 @@ virker står under dem.
 
 ```
 .............
-.V.I.F.V.I.F.
-.V.F.F.F.F.F.
-.V.I.F.V.I.F.
-.V.I.F.V.I.F.
-.V.F.F.F.F.F.
-.VIEEEEEEEFF.
-..X.......X..
+....IIIII....
+...IV...VI...
+...IV...VI...
+.FFFFFFFFFFF.
+.FFVVEEEVVFF.
+.FFVPPPPPVFF.
+.FFVVXPXVVFF.
+.FFFFFFFFFFF.
 ```
 
 ### Level 6: The Anvil
 
 ```
 .............
-..HHHHHHHHH..
-..H.EEE...H..
-..HHHHHHHHH..
-....FIVIF....
-...FIVVVIF...
+..HHHHHHHHHH.
+..HHHHHHHH...
+.....HEEH....
+.....H..H....
+...FFFFFFF...
+..FFIIVIIFF..
 ```
 
 ### Level 7: Off Axis
@@ -1459,3 +1461,33 @@ dybeste mur, level 12's tolv rækker, kan himlen og faldzonen ikke begge
 betales. Faldzonen vinder: den er løftet fra afsnit 20 — omkring et
 sekund at reagere i — og himlen giver sine sidste to pixels. Det står i
 `origin_for` som en tredje klemme ved siden af de to, der var der.
+
+---
+
+## Laseren, skyggen og tre billeder mere
+
+**Laseren skyder selv.** Den ville have et tryk, og et tryk er endnu et
+job til den hånd, der allerede styrer. Spilleren skal sigte med
+skjoldet, ikke betjene det. Kadencen er den samme som før, 220 ms; det
+eneste, der er væk, er kravet om at bede om hvert eneste skud. Et tryk
+gør nu kun én ting: sender en ventende bold af sted.
+
+**Glansen over skjoldet er væk.** De tre rækker Volt, der lå over
+overkanten, læste som en udtværing hen over feltet i stedet for som en
+projektion. Kanten, bolden rammer, er tydeligere uden noget svævende
+over sig. Skyggen under bliver, for det er den, der forhindrer skjoldet
+i at flyde.
+
+**Tre baner mere er blevet billeder**, og de hedder nu det, de ligner:
+
+- **The Chain** er to sammenkoblede led med sprængklodserne i samlingen
+  og en glasrække under. Før var den en vinge.
+- **The Hold** er en hængelås: bøjle af is, krop af flare, Pulse som
+  nøglehul og Gnisterne inde i kroppen, hvor de skal findes.
+- **The Anvil** er en ambolt med horn: bred flade foroven, hul talje med
+  sprængklodserne i, og en flaret fod.
+
+Sammen med de fire fra sidste pas — Karlsvognen, lynet, spiralen og
+vinduet — er syv af tolv baner nu former frem for mønstre. De fem
+resterende (pilespidsen, kapslen, ringen, diamanten og kernen) var det
+allerede.
