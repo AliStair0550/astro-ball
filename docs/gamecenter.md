@@ -67,6 +67,14 @@ where the game reports it, and every one of them is already wired.
 
 **Not created yet.** These are the ten to type in next.
 
+**Outstanding: the ten achievement images.** App Store Connect will not
+save an achievement's localization without one — 512x512 PNG, no alpha,
+one per achievement. They are to be generated in code the way the app
+icon is, in the game's own language: a comet for FIRST BREACH, a chain
+for CHAIN OF FIVE, the constellation for CONSTELLATION CHARTED, on
+violet with Volt detail. Deferred on purpose; come back to it before the
+achievements can be finished.
+
 | Id | Name | Earned by |
 |---|---|---|
 | `first_breach` | FIRST BREACH | Clearing level 1 |
@@ -79,6 +87,28 @@ where the game reports it, and every one of them is already wired.
 | `the_drift_cleared` | THE DRIFT CLEARED | Clearing level 12 |
 | `constellation_charted` | CONSTELLATION CHARTED | Every level in The Drift cleared |
 | `full_chart` | FULL CHART | All 36 stars |
+
+Point values, hardest last: 5, 5, 10, 10, 10, 15, 15, 15, 25, 40. That is
+150 of the 1000 an app may hand out, which leaves room for universes 2 to
+5. All ten are Hidden: No and Achievable More Than Once: No.
+
+### The words for App Store Connect
+
+Title is in capitals, as it is in the game. Pre-earned is what a player
+sees before they have it; earned is what replaces it after.
+
+| Id | Title | Pre-earned | Earned |
+|---|---|---|---|
+| `first_breach` | FIRST BREACH | Clear the first field. | The first field is open. |
+| `chain_of_five` | CHAIN OF FIVE | Take five bricks with one chain. | One brick took four with it. |
+| `clean_sweep` | CLEAN SWEEP | Clear a field without losing the ball. | A field cleared without losing the ball. |
+| `ahead_of_schedule` | AHEAD OF SCHEDULE | Clear a field inside its par time. | A field cleared inside par. |
+| `three_of_three` | THREE OF THREE | Take all three stars on one field. | Everything a single field has to give. |
+| `patience` | PATIENCE | Clear The Anvil. | The Anvil is down. |
+| `one_hit` | ONE HIT | Take thirty bricks with one chain. | Thirty bricks, one contact. |
+| `the_drift_cleared` | THE DRIFT CLEARED | Clear the last field of Universe 1. | The last field of Universe 1. |
+| `constellation_charted` | CONSTELLATION CHARTED | Clear every field in The Drift. | Every field in The Drift. |
+| `full_chart` | FULL CHART | Take all thirty-six stars. | Thirty-six stars. Nothing left in Universe 1. |
 
 Points: spread them as you like in App Store Connect; the game does not
 know or care. Suggested split, hardest last: 5, 5, 10, 10, 10, 15, 15,
