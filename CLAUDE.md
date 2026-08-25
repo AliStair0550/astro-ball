@@ -1122,3 +1122,34 @@ En note til næste gang: `var halo := brick.color()` kan ikke udlede sin
 type, fordi `color()` ikke erklærer en. Parse-fejlen fik test-scenen til
 at hænge i ti minutter med nul procent CPU og ingen output overhovedet.
 Symptomet på en parse-fejl er tavshed, ikke en fejlbesked.
+
+---
+
+## Fire ting kapslerne lovede og ikke gjorde
+
+Alle nitten power-ups fandtes. Fire detaljer i afsnit 5 og 7 var tekst
+uden kode bag.
+
+**Zap havde intet lyn.** Naboklodserne røg, men der var ingenting at se.
+Der går nu et lyn fra den ramte klods til hver nabo den tager: fire
+segmenter, rystet af den lige linje, væk på 180 ms, med et loft på tolv
+ad gangen så en bold gennem en mur ikke kan lade listen vokse.
+
+**De dårlige kapsler faldt lige ned.** Zigzagget var tegnet på kanten af
+kapslen i stedet for at være dens bane. Nu svinger de 26 px til hver side
+på vej ned, og de holdes inde i feltet, for en kapsel der svinger ud over
+kanten er en, paddlen aldrig kan nå. Den mørke kant siger hvad det er;
+banen giver dig et sted at være i stedet.
+
+**Byt blinkede i ét frame.** Hele muren skiftede farve på én gang, hvilket
+læses som en fejl. Blinket løber nu hen over muren fra venstre.
+
+**Lotteri afslørede sig med det samme.** En møntkast, man får svaret på
+øjeblikkeligt, er ikke et møntkast, det er et drop. Kapslen holder nu
+vejret i 550 ms med et spørgsmålstegn over paddlen, der blinker hurtigere
+og lysere, indtil den siger hvad den trak.
+
+Og en note til, som kostede tid to gange på én dag:
+`Godot --headless --check-only --script res://fil.gd` finder syntaksfejl
+på sekunder. Uden den er symptomet på en parse-fejl, at test-scenen
+hænger uden output.

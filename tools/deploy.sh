@@ -126,6 +126,10 @@ fi
 # packs in release configuration, not a submission: it is signed with the
 # development certificate. A real App Store build needs a distribution
 # certificate, which is an account matter, not a code one.
+# Expanded below as ${SIGN_ARGS[@]+"${SIGN_ARGS[@]}"}, which is the only
+# way to pass a possibly-empty array under set -u in the bash macOS
+# ships. "${SIGN_ARGS[@]}" on its own is an unbound variable there, and
+# it took the debug build down with it.
 SIGN_ARGS=()
 if [ "$CONFIG" = "Release" ]; then
   SIGN_ARGS=(CODE_SIGN_IDENTITY="Apple Development" CODE_SIGN_STYLE=Automatic)
@@ -138,7 +142,7 @@ xcodebuild \
   -destination "$DEST" \
   -derivedDataPath "$DERIVED" \
   -allowProvisioningUpdates \
-  "${SIGN_ARGS[@]}" \
+  ${SIGN_ARGS[@]+"${SIGN_ARGS[@]}"} \
   build 2>&1 | tail -25
 [ "${PIPESTATUS[0]}" -eq 0 ] || fail "The build failed. The lines above are Xcode's, not ours."
 

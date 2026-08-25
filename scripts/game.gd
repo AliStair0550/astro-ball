@@ -113,6 +113,7 @@ func _ready() -> void:
 	powerups.paddle = paddle
 	powerups.kill_y = arena.death_y
 	powerups.collected.connect(_on_powerup_collected)
+	powerups.rolling.connect(_on_lottery_rolling)
 	powerups.expired.connect(_on_powerup_expired)
 
 	grid.brick_damaged.connect(_on_brick_damaged)
@@ -592,7 +593,9 @@ func _on_brick_hit(brick: Brick, damage: int, pos: Vector2, _passed: bool, ball:
 		return
 	_last_impact = pos
 	if ball.zap and brick.is_breakable():
-		grid.zap_neighbours(brick)
+		# Section 5: a small bolt to each brick it takes with it.
+		for neighbour in grid.zap_neighbours(brick):
+			effects.lightning(brick.rect.get_center(), neighbour.rect.get_center(), Powerup.VOLT)
 	grid.hit(brick, damage)
 
 
@@ -821,6 +824,15 @@ func _sync_powerup_state() -> void:
 		ball.fireball = active.has("fireball")
 		ball.giant = active.has("giant")
 		ball.zap = active.has("zap")
+
+
+## A Lottery has been caught and is being drawn. The paddle keeps its
+## flash and the question mark does the waiting.
+func _on_lottery_rolling(seconds: float) -> void:
+	paddle.on_powerup_caught(Powerup.FLARE)
+	effects.suspense(paddle.global_position - Vector2(0.0, 34.0), seconds, Powerup.FLARE)
+	audio.play("powerup_neutral", 1.2, -6.0)
+	game_feel.pulse(GameFeel.HAPTIC_STAR)
 
 
 ## Splinter: everything one hit from breaking goes at once.

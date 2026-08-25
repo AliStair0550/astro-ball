@@ -24,6 +24,7 @@ func _ready() -> void:
 	_test_swap()
 	_test_spark_table()
 	_test_tail_marking()
+	_test_capsule_behaviour()
 	_test_recording_mode()
 	_test_no_frame_allocation()
 	_test_the_drift()
@@ -399,6 +400,59 @@ func _test_tail_marking() -> void:
 	grid.build([".............", ".SSSSSSSSSSS.", "............."], 0.0)
 	ok(grid.in_the_tail(), "unbreakable bricks leave nothing to look for")
 	eq(grid.remaining_breakable(), 0, "and nothing to clear")
+
+
+# --- What the capsules do, not just what they are -----------------------
+
+func _test_capsule_behaviour() -> void:
+	# A bad capsule zigzags so it can be dodged; a good one falls straight
+	# so it can be caught.
+	var bad := Powerup.new()
+	add_child(bad)
+	bad.setup("narrow", Vector2(195.0, 300.0), 800.0)
+	var good := Powerup.new()
+	add_child(good)
+	good.setup("wide", Vector2(195.0, 300.0), 800.0)
+	var bad_min := 999.0
+	var bad_max := -999.0
+	for i in 120:
+		bad._process(1.0 / 60.0)
+		good._process(1.0 / 60.0)
+		bad_min = minf(bad_min, bad.position.x)
+		bad_max = maxf(bad_max, bad.position.x)
+	ok(bad_max - bad_min > 30.0,
+		"a punishment swings on the way down (%.0f px)" % (bad_max - bad_min))
+	ok(absf(good.position.x - 195.0) < 0.01, "a gift falls straight")
+	ok(bad.position.y > 300.0 and good.position.y > 300.0, "and both of them fall")
+	# And it never swings out of reach of the paddle.
+	bad.setup("narrow", Vector2(20.0, 300.0), 800.0)
+	var strayed := false
+	for i in 120:
+		bad._process(1.0 / 60.0)
+		if bad.position.x < Powerup.SIZE.x * 0.5 or bad.position.x > 390.0 - Powerup.SIZE.x * 0.5:
+			strayed = true
+	ok(not strayed, "and it never swings out of the paddle's reach")
+	bad.queue_free()
+	good.queue_free()
+
+	# Lottery waits before it says what it drew.
+	var pm := PowerupManager.new()
+	add_child(pm)
+	pm.configure({"id": 9, "powerups": {"multi": 50, "narrow": 50, "lottery": 0}})
+	var caught: Array[String] = []
+	var rolled := {"count": 0}
+	pm.collected.connect(func(id: String) -> void: caught.append(id))
+	pm.rolling.connect(func(_s: float) -> void: rolled["count"] += 1)
+	pm._apply("lottery")
+	eq(rolled["count"], 1, "a caught Lottery starts a draw")
+	ok(pm.is_rolling(), "and holds")
+	eq(caught.size(), 0, "and says nothing yet")
+	for i in 60:
+		pm._process(1.0 / 60.0)
+	ok(not pm.is_rolling(), "the draw ends")
+	eq(caught.size(), 1, "with exactly one power-up")
+	ok(caught[0] != "lottery", "and it is not itself: %s" % caught[0])
+	pm.queue_free()
 
 
 # --- Section 18 and the frame budget ------------------------------------

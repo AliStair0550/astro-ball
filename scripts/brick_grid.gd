@@ -218,12 +218,16 @@ func _queue_chain(brick: Brick) -> void:
 		_pending.append({"brick": neighbour, "delay": CHAIN_DELAY * float(step)})
 
 
-## Zap breaks the bricks beside the one that was hit.
-func zap_neighbours(brick: Brick) -> void:
+## Zap breaks the bricks beside the one that was hit. Returns the ones it
+## took, so the bolt can be drawn to each of them.
+func zap_neighbours(brick: Brick) -> Array[Brick]:
+	var taken: Array[Brick] = []
 	for offset in [Vector2i(-1, 0), Vector2i(1, 0)]:
 		var neighbour := brick_at(brick.col + offset.x, brick.row + offset.y)
 		if neighbour != null and neighbour.alive and neighbour.is_breakable():
 			_pending.append({"brick": neighbour, "delay": CHAIN_DELAY})
+			taken.append(neighbour)
+	return taken
 
 
 ## Splinter: everything one hit from breaking goes at once. Staggered
@@ -260,7 +264,9 @@ func swap_types() -> int:
 		if at < 0:
 			continue
 		brick.type = PLAIN_CYCLE[(at + 1) % PLAIN_CYCLE.size()]
-		brick.flash = 1.0
+		# The flash runs across the wall rather than covering it: a whole
+		# field changing colour in one frame reads as a glitch.
+		brick.flash = 1.0 - clampf(brick.rect.position.x / (COLUMNS * PITCH.x), 0.0, 1.0) * 0.75
 		changed += 1
 	queue_redraw()
 	return changed

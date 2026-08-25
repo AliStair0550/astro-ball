@@ -22,6 +22,11 @@ enum Kind { GOOD, BAD, NEUTRAL }
 const SIZE := Vector2(34.0, 22.0)
 const ICON_SCALE := 1.45
 const FALL_SPEED := 140.0
+## Section 7: a bad capsule zigzags on the way down. It is not decoration
+## on the capsule, it is the difference between a punishment you have to
+## take and one you can step out of the way of.
+const ZIGZAG_WIDTH := 26.0
+const ZIGZAG_PERIOD := 0.85
 
 const LABEL_FONT := preload("res://assets/fonts/SpaceGrotesk-700.ttf")
 const LABEL_SIZE := 9
@@ -121,6 +126,8 @@ const CATALOG := {
 
 var id := "wide"
 var kill_y := 900.0
+## Where the capsule would be falling if it fell straight.
+var _lane_x := 0.0
 
 var _angle := 0.0
 var _time := 0.0
@@ -151,6 +158,7 @@ static func is_neutral(powerup_id: String) -> bool:
 func setup(powerup_id: String, at: Vector2, bottom: float) -> void:
 	id = powerup_id
 	position = at
+	_lane_x = at.x
 	kill_y = bottom + SIZE.y
 
 
@@ -174,6 +182,11 @@ func _process(delta: float) -> void:
 			queue_free()
 	else:
 		position.y += FALL_SPEED * delta
+		if is_bad(id):
+			# Kept inside the field: a capsule that swings off the edge
+			# is one the paddle can never reach.
+			var swing := sin(_time * TAU / ZIGZAG_PERIOD) * ZIGZAG_WIDTH
+			position.x = clampf(_lane_x + swing, SIZE.x * 0.5 + 8.0, 390.0 - SIZE.x * 0.5 - 8.0)
 		if position.y > kill_y:
 			queue_free()
 	queue_redraw()

@@ -12,8 +12,12 @@ extends Node2D
 
 signal collected(id: String)
 signal expired(id: String)
+## Lottery has been caught and has not said what it is yet.
+signal rolling(seconds: float)
 
 const MAX_ON_SCREEN := 2
+## Long enough to be a moment, short enough not to be a wait.
+const LOTTERY_ROLL := 0.55
 ## Death and the other hard punishments stay out of the first five levels.
 const HARSH := ["death"]
 const HARSH_SAFE_LEVELS := 5
@@ -42,6 +46,8 @@ var _first_spawned := false
 ## Section 15, the quiet helper: percentage points moved from the bad
 ## drops to the good ones after three fails on the same field.
 var _good_bonus := 0.0
+## {"id": String, "left": float} while a Lottery is being drawn.
+var _rolling: Dictionary = {}
 
 
 func configure(level_data: Dictionary) -> void:
@@ -99,7 +105,13 @@ func effective_table() -> Dictionary:
 	return out
 
 
+## True while a Lottery has been caught and not yet resolved.
+func is_rolling() -> bool:
+	return not _rolling.is_empty()
+
+
 func reset_level() -> void:
+	_rolling = {}
 	for capsule in _capsules:
 		if is_instance_valid(capsule):
 			capsule.queue_free()
@@ -206,6 +218,13 @@ func _process(delta: float) -> void:
 			_apply(id)
 		i -= 1
 
+	if not _rolling.is_empty():
+		_rolling["left"] = float(_rolling["left"]) - delta
+		if float(_rolling["left"]) <= 0.0:
+			var drawn := str(_rolling["id"])
+			_rolling = {}
+			_apply(drawn)
+
 	for id in _active.keys():
 		_active[id] = float(_active[id]) - delta
 		if _active[id] <= 0.0:
@@ -244,7 +263,11 @@ func resolve_lottery() -> String:
 
 func _apply(id: String) -> void:
 	if id == "lottery":
-		_apply(resolve_lottery())
+		# Caught, but not yet known. The wait is the whole point of a
+		# lottery: a coin flip you are told the answer to instantly is
+		# not a coin flip, it is a drop.
+		_rolling = {"id": resolve_lottery(), "left": LOTTERY_ROLL}
+		rolling.emit(LOTTERY_ROLL)
 		return
 	for other in EXCLUSIVE.get(id, []):
 		if _active.has(other):

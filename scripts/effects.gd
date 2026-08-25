@@ -30,6 +30,13 @@ var _bits: Array[Dictionary] = []
 ## that makes is the one allocation the game does at speed.
 var _bit_pool: Array[Dictionary] = []
 var _texts: Array[Dictionary] = []
+## Zap's bolts. Capped, so a ball tearing through a wall cannot grow the
+## list without limit, and the points array is built once per bolt.
+const MAX_BOLTS := 12
+const BOLT_POINTS := 5
+const BOLT_LIFE := 0.18
+var _bolts: Array[Dictionary] = []
+var _suspense: Dictionary = {}
 var _rings: Array[Dictionary] = []
 var _flashes: Array[Dictionary] = []
 var _combo: Dictionary = {}
@@ -137,6 +144,30 @@ func sparks(at: Vector2, dir: Vector2, count: int, color: Color) -> void:
 		}))
 
 
+## A bolt between two points. Four segments, jittered off the straight
+## line, gone in 180 ms. Pre-sized on the pool like everything else.
+func lightning(from: Vector2, to: Vector2, color: Color) -> void:
+	if _bolts.size() >= MAX_BOLTS:
+		_bolts.remove_at(0)
+	var points := PackedVector2Array()
+	var span := to - from
+	var side := Vector2(-span.y, span.x).normalized()
+	for i in BOLT_POINTS:
+		var f := float(i) / float(BOLT_POINTS - 1)
+		var wobble := 0.0
+		if i > 0 and i < BOLT_POINTS - 1:
+			wobble = randf_range(-5.0, 5.0)
+		points.append(from + span * f + side * wobble)
+	_bolts.append({"points": points, "color": color, "t": 0.0})
+
+
+## The question mark over the paddle while a Lottery is being drawn. One
+## entry, replaced rather than stacked, so a second capsule cannot leave
+## two of them flickering at each other.
+func suspense(at: Vector2, seconds: float, color: Color) -> void:
+	_suspense = {"pos": at, "left": seconds, "total": maxf(seconds, 0.001), "color": color}
+
+
 func score_popup(at: Vector2, amount: int) -> void:
 	_texts.append({
 		"text": "+%d" % amount,
@@ -191,6 +222,8 @@ func clear_all() -> void:
 	_bits.clear()
 	_texts.clear()
 	_rings.clear()
+	_bolts.clear()
+	_suspense = {}
 	_flashes.clear()
 	_combo = {}
 
@@ -232,6 +265,18 @@ func _process(delta: float) -> void:
 			_rings.remove_at(i)
 		i -= 1
 
+	i = _bolts.size() - 1
+	while i >= 0:
+		_bolts[i]["t"] += delta
+		if _bolts[i]["t"] >= BOLT_LIFE:
+			_bolts.remove_at(i)
+		i -= 1
+
+	if not _suspense.is_empty():
+		_suspense["left"] = float(_suspense["left"]) - delta
+		if float(_suspense["left"]) <= 0.0:
+			_suspense = {}
+
 	i = _flashes.size() - 1
 	while i >= 0:
 		_flashes[i]["t"] += delta
@@ -248,6 +293,14 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	for bolt in _bolts:
+		var f := float(bolt["t"]) / BOLT_LIFE
+		var c: Color = bolt["color"]
+		c.a = (1.0 - f) * 0.9
+		draw_polyline(bolt["points"], c, 2.0)
+		c.a = (1.0 - f) * 0.5
+		draw_polyline(bolt["points"], Color.WHITE, 1.0)
+
 	for f in _flashes:
 		var c: Color = f["color"]
 		c.a = 1.0 - float(f["t"]) / float(f["life"])
@@ -268,6 +321,20 @@ func _draw() -> void:
 			draw_rect(Rect2(b["pos"] - Vector2(1.0, 1.0), b["size"]), c)
 		else:
 			_draw_rotated_rect(b["pos"], b["size"], b["rot"], c)
+
+	if _font and not _suspense.is_empty():
+		# Faster and brighter as it runs out, so the reveal is the end of
+		# something rather than an interruption.
+		var left := float(_suspense["left"])
+		var f := 1.0 - left / float(_suspense["total"])
+		var beat := sin(left * TAU * lerpf(6.0, 22.0, f))
+		var c: Color = _suspense["color"]
+		c.a = 0.55 + 0.45 * absf(beat)
+		var size := int(lerpf(18.0, 26.0, f))
+		var at: Vector2 = _suspense["pos"]
+		var width := _font.get_string_size("?", HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x
+		draw_string(_font, at - Vector2(width * 0.5, 0.0), "?",
+			HORIZONTAL_ALIGNMENT_LEFT, -1.0, size, c)
 
 	if _font:
 		for t in _texts:
