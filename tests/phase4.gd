@@ -347,8 +347,28 @@ func _test_launch() -> void:
 	var story: Color = cfg.get_value("preset.0.options", "storyboard/custom_bg_color", Color.BLACK)
 	ok(story.is_equal_approx(void_color),
 		"and it is the same void as the rest (%s)" % story.to_html(false))
-	ok(str(cfg.get_value("preset.0.options", "storyboard/custom_image@2x", "")).is_empty(),
-		"with no image on it")
+	# And nothing on it. An empty image field does not mean no image: the
+	# exporter falls back to the engine's own splash, which is how the
+	# Godot robot kept turning up on the phone long after the boot screen
+	# had been switched off. The blank is a transparent 8x8.
+	for key in ["storyboard/custom_image@2x", "storyboard/custom_image@3x"]:
+		var image := str(cfg.get_value("preset.0.options", key, ""))
+		ok(image.ends_with("launch_blank.png"), "%s is the blank, not the engine's logo" % key)
+		ok(ResourceLoader.exists(image) or FileAccess.file_exists(image),
+			"and the blank is in the project")
+	# Read as bytes rather than through the resource loader: loading a
+	# PNG as an image file warns that it will not work on export, and it
+	# is not being loaded for the game, only inspected.
+	var blank := Image.new()
+	var bytes := FileAccess.get_file_as_bytes("res://assets/icons/launch_blank.png")
+	ok(blank.load_png_from_buffer(bytes) == OK, "the blank loads")
+	if blank.get_width() > 0:
+		var opaque := false
+		for y in blank.get_height():
+			for x in blank.get_width():
+				if blank.get_pixel(x, y).a > 0.0:
+					opaque = true
+		ok(not opaque, "and there is nothing in it")
 
 	# And the first frame the player actually sees is that same darkness:
 	# the title's curtain starts solid and settles, rather than catching

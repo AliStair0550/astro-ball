@@ -63,6 +63,13 @@ grep -q '^storyboard/use_custom_bg_color=true' "$ROOT/export_presets.cfg" \
   || fail "export_presets.cfg has lost the iOS launch screen colour. Put back:
   storyboard/use_custom_bg_color=true
   storyboard/custom_bg_color=Color(0.027451, 0.027451, 0.047059, 1)"
+# An empty custom image is not no image: the exporter puts the engine's
+# own splash in the storyboard, robot and all.
+grep -q 'storyboard/custom_image@2x=".*launch_blank.png"' "$ROOT/export_presets.cfg" \
+  || fail "export_presets.cfg has lost the blank launch image, so the iOS
+launch screen will carry the Godot logo again. Put back:
+  storyboard/custom_image@2x=\"res://assets/icons/launch_blank.png\"
+  storyboard/custom_image@3x=\"res://assets/icons/launch_blank.png\""
 
 FREE_GB=$(df -g "$ROOT" | awk 'NR==2 {print $4}')
 if [ "${FREE_GB:-0}" -lt "$MIN_FREE_GB" ]; then

@@ -871,6 +871,16 @@ Godot-editoren skriver over fra sin hukommelse, når den lukker. Derfor
 tjekker både testene og `deploy.sh` dem: et logo, der stille kom tilbage,
 ville først vise sig på en telefon.
 
+**Og det gjorde det.** `boot_splash/show_image=false` slukker kun motorens
+egen opstartsskærm. iOS' launch screen er et storyboard, eksportøren
+genererer, og den lægger et `imageView` ind i det med
+`storyboard/custom_image@2x`. Er feltet tomt, betyder det ikke "intet
+billede", det betyder "brug motorens eget" — Godot-robotten, i fuld
+størrelse, før spillet overhovedet starter. Feltet peger nu på et
+gennemsigtigt 8x8-billede, `assets/icons/launch_blank.png`, så
+storyboardet kun er sin egen baggrundsfarve. Både testen og `deploy.sh`
+kræver det.
+
 ## Testene spiste den gemte progression
 
 Suiterne deler `user://` med spillet. phase3 nulstiller, stjernekortet
