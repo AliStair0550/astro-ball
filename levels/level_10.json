@@ -3,12 +3,15 @@
   "name": "The Pane",
   "zone": "baeltet",
   "grid": [
-    ".GGGGGGGGGGG.",
-    ".GGGGGGGGGGG.",
-    ".FFFPPPPPFFF.",
-    ".FFEEEEEEEFF.",
-    ".VVVVPPPVVVV.",
-    "..IIIPPPIII.."
+    ".GGGGGEGGGGG.",
+    ".GVVIGEGIVVG.",
+    ".GVIPGEGPIVG.",
+    ".GGGGGEGGGGG.",
+    "......E......",
+    ".GGGGGEGGGGG.",
+    ".GVIPGEGPIVG.",
+    ".GVVIGEGIVVG.",
+    ".GGGGGEGGGGG."
   ],
   "ballSpeed": 390,
   "gridAnchor": 0,
@@ -28,5 +31,5 @@
     "death": 3
   },
   "forcedFirstPowerup": null,
-  "parTime": 80
+  "parTime": 110
 }

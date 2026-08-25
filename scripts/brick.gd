@@ -225,7 +225,7 @@ func draw_into(ci: CanvasItem, time: float, blind := false, flat := false) -> vo
 	ci.draw_rect(r, body)
 
 	# 2. Inner texture, on the base and under everything else.
-	_draw_texture(ci, r, base)
+	_draw_texture(ci, r, base, time)
 
 	if flat:
 		# Version one, for the feel lab's side by side: a light line on
@@ -367,7 +367,7 @@ func _edge(base: Color, factor: float, alpha: float) -> Color:
 	return c
 
 
-func _draw_texture(ci: CanvasItem, r: Rect2, base: Color) -> void:
+func _draw_texture(ci: CanvasItem, r: Rect2, base: Color, time := 0.0) -> void:
 	var grain := base.darkened(0.55)
 	grain.a = 0.12
 	match type:
@@ -398,25 +398,37 @@ func _draw_texture(ci: CanvasItem, r: Rect2, base: Color) -> void:
 				var p := r.position + Vector2(1.0 + _rand(100 + i) * 21.0, 1.0 + _rand(120 + i) * 13.0)
 				ci.draw_rect(Rect2(p.floor(), Vector2(3.0, 2.0)), pit)
 		Type.BLAST:
-			# Unstable ore around a dark core, lit from inside as the
-			# ball comes near. It sits on the v2 bevel like everything
-			# else: the core is a hole in the surface, not a sticker.
-			var core := Color("2A0A05")
-			core.a = 0.8 - proximity * 0.45
+			# Lit, always. DX-Ball's explosive brick is the one you can
+			# pick out of a full wall without looking for it, and a dark
+			# core that only wakes when the ball is near cannot do that:
+			# the brick has to say what it does before you aim at it.
 			var middle := r.position + r.size * 0.5
-			ci.draw_rect(Rect2(middle - Vector2(5.0, 3.5), Vector2(10.0, 7.0)), core)
-			if proximity > 0.0:
-				# Flare, from the inside out: a small hot centre with the
-				# heat bleeding into the ore around it.
-				var heat := Color("FF9F1C")
-				for ring in 3:
-					heat.a = proximity * (0.55 - float(ring) * 0.16)
-					var pad := 1.0 + float(ring) * 2.0
-					ci.draw_rect(Rect2(middle - Vector2(3.0 + pad, 2.0 + pad),
-						Vector2(6.0 + pad * 2.0, 4.0 + pad * 2.0)), heat)
-				var white := Color("FFE7C2")
-				white.a = proximity * 0.85
-				ci.draw_rect(Rect2(middle - Vector2(2.0, 1.5), Vector2(4.0, 3.0)), white)
+			var breath := 0.62 + 0.38 * (0.5 + 0.5 * sin(time * 3.4 + _rand(5) * TAU))
+			var heat := 0.55 + 0.45 * proximity
+
+			# A hot wash over the whole face, so it reads orange rather
+			# than red at arm's length.
+			var wash_c := Color("FF9F1C")
+			wash_c.a = 0.30 * breath * heat
+			ci.draw_rect(r.grow(-2.0), wash_c)
+
+			# The burst: four spokes out of the middle. It is the mark
+			# that says this one takes the others with it.
+			var spoke := Color("FFC65C")
+			spoke.a = (0.5 + 0.4 * proximity) * breath
+			ci.draw_rect(Rect2(middle - Vector2(8.0, 1.0), Vector2(16.0, 2.0)), spoke)
+			ci.draw_rect(Rect2(middle - Vector2(1.0, 5.0), Vector2(2.0, 10.0)), spoke)
+			spoke.a *= 0.7
+			for corner in [Vector2(-1.0, -1.0), Vector2(1.0, -1.0),
+					Vector2(-1.0, 1.0), Vector2(1.0, 1.0)]:
+				for step in 3:
+					var at: Vector2 = middle + corner * (3.0 + float(step) * 2.0)
+					ci.draw_rect(Rect2(at - Vector2(1.0, 1.0), Vector2(2.0, 2.0)), spoke)
+
+			# And the core, white hot, brighter the closer the ball is.
+			var core := Color("FFE7C2")
+			core.a = (0.55 + 0.45 * proximity) * breath
+			ci.draw_rect(Rect2(middle - Vector2(3.0, 2.0), Vector2(6.0, 4.0)), core)
 		_:
 			for i in 5:
 				var p := r.position + Vector2(2.0 + _rand(140 + i) * 20.0, 2.0 + _rand(160 + i) * 12.0)

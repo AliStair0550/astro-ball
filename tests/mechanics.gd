@@ -136,13 +136,19 @@ func _test_geometry() -> void:
 		var top := BrickGrid.origin_for(grid)
 		var bottom := top + BrickGrid.wall_height(grid)
 		var sky := BrickGrid.sky_for(grid)
-		ok(absf(sky - BrickGrid.SKY) < 0.01,
-			"%d rows leave exactly the sky we asked for (%.1f)" % [row_count, sky])
+		# The sky is what is left after the fall zone is paid for. On the
+		# deepest wall it gives up a pixel or two, and the reaction time
+		# keeps its eight tenths of a second.
+		ok(sky <= BrickGrid.SKY + 0.01 and sky >= BrickGrid.SKY - 4.0,
+			"%d rows leave the sky we asked for, or nearly (%.1f)" % [row_count, sky])
 		ok(sky >= BrickGrid.MIN_SKY,
 			"%d rows clear the minimum sky" % row_count)
 		ok(bottom <= BrickGrid.wall_line_y() + 0.01,
 			"%d rows stay above the wall line guard (%.1f)" % [row_count, bottom])
-		ok(paddle_top - bottom > 200.0,
+		# To the shield's deck. The number that matters is the one below,
+		# in seconds: this is the same thing measured in pixels, and it
+		# moved when the shield came up to make room for a thumb.
+		ok(paddle_top - bottom > 180.0,
 			"%d rows leave the ball room to fall (%.1f px)" % [row_count, paddle_top - bottom])
 		var fall := Arena.FIELD_BOTTOM - bottom
 		ok(fall / Ball.BASE_SPEED > 0.8,

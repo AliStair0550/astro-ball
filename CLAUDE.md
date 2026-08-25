@@ -326,14 +326,15 @@ virker står under dem.
 
 ```
 .............
-.IIPPPPPPPII.
-.F?PPPPPPP?F.
-.FFFPPPPPFFF.
-.VVV?P?P?VVV.
-.IIEEEEEEEII.
-.FFFFPPPPFFF.
-.F?FFPPPFF?F.
-.VVVVPPPVVVV.
+.FF..........
+..IFF........
+...VIFF......
+.....VIFF....
+..VVVVVIFFVV.
+..V?VEEEEV?V.
+..VI?PPPP?IV.
+..VVVVVVVVVV.
+...I?VFFV?I..
 ```
 
 ### Level 5: The Hold
@@ -364,26 +365,30 @@ virker står under dem.
 
 ```
 .............
-.FPPPPI..EEE.
-.IPPFEE..EEE.
-..IPIEEE.....
-...IVPPIV....
-....IFPPIF...
-.....IVIPIV..
-......IFVVIF.
+......FFFFFF.
+.....FFIIIIF.
+....FIIPPIF..
+...VIIPPIF...
+..VVEEPPIF...
+...VVEEPPIF..
+....VVIIPPIF.
+.....VVIIPPF.
+......VVIIF..
 ```
 
 ### Level 8: The Labyrinth
 
 ```
 .............
-.IIIPPPPPPII.
-.S...SE..S.S.
-.FFEEEEEEEFF.
-.S.S..ES...S.
-.IIEEEEEEEII.
-...S.....S...
-..FFFPPPFFF..
+.FFFFFFFFFFF.
+.F.........S.
+.F.IIIIIII.F.
+.F.I.....I.F.
+.F.I.PPS.I.F.
+.F.IEEEEEI.F.
+.F.IIIIIII.F.
+.F.........F.
+.FFFFFFFFVVF.
 ```
 
 ### Level 9: The Fuse
@@ -403,12 +408,15 @@ virker står under dem.
 ### Level 10: The Pane
 
 ```
-.GGGGGGGGGGG.
-.GGGGGGGGGGG.
-.FFFPPPPPFFF.
-.FFEEEEEEEFF.
-.VVVVPPPVVVV.
-..IIIPPPIII..
+.GGGGGEGGGGG.
+.GVVIGEGIVVG.
+.GVIPGEGPIVG.
+.GGGGGEGGGGG.
+......E......
+.GGGGGEGGGGG.
+.GVIPGEGPIVG.
+.GVVIGEGIVVG.
+.GGGGGEGGGGG.
 ```
 
 ### Level 11: Blackout
@@ -1417,3 +1425,37 @@ Feel_test har fået tilstand 4: hver klodstype tegnet to gange, flad til
 venstre og affaset til højre, samme farver og samme afstand. Det er den
 eneste ærlige måde at vælge mellem to udgaver af den samme flade på — på
 en telefon, ikke på en skærm.
+
+---
+
+## Efter endnu en tur på telefonen
+
+**Sprængklodsen lyser.** Den havde en mørk kerne, der først vågnede, når
+bolden var tæt på. Men en klods, der tager naboerne med sig, skal kunne
+plukkes ud af en fuld mur, *før* man sigter — ellers er informationen
+kommet for sent. Den er orange nu, med et kors og fire diagonale gnister
+ud fra midten, og den ånder. Kernen bliver hvidglødende, når bolden
+nærmer sig, som den altid har gjort.
+
+**De grønne lamper er skruet ned.** Afsnit 2 lod de nærmeste stjerner
+svare på hver eneste klods. Med en kæde i gang er det et felt af lamper,
+der blinker bag det, spilleren prøver at se på. Himlen svarer nu kun
+rammen, hvor det er én hændelse ad gangen.
+
+**Magneten skød den forkerte vej.** Det var ikke afbøjningen: `launch()`
+valgte en tilfældig side og ignorerede fuldstændig, hvor bolden lå på
+skjoldet. Med magnet er skjoldet et sigte, og et sigte, der ser bort fra,
+hvor man har lagt bolden, er ikke et. En holdt bold forlader nu skjoldet
+præcis som den ville have gjort, hvis den var hoppet der — samme model,
+samme bæring fra paddlens egen bevægelse.
+
+**Fire opstillinger er tegnet om til billeder.** The Constellation er
+Karlsvognen, Off Axis er et lyn, The Labyrinth er en spiral med
+sten-propper, og The Pane er et vindue med fire ruder og en sprosse af
+sprængklodser ned gennem midten. De fire var mønstre; de er former nu.
+
+**Platformen op igen, og hvad det kostede.** Feltets bund er 738. På den
+dybeste mur, level 12's tolv rækker, kan himlen og faldzonen ikke begge
+betales. Faldzonen vinder: den er løftet fra afsnit 20 — omkring et
+sekund at reagere i — og himlen giver sine sidste to pixels. Det står i
+`origin_for` som en tredje klemme ved siden af de to, der var der.

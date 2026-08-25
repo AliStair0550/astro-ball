@@ -35,6 +35,10 @@ const SKY := 100.0
 const WALL_LINE_FRACTION := 0.57
 ## Never less than this, whatever a level's gridAnchor asks for.
 const MIN_SKY := 90.0
+## Eight tenths of a second at the base speed, from the underside of the
+## wall to the line. Below that a deep wall stops being a challenge and
+## becomes a coin flip.
+const MIN_FALL := 258.0
 
 ## The chain has to be seen, not only heard.
 const CHAIN_DELAY := 0.04
@@ -100,12 +104,19 @@ static func wall_height(grid: Array) -> float:
 	return float(last_brick_row(grid)) * PITCH.y + Brick.SIZE.y
 
 
-## Where the wall's top row starts. A short sky by default, and the wall
-## line as the guard that keeps a deep wall off the paddle.
+## Where the wall's top row starts.
+##
+## Three claims on the same space, and the tightest wins: a short sky
+## above the wall, the 57 per cent line under it, and the fall zone the
+## ball needs below that. The fall zone is the promise — section 20 asks
+## for about a second at the base speed — so when a twelve row wall and
+## a shield raised for a thumb cannot both be paid, the sky gives up its
+## last two pixels rather than the player giving up their reaction time.
 static func origin_for(grid: Array, anchor := 0.0) -> float:
 	var by_sky := field_top() + SKY
 	var by_line := wall_line_y() - wall_height(grid)
-	return minf(by_sky, by_line) + anchor
+	var by_fall := Arena.FIELD_BOTTOM - MIN_FALL - wall_height(grid)
+	return minf(minf(by_sky, by_line), by_fall) + anchor
 
 
 ## Sky between the inside of the frame and the topmost brick row.

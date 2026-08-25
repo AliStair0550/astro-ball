@@ -215,15 +215,25 @@ func _unhandled_input(event: InputEvent) -> void:
 		launch()
 
 
+## Firing a held ball. A ball the Magnet caught leaves where it was
+## held, the same way it would have left if it had bounced there: it was
+## picking a random side instead, so a ball held on the left could fire
+## right. With the Magnet on, the shield is an aim, and an aim that
+## ignores where you put the ball is not one.
 func launch() -> void:
 	if not stuck:
 		return
+	var held := stick_offset
 	stuck = false
 	stick_offset = 0.0
-	var angle := LAUNCH_ANGLE_DEG + randf_range(-LAUNCH_SPREAD_DEG, LAUNCH_SPREAD_DEG)
-	var dir_x := 1.0 if randf() < 0.5 else -1.0
-	var a := deg_to_rad(angle)
-	velocity = Vector2(cos(a) * dir_x, -sin(a)) * current_speed()
+	if paddle != null and absf(held) > 0.5:
+		velocity = _exit_velocity(held)
+	else:
+		# A fresh serve sits in the middle and has no side to leave from.
+		var angle := LAUNCH_ANGLE_DEG + randf_range(-LAUNCH_SPREAD_DEG, LAUNCH_SPREAD_DEG)
+		var dir_x := 1.0 if randf() < 0.5 else -1.0
+		var a := deg_to_rad(angle)
+		velocity = Vector2(cos(a) * dir_x, -sin(a)) * current_speed()
 	launched.emit()
 
 
@@ -413,6 +423,23 @@ func _reflect(normal: Vector2) -> void:
 	velocity = _enforce_min_angle(velocity)
 
 
+## Where a ball leaves the shield, given how far from the middle it sat.
+## Used by a bounce and by firing a held ball, so both answer the same
+## question the same way.
+func _exit_velocity(dx: float) -> Vector2:
+	var half := paddle.half_width()
+	var offset := clampf(dx / half, -1.0, 1.0)
+	var sweet := paddle.is_sweet(dx)
+	var angle_deg := SWEET_ANGLE_DEG if sweet else lerpf(CENTER_ANGLE_DEG, EDGE_ANGLE_DEG, absf(offset))
+	var dir_x := signf(offset)
+	if dir_x == 0.0:
+		dir_x = 1.0 if randf() < 0.5 else -1.0
+	var a := deg_to_rad(angle_deg)
+	var out := Vector2(cos(a) * dir_x, -sin(a))
+	out.x += clampf(paddle.velocity_x() / CARRY_REFERENCE, -CARRY_MAX, CARRY_MAX)
+	return _enforce_min_angle(out.normalized() * current_speed())
+
+
 func _bounce_off_paddle() -> void:
 	var half := paddle.half_width()
 	var dx := global_position.x - paddle.global_position.x
@@ -423,21 +450,13 @@ func _bounce_off_paddle() -> void:
 		stick_to_paddle(dx)
 		caught.emit(self)
 		return
-	var offset := clampf(dx / half, -1.0, 1.0)
 	var sweet := paddle.is_sweet(dx)
-
-	var angle_deg := SWEET_ANGLE_DEG if sweet else lerpf(CENTER_ANGLE_DEG, EDGE_ANGLE_DEG, absf(offset))
-	var dir_x := signf(offset)
-	if dir_x == 0.0:
-		dir_x = 1.0 if randf() < 0.5 else -1.0
-
 	if sweet:
 		_bonus_left = SWEET_BONUS_TIME
+	var angle_deg := SWEET_ANGLE_DEG if sweet else lerpf(CENTER_ANGLE_DEG, EDGE_ANGLE_DEG,
+		absf(clampf(dx / half, -1.0, 1.0)))
 
-	var a := deg_to_rad(angle_deg)
-	var out := Vector2(cos(a) * dir_x, -sin(a))
-	out.x += clampf(paddle.velocity_x() / CARRY_REFERENCE, -CARRY_MAX, CARRY_MAX)
-	velocity = _enforce_min_angle(out.normalized() * current_speed())
+	velocity = _exit_velocity(dx)
 	last_exit_angle = rad_to_deg(atan2(-velocity.y, velocity.x))
 
 	paddle.on_ball_hit(global_position.x)

@@ -742,7 +742,10 @@ func _on_brick_destroyed(brick: Brick, by_chain: bool) -> void:
 	effects.brick_smashed(brick.rect, brick.color(), brick.shard_count(),
 		brick.type == Brick.Type.GLASS, push, throw)
 	effects.score_popup(brick.rect.get_center(), points)
-	background.flash_near(brick.rect.get_center(), randi_range(5, 8), brick.color())
+	# Section 2 had the nearest stars answer every brick. On a phone,
+	# with a chain running, that is a field of lamps blinking behind the
+	# thing the player is trying to watch. The sky answers the frame
+	# instead, where it is one event at a time.
 
 	match brick.type:
 		Brick.Type.BLAST:

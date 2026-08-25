@@ -52,7 +52,7 @@ const EMBER_WARN_DISTANCE := 100.0
 ## The field ends above the screen, and the shield rides 65 px above
 ## that. Everything below is thumb: 126 px of it, because a hand holding
 ## a phone covers the bottom of it whatever the design says.
-const FIELD_BOTTOM := 760.0
+const FIELD_BOTTOM := 738.0
 ## The gap in the sill: the only way out of the field, and the only part
 ## of the frame the ball can pass.
 const MOUTH_WIDTH := 150.0
