@@ -39,6 +39,19 @@ the app has a record in App Store Connect, so that comes first:
 Processing on Apple's side takes ten minutes to an hour. The build shows
 up under TestFlight in App Store Connect when it is done.
 
+## Do not delete the simulator runtimes
+
+They look like free disk space when the game is only ever deployed to a
+physical phone. They are not: in Xcode 16 the simulator runtime and the
+iOS *platform* are one component, and without it Xcode cannot resolve a
+device destination at all. The SDK stays behind, so `xcodebuild
+-showsdks` still lists iOS 26.5 and the failure reads as something else.
+
+    xcodebuild -downloadPlatform iOS
+
+brings it back, at several gigabytes. deploy.sh checks for it before
+building and says this.
+
 ## Export settings worth checking
 
 | Setting | Value | Why |

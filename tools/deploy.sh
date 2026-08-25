@@ -71,6 +71,22 @@ launch screen will carry the Godot logo again. Put back:
   storyboard/custom_image@2x=\"res://assets/icons/launch_blank.png\"
   storyboard/custom_image@3x=\"res://assets/icons/launch_blank.png\""
 
+# Xcode cannot resolve a device destination without the iOS platform,
+# and in Xcode 16 that platform is the same component as the simulator
+# runtime. Deleting the runtimes to free disk space — which looks
+# harmless when the simulator is never used — takes device builds down
+# with them. The SDK stays behind, so -showsdks still lists iOS and the
+# failure looks like something else entirely.
+if ! xcrun simctl list runtimes 2>/dev/null | grep -qi "iOS "; then
+  fail "The iOS platform is not installed, so Xcode cannot build for a device.
+It is the same component as the simulator runtimes: deleting those to
+free space takes this with them. Get it back with
+
+  xcodebuild -downloadPlatform iOS
+
+or Xcode > Settings > Components. It is several gigabytes."
+fi
+
 FREE_GB=$(df -g "$ROOT" | awk 'NR==2 {print $4}')
 if [ "${FREE_GB:-0}" -lt "$MIN_FREE_GB" ]; then
   fail "Only ${FREE_GB} GB free and a build needs about ${MIN_FREE_GB}. Free some up:
