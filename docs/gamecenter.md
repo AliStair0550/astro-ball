@@ -22,18 +22,50 @@ in App Store Connect: build an iOS plugin exposing `authenticate`,
 
 ## Leaderboards
 
-| Id | Name | What it holds |
-|---|---|---|
-| `astroball.stars.total` | Total stars | 0 to 36 across The Drift. Sent on every level clear. |
-| `astroball.level.01` … `.12` | Level 01 … 12 best | The run's score for that level. One board per level. |
+**Created in App Store Connect.** All thirteen exist; the settings below
+are what they were made with, so a new one matches its neighbours.
 
-Format: integer, higher is better. The per-level boards are sent the
-score at the moment the level falls, not the total for the run.
+| Id | Reference name | What it holds |
+|---|---|---|
+| `astroball.stars.total` | Total Stars | 0 to 36 across The Drift. Sent on every level clear. |
+| `astroball.level.01` | Level 01 Liftoff | The run's score for that level |
+| `astroball.level.02` | Level 02 The Capsule | |
+| `astroball.level.03` | Level 03 The Chain | |
+| `astroball.level.04` | Level 04 The Constellation | |
+| `astroball.level.05` | Level 05 The Hold | |
+| `astroball.level.06` | Level 06 The Anvil | |
+| `astroball.level.07` | Level 07 Off Axis | |
+| `astroball.level.08` | Level 08 The Labyrinth | |
+| `astroball.level.09` | Level 09 The Fuse | |
+| `astroball.level.10` | Level 10 The Pane | |
+| `astroball.level.11` | Level 11 Blackout | |
+| `astroball.level.12` | Level 12 The Core | |
+
+Settings, the same on every one of them:
+
+| | |
+|---|---|
+| Leaderboard type | Single (Classic), never Recurring |
+| Score Format Type | Integer |
+| Sort Order | High to Low |
+| Score Submission Type | Best Score |
+| Score Range | 0 to 36 for the stars, 0 to 500000 per level |
+
+Best Score matters here: the game sends the run's score every time a
+level falls, not the player's record. Apple keeps the highest of them.
+With Most Recent Score a lazy run would replace a good one and the board
+would be measuring the wrong thing.
+
+A Leaderboard Set is worth adding later — one entry called The Drift that
+opens the twelve level boards, instead of twelve entries in a row. It
+changes nothing in the code.
 
 ## Achievements
 
 Ten, all one-shot, all in the game's own voice. The trigger column is
 where the game reports it, and every one of them is already wired.
+
+**Not created yet.** These are the ten to type in next.
 
 | Id | Name | Earned by |
 |---|---|---|
