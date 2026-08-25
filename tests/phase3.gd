@@ -109,9 +109,11 @@ func _test_strings() -> void:
 # --- Section 11, the loader ---------------------------------------------
 
 func _base_level() -> Dictionary:
+	# Three colours in a mirror, so the fixture passes the mosaic rule
+	# it is not here to test.
 	var grid_rows: Array = []
 	for i in 3:
-		grid_rows.append(".VVVVVVVVVVV.")
+		grid_rows.append(".FFIIVPVIIFF." if i % 2 == 0 else ".IIFFVPVFFII.")
 	return {"id": 99, "name": "Fixture", "zone": "baeltet", "grid": grid_rows,
 		"powerups": {"wide": 100}, "parTime": 60}
 

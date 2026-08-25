@@ -61,7 +61,8 @@ func _test_level_validation() -> void:
 
 func _test_broken_levels() -> void:
 	var base := {
-		"grid": [".VVVVVVVVVVV.", ".VVVVVVVVVVV."],
+		# Three colours, because the mosaic rule applies to fixtures too.
+		"grid": [".VVVIIIPPPFF.", ".FFPPPIIIVVV."],
 		"powerups": {"wide": 100},
 	}
 	ok(LevelLoader.validate(base).is_empty(), "a valid test level produces no errors")

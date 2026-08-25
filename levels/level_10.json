@@ -5,10 +5,10 @@
   "grid": [
     ".GGGGGGGGGGG.",
     ".GGGGGGGGGGG.",
-    ".VVVVVVVVVVV.",
-    ".IIEEEEEEEII.",
-    ".PPPPPPPPPPP.",
-    "..FFFFFFFFF.."
+    ".FFFPPPPPFFF.",
+    ".FFEEEEEEEFF.",
+    ".VVVVPPPVVVV.",
+    "..IIIPPPIII.."
   ],
   "ballSpeed": 390,
   "gridAnchor": 0,

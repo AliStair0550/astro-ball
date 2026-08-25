@@ -4,13 +4,13 @@
   "zone": "baeltet",
   "grid": [
     ".............",
-    ".VV.......VV.",
-    ".VVVV...VVVV.",
-    ".VVVEEEEEVVV.",
+    ".FF.......FF.",
+    ".FFIP...PPFF.",
+    ".FFIEEEEEIFF.",
     "..GGGGGGGGG..",
-    "...PPPPPPP...",
-    "....PPEPP....",
-    "....?VVV?...."
+    "...FPPPPPF...",
+    "....FPEPF....",
+    "....?FPF?...."
   ],
   "ballSpeed": 380,
   "gridAnchor": 0,

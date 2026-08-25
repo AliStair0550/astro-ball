@@ -4,11 +4,11 @@
   "zone": "baeltet",
   "grid": [
     ".S.........S.",
-    ".VVVVVVVVVVV.",
+    ".VVVVVPPVVVV.",
     ".VVFFEEEFFVV.",
     ".VV.......VV.",
+    ".VV.IIPII.VV.",
     ".VV.IIIII.VV.",
-    ".VV.IPPPI.VV.",
     ".VV.IIIII.VV.",
     ".VVEEEEEEEVV."
   ],

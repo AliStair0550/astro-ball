@@ -79,17 +79,33 @@ Bunden er åben. Det er kanten af feltet, og under den er der frit fald. En tynd
 
 Klodserne er 16 px høje og 24 px brede i logisk grid (skaleres til skærm). Afstand 2 px. Tætte, massive mure, som DX-Ball havde.
 
-### Anatomi af en klods
+### Anatomi af en klods, version 2
 
-Hver klods er bygget af fem elementer.
+Version 1 var flad: en lys toplinje, en mørk bundlinje, ellers ingenting.
+Den holdt ikke på en telefon. Version 2 er en flise, som DX-Ball 2's var.
 
 ```
-┌──────────────────┐  1. Toplinje: 1 px, lysere end basen (+20 % lum)
-│ ░░░░░░░░░░░░░░░░ │  2. Base: materialefarven, flad
-│ ░░░░░░░░░░░░░░░░ │  3. Indre tekstur: 2 til 3 px grain eller mønster, opacity 0.12
-│ ░░░░░░░░░░░░░░░░ │  4. Kernelys: lille lysere felt øverst til venstre, 6x3 px
-└──────────────────┘  5. Bundlinje: 1 px, mørkere end basen (-30 % lum)
+┌──────────────────┐  1. Base: materialefarven ved 86 % lum
+│▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀│  2. Affasning: 2 px, lys top (145 %) og venstre (125 %),
+│▌ ▁▁▁▁▁▁▁▁▁     ▐│     mørk højre (60 %) og bund (50 %), tegnet som
+│▌               ▐│     geringede trapezer, så hjørnerne mødes som fliser
+│▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄│  3. Glans: afrundet lysstribe øverst til venstre,
+└──────────────────┘     55 % bredde, hvid ved 0.5, plus en svagere ved 0.25
 ```
+
+4. Kernelys og indre tekstur er uændrede og ligger oven på basen.
+
+Geringen er hele pointen: fire rektangler lagt oven på hinanden krydser i
+hjørnerne og læses som en billedramme. Fire trapezer, der hver smalner
+45 grader i begge ender, mødes langs diagonalen, og en mur af dem ser ud
+som fliser.
+
+Skadestadierne følger med: revnerne skærer nu gennem affasningen og ud
+over kanten, og stadie 2 tager hjørnerne af, så geringen stopper før
+kanten. Sten har ingen glans og en flad affasning (40 procent af løftet,
+70 procent af skyggen), så den stadig ser død ud ved siden af elleve
+klodser, der er oplyst. Sprængklodsen har fortsat sin mørke kerne med
+Flare-glød indefra, nu liggende på v2-overfladen.
 
 Kernelyset er nu fiktionens lys: den fjerne sol rammer feltet oppefra og til venstre. Samme lysretning i alle fem zoner. Det er den slags konsistens, ingen bemærker, men alle mærker.
 
@@ -251,7 +267,8 @@ afsnit 20 også gælder den. Se afsnit 21.
 
 Formålet: lære spilleren alt i afsnit 3 til 7 uden en eneste tekstforklaring. Hvert level lærer én ting.
 
-Grid er 13 kolonner, maks 12 rækker. Symboler:
+**Griddene herunder er de aktuelle**, hentet fra `levels/*.json` efter
+mosaik-passet. Grid er 13 kolonner, maks 12 rækker. Symboler:
 
 ```
 .  tom
@@ -263,95 +280,179 @@ G  Glas       X  Gnist      ?  Skjult
 
 ---
 
-### Level 1: Liftoff (Afgang)
+### De tolv vægge, som de er nu
 
-Lærer: Bolden, paddlen, at vinkel er alt. Og kæden, fra første bane.
+Hentet fra `levels/*.json`. Begrundelserne for hvorfor de tre første
+virker står under dem.
+
+### Level 1: Liftoff
 
 ```
 .............
-.VVVVVVVVVVV.
-.IIIIIIIIIII.
-..FFEFFFEFF..
-...PPPEPPP...
-....VVVVV....
-.....III.....
-......X......
+.IIIIPPPIIII.
+.FFFEEEEEFFF.
+..FFFFPPFFF..
+...VVVPVVV...
+....XIPIX....
 ```
 
-47 klodser, heraf 3 sprængklodser. Silhuet: pilespids. parTime 60
-sekunder, boldfart 360 px/s. Ingen Sten, ingen Hærdet.
-
-Hvorfor det virker:
-- Den omvendte trekant sender hurtigt bolden op bag muren. Det er øjeblikket, alle husker fra DX-Ball: bolden bouncer i hjørnet og smadrer 10 klodser, mens man ser til.
-- Spidsen er en Gnist. Nem at ramme først, garanteret power-up, tvunget til Bred i level 1. Succes inden for 5 sekunder.
-- De tre sprængklodser ligger inde i trekanten. Kædereaktionen er det mest belønnende i spillet, og den skal findes mens man stadig er ved at blive fanget, ikke i level 3.
-- Farverne skifter pr. række, så grid og pointsystem læres visuelt.
-
-Power-up-tabel: Multi 25 %, Ildkugle 25 %, Bred 15 %, Laser 15 %, Liv 10 %, Giant 10 %. Ingen dårlige. (Rettet under bygning: Langsom er ude af de tre første levels, se afsnit 21.)
-
-Visuelt øjeblik: Ved sidste klods lyser rammen op, og hele stjernefeltet blitzer i ét frame. Stilhed i 1 sekund. Så clear-lyden. Spillerens første bekræftelse af, at rummet ser dig.
-
----
-
-### Level 2: The Capsule (Kapslen)
-
-Lærer: Sten kan ikke smadres, men bruges.
+### Level 2: The Capsule
 
 ```
 .S.........S.
-.VVVVVVVVVVV.
-.VFFFFEFFFFV.
-.V.........V.
-.V.IIIIIII.V.
-.V.I.....I.V.
-.V.I.PPP.I.V.
-.V.I.....I.V.
-.V.IIIIIII.V.
-.VVVVVVVVVVV.
+.VVVVVPPVVVV.
+.VVFFEEEFFVV.
+.VV.......VV.
+.VV.IIPII.VV.
+.VV.IIIII.VV.
+.VV.IIIII.VV.
+.VVEEEEEEEVV.
 ```
 
-68 smadrelige klodser plus 2 Sten, heraf 1 sprængklods. Silhuet: kapsel.
-parTime 110 sekunder, boldfart 360 px/s. Hærdet-rækken er erstattet af
-Flare med en sprængklods i midten.
-
-Hvorfor det virker:
-- En kapsel i en kapsel. Ydre Volt-skal, indre Ice-skal, Pulse-kerne. Tre små sejre i ét level.
-- Flare-rækken øverst ryger sidst, og sprængklodsen i dens midte er belønningen for at nå derop.
-- De to Sten-kerner i hjørnerne kaster bolden ind mod midten i stedet for at fange den. Sten er aldrig dekoration. De styrer altid bolden.
-
-Power-up-tabel: Multi 25 %, Ildkugle 20 %, Laser 20 %, Bred 15 %, Giant 10 %, Smal 10 %. Første dårlige, men kun én.
-
-Visuelt øjeblik: Når Pulse-kernen smadres, sender den en større lysbølge end normalt, alle Ice-klodser flimrer, og det fjerne lys i baggrunden får et kort glimt.
-
----
-
-### Level 3: The Chain (Kæden)
-
-Lærer: Sprængklodser smadrer naboer. Glas lader bolden gå igennem.
+### Level 3: The Chain
 
 ```
 .............
-.VV.......VV.
-.VVVV...VVVV.
-.VVVVVEVVVVV.
-..GGEGGGEGG..
-...PPPPPPP...
-....PPEPP....
-.....VVV.....
-......?......
+.FF.......FF.
+.FFIP...PPFF.
+.FFIEEEEEIFF.
+..GGGGGGGGG..
+...FPPPPPF...
+....FPEPF....
+....?FPF?....
 ```
 
-48 smadrelige klodser, heraf 4 sprængklodser. Silhuet: vinge. parTime 80
-sekunder, boldfart 380 px/s.
+### Level 4: The Constellation
 
-Hvorfor det virker:
-- Sprængklodserne ligger på vingeknoglen. Ét slag løber ud gennem hele vingen.
-- Glas-rækken lader bolden passere. Første gang føles det som en fejl. Anden gang forstår man, at det er vejen op bag vingespidserne.
-- Den skjulte klods i bunden viser sig, når en Volt over den ryger. Lille overraskelse.
+```
+.............
+.IIPPPPPPPII.
+.F?PPPPPPP?F.
+.FFFPPPPPFFF.
+.VVV?P?P?VVV.
+.IIEEEEEEEII.
+.FFFFPPPPFFF.
+.F?FFPPPFF?F.
+.VVVVPPPVVVV.
+```
 
-Power-up-tabel: Multi 20 %, Ildkugle 20 %, Giant 15 %, Laser 15 %, Zap 10 %, Bred 10 %, Hurtig 5 %, Smal 5 %.
+### Level 5: The Hold
 
-Visuelt øjeblik: Sprængklodsen midt i vingen tager alle 8 naboer i spiral med 40 ms forsinkelse hver. Screen shake 6 px. Stjernerne omkring blinker Ember. Det er spillets første wow og skal sidde perfekt.
+```
+.............
+.V.I.F.V.I.F.
+.V.F.F.F.F.F.
+.V.I.F.V.I.F.
+.V.I.F.V.I.F.
+.V.F.F.F.F.F.
+.VIEEEEEEEFF.
+..X.......X..
+```
+
+### Level 6: The Anvil
+
+```
+.............
+..HHHHHHHHH..
+..H.EEE...H..
+..HHHHHHHHH..
+....FIVIF....
+...FIVVVIF...
+```
+
+### Level 7: Off Axis
+
+```
+.............
+.FPPPPI..EEE.
+.IPPFEE..EEE.
+..IPIEEE.....
+...IVPPIV....
+....IFPPIF...
+.....IVIPIV..
+......IFVVIF.
+```
+
+### Level 8: The Labyrinth
+
+```
+.............
+.IIIPPPPPPII.
+.S...SE..S.S.
+.FFEEEEEEEFF.
+.S.S..ES...S.
+.IIEEEEEEEII.
+...S.....S...
+..FFFPPPFFF..
+```
+
+### Level 9: The Fuse
+
+```
+.............
+.EEEEEEEEEEE.
+.EFIVPPPVIFE.
+.EFIVPPPVIFE.
+.EEEEEEEEEEE.
+.............
+..FIVVPVVIF..
+..FIIIPIIIF..
+..FFFFPFFFF..
+```
+
+### Level 10: The Pane
+
+```
+.GGGGGGGGGGG.
+.GGGGGGGGGGG.
+.FFFPPPPPFFF.
+.FFEEEEEEEFF.
+.VVVVPPPVVVV.
+..IIIPPPIII..
+```
+
+### Level 11: Blackout
+
+```
+.............
+.....FFF.....
+...IFVVFFI...
+..IFVVIVFFI..
+.IFVVEEEVFFI.
+..IFVVIVFFI..
+...IFVVFFI...
+.....FFF.....
+```
+
+### Level 12: The Core
+
+```
+SVVVPPPPPVVVS
+VHHVVPPPVVHHV
+VVIIIPEPIIIVV
+.VHIIPEPVIHV.
+.VVIFPEPVIVV.
+.VVIIEGEIIVV.
+.VVIFFEFIIVV.
+.VHIIIEIIIHV.
+.VVIIIEIIIVV.
+.VHHVVVVVHHV.
+.VVVVVVVVVVV.
+.X?X?X?X?X?X.
+```
+
+### Hvorfor de tre første virker
+
+- **Liftoff.** Den omvendte trekant sender bolden op bag muren, og
+  spidsen er en klynge på fem med to Gnister i: succes inden for fem
+  sekunder, og ingen enlig klods at jage til sidst. Kæden i Ice-rækken
+  tager 45 procent af feltet i ét slag.
+- **The Capsule.** En kapsel i en kapsel: ydre skal, indre skal, kerne.
+  Tre små sejre i én bane. De to Sten-kerner i hjørnerne kaster bolden
+  ind mod midten i stedet for at fange den.
+- **The Chain.** Sprængklodserne ligger på vingeknoglen, så ét slag løber
+  ud gennem hele vingen. Glas-rækken føles som en fejl første gang og som
+  vejen op bag vingespidserne anden gang.
 
 ---
 
@@ -1277,3 +1378,42 @@ forsinkede knok. En timer, der stadig venter, når træet lukker, er et
 objekt, der bliver efterladt, og autopiloten rydder tolv baner pr.
 kørsel. Køen ligger i `_process` nu, og hukommelsen hen over zonen faldt
 fra 4,8 til 1,4 MB.
+
+---
+
+## Mosaik-reglen (tilføjelse til afsnit 20)
+
+Hver bane bruger mindst tre af de fire etslags-farver i et mønster, der
+kan læses på et øjeblik: bånd, spejlinger eller gradienter, der følger
+eller modellerer silhuetten. Et enkeltfarvet område må ikke strække sig
+over mere end to nabo-rækker.
+
+Ti af tolv baner brød reglen, før den blev skrevet. De er omfarvet, hver
+efter sin egen form: bånd på pilespidsen, spejling på vingen, søjler på
+gitteret, diagonaler på det skæve bånd, ringe på ambolten og kernen, og
+en koncentrisk diamant på Blackout.
+
+**Balancen er urørt.** Antallet af E, H, G, S, X og ? pr. bane er præcis
+det samme, og det samme er antallet af klodser i alt, drop-tabellerne og
+par-tiderne. Kun fordelingen af V/I/P/F har flyttet sig — og Pulse er
+lagt tilbage til nøjagtig samme antal pr. bane som før, fordi Pulse er
+dobbelt point og dermed balance og ikke farve. Pulse ligger nu aldrig
+yderst i en række: den er en belønning og hører inde i muren.
+
+Validatoren håndhæver de to første regler. Pulses placering står i
+testene, hvor hensigten kan skrives ned.
+
+Alle tolv vægge er gengivet i `docs/walls/`, tegnet med optagetilstanden,
+så mønstrene kan bedømmes ved siden af hinanden.
+
+## Kæden som trykbølge
+
+En klods, kæden tager, kaster nu sine splinter væk fra eksplosionen med
+halvanden gang farten, og den vaskes Flare-orange i 60 ms, før den går.
+Forsinkelsen mellem klodserne er uændret. Forskellen er, hvad man læser:
+før forsvandt otte klodser i rækkefølge, nu æder noget sig gennem muren.
+
+Feel_test har fået tilstand 4: hver klodstype tegnet to gange, flad til
+venstre og affaset til højre, samme farver og samme afstand. Det er den
+eneste ærlige måde at vælge mellem to udgaver af den samme flade på — på
+en telefon, ikke på en skærm.

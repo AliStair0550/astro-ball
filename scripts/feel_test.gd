@@ -10,11 +10,15 @@ extends Node
 ##   1  one Volt brick, respawns 500 ms after it breaks
 ##   2  a wall, 11 wide and 6 rows, for mass destruction and combo pitch
 ##   3  the same wall with the ball pinned at 520 px/s
+##   4  every brick type in two columns, for judging the bevel on a
+##      device: the left half is drawn flat the way version one was, the
+##      right half with the v2 bevel and gloss, same colours, same
+##      spacing. It is the only honest way to choose between them.
 ##
 ## F1 shows combo, live shard count and hits landed.
 ## R resets the counter.
 
-enum Mode { SINGLE, WALL, MAX_SPEED }
+enum Mode { SINGLE, WALL, MAX_SPEED, BEVEL }
 
 const RESPAWN_DELAY := 0.5
 const MAX_SPEED := 520.0
@@ -80,10 +84,19 @@ func _build_field() -> void:
 			for i in SINGLE_ROW:
 				rows.append(".............")
 			rows.append("......V......")
+		Mode.BEVEL:
+			# Every type, twice: flat on the left, bevelled on the right.
+			rows.append(".............")
+			for pair in ["VV", "II", "PP", "FF", "HH", "SS", "EE", "GG"]:
+				rows.append("..%s.....%s..." % [pair[0], pair[1]])
+			game.grid.build(rows)
+			game.grid.flat_columns = 6
+			return
 		_:
 			for i in WALL_ROWS:
 				rows.append(".VVVVVVVVVVV.")
 	game.grid.build(rows)
+	game.grid.flat_columns = -1
 
 
 func _on_field_cleared() -> void:
@@ -125,5 +138,7 @@ func _input(event: InputEvent) -> void:
 			set_mode(Mode.WALL)
 		KEY_3:
 			set_mode(Mode.MAX_SPEED)
+		KEY_4:
+			set_mode(Mode.BEVEL)
 		KEY_R:
 			hits = 0

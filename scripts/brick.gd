@@ -19,6 +19,22 @@ extends RefCounted
 
 enum Type { VOLT, ICE, PULSE, FLARE, HARDENED, STONE, BLAST, GLASS, SPARK, HIDDEN }
 
+## Version 2 of the anatomy, replacing section 3's five elements. The
+## brick sits back at 86 per cent so the bevel has room to go both ways,
+## and the bevel is four mitred trapezoids: light on the top and left,
+## dark on the right and bottom, joining at the corners like tiles.
+const BASE_LUM := 0.86
+const BEVEL := 2.0
+## top, left, right, bottom.
+const NORMAL_BEVEL := [1.45, 1.25, 0.60, 0.50]
+## Stone keeps 40 per cent of the lift and 70 per cent of the drop: a
+## shallow bevel with almost no light in it, which is what dead looks
+## like next to eleven bricks that are lit.
+const STONE_BEVEL := [1.18, 1.10, 0.72, 0.65]
+const GLOSS_WIDTH := 0.55
+## The pressure wave. Sixty milliseconds of Flare before the brick goes.
+const WASH_TIME := 0.06
+
 const SIZE := Vector2(24.0, 16.0)
 
 const SYMBOLS := {
@@ -94,6 +110,13 @@ var flash := 0.0
 var shake := 0.0
 ## The blast brick glows when the ball is near.
 var proximity := 0.0
+## Phase: the pressure wave. A brick queued into a chain washes orange
+## for 60 ms before it goes, so the cascade reads as something eating
+## through the wall rather than a set of bricks vanishing in order.
+var wash := 0.0
+## Where the chain that is coming for this brick started. INF when the
+## brick was not taken by one.
+var chain_from := Vector2.INF
 ## Fixed per brick, so cracks and texture do not flicker between frames.
 var seed_value := 0
 
@@ -167,7 +190,7 @@ func _rand(salt: int) -> float:
 
 # --- Drawing -----------------------------------------------------------
 
-func draw_into(ci: CanvasItem, time: float, blind := false) -> void:
+func draw_into(ci: CanvasItem, time: float, blind := false, flat := false) -> void:
 	if not alive:
 		return
 
@@ -194,23 +217,33 @@ func draw_into(ci: CanvasItem, time: float, blind := false) -> void:
 
 	var stage := damage_stage()
 
-	# 2. Base.
-	var body := base
+	# 1. Base, sat back from the full colour so the bevel has somewhere
+	#    to go in both directions.
+	var body := _lum(base, BASE_LUM)
 	if type == Type.GLASS:
 		body.a = 0.4
 	ci.draw_rect(r, body)
 
-	# 3. Inner texture.
+	# 2. Inner texture, on the base and under everything else.
 	_draw_texture(ci, r, base)
 
-	# 1. Top line. Stone has none. It should look dead.
-	if type != Type.STONE:
-		ci.draw_rect(Rect2(r.position, Vector2(r.size.x, 1.0)), base.lightened(0.2))
+	if flat:
+		# Version one, for the feel lab's side by side: a light line on
+		# top and a dark one underneath, and nothing else.
+		if type != Type.STONE:
+			ci.draw_rect(Rect2(r.position, Vector2(r.size.x, 1.0)), base.lightened(0.2))
+		ci.draw_rect(Rect2(r.position + Vector2(0.0, r.size.y - 1.0),
+			Vector2(r.size.x, 1.0)), base.darkened(0.3))
+	else:
+		# 3. The bevel. Four mitred trapezoids, so a wall of them joins
+		#    at the corners the way tiles do rather than crossing.
+		_draw_bevel(ci, r, base, stage)
 
-	# 5. Bottom line.
-	ci.draw_rect(Rect2(r.position + Vector2(0.0, r.size.y - 1.0), Vector2(r.size.x, 1.0)), base.darkened(0.3))
+		# 4. Gloss. Not on Stone, which has to keep reading as dead.
+		if type != Type.STONE and not (type == Type.GLASS and stage > 0):
+			_draw_gloss(ci, r)
 
-	# 4. Core light. It goes out the moment the brick takes damage.
+	# 5. Core light. It goes out the moment the brick takes damage.
 	if stage == 0 and type != Type.STONE:
 		_draw_core_light(ci, r, base, time)
 
@@ -226,10 +259,112 @@ func draw_into(ci: CanvasItem, time: float, blind := false) -> void:
 			f.a = 0.18
 			ci.draw_rect(r, f)
 
+	if wash > 0.0:
+		# The pressure wave arriving, a breath before the brick goes.
+		var heat := Color("FF9F1C")
+		heat.a = 0.62 * wash
+		ci.draw_rect(r, heat)
+
 	if flash > 0.0:
 		var white := Color.WHITE
 		white.a = flash
 		ci.draw_rect(r, white)
+
+
+## The bevel, as four mitred trapezoids. Each edge tapers 45 degrees at
+## both ends, so the light top meets the light left along the diagonal
+## and the dark right meets the dark bottom along the other one. Drawn
+## as polygons rather than rectangles for exactly that reason: stacked
+## rectangles cross at the corners and read as a picture frame.
+func _draw_bevel(ci: CanvasItem, r: Rect2, base: Color, stage: int) -> void:
+	var b := BEVEL
+	var x := r.position.x
+	var y := r.position.y
+	var w := r.size.x
+	var h := r.size.y
+	var mult := STONE_BEVEL if type == Type.STONE else NORMAL_BEVEL
+	var alpha := 1.0 if type != Type.GLASS else 0.55
+
+	# Stage 2 takes the corners off, so the mitres stop short.
+	var chip := 0.0 if stage < 2 else 3.0
+
+	ci.draw_colored_polygon(PackedVector2Array([
+		Vector2(x + chip, y), Vector2(x + w - chip, y),
+		Vector2(x + w - b, y + b), Vector2(x + b, y + b),
+	]), _edge(base, float(mult[0]), alpha))
+	ci.draw_colored_polygon(PackedVector2Array([
+		Vector2(x, y + chip), Vector2(x + b, y + b),
+		Vector2(x + b, y + h - b), Vector2(x, y + h - chip),
+	]), _edge(base, float(mult[1]), alpha))
+	ci.draw_colored_polygon(PackedVector2Array([
+		Vector2(x + w, y + chip), Vector2(x + w, y + h - chip),
+		Vector2(x + w - b, y + h - b), Vector2(x + w - b, y + b),
+	]), _edge(base, float(mult[2]), alpha))
+	ci.draw_colored_polygon(PackedVector2Array([
+		Vector2(x + chip, y + h), Vector2(x + b, y + h - b),
+		Vector2(x + w - b, y + h - b), Vector2(x + w - chip, y + h),
+	]), _edge(base, float(mult[3]), alpha))
+
+
+## The trapezoid for one edge, so a test can check the mitre without
+## reading pixels. 0 top, 1 left, 2 right, 3 bottom.
+static func bevel_polygon(r: Rect2, edge: int, chip := 0.0) -> PackedVector2Array:
+	var b := BEVEL
+	var x := r.position.x
+	var y := r.position.y
+	var w := r.size.x
+	var h := r.size.y
+	match edge:
+		0:
+			return PackedVector2Array([Vector2(x + chip, y), Vector2(x + w - chip, y),
+				Vector2(x + w - b, y + b), Vector2(x + b, y + b)])
+		1:
+			return PackedVector2Array([Vector2(x, y + chip), Vector2(x + b, y + b),
+				Vector2(x + b, y + h - b), Vector2(x, y + h - chip)])
+		2:
+			return PackedVector2Array([Vector2(x + w, y + chip), Vector2(x + w, y + h - chip),
+				Vector2(x + w - b, y + h - b), Vector2(x + w - b, y + b)])
+		_:
+			return PackedVector2Array([Vector2(x + chip, y + h), Vector2(x + b, y + h - b),
+				Vector2(x + w - b, y + h - b), Vector2(x + w - chip, y + h)])
+
+
+## A rounded stripe of light in the upper left, and a fainter one under
+## it. It is what makes a flat rectangle look like something with a
+## surface, and it is the whole difference between this and version one.
+func _draw_gloss(ci: CanvasItem, r: Rect2) -> void:
+	var white := Color.WHITE
+	var x := r.position.x + BEVEL + 1.0
+	var top := r.position.y + BEVEL + 1.0
+	var width := (r.size.x - BEVEL * 2.0 - 2.0) * GLOSS_WIDTH
+	white.a = 0.5
+	_stripe(ci, Vector2(x, top), width, 2.0, white)
+	white.a = 0.25
+	_stripe(ci, Vector2(x + 1.0, top + 3.0), width * 0.72, 1.0, white)
+
+
+## A stripe with its ends taken off, so it reads as rounded at this size
+## without costing an arc.
+static func _stripe(ci: CanvasItem, at: Vector2, width: float, height: float, color: Color) -> void:
+	if width <= 2.0:
+		return
+	ci.draw_rect(Rect2(at + Vector2(1.0, 0.0), Vector2(width - 2.0, height)), color)
+	var faded := color
+	faded.a = color.a * 0.55
+	ci.draw_rect(Rect2(at, Vector2(1.0, height)), faded)
+	ci.draw_rect(Rect2(at + Vector2(width - 1.0, 0.0), Vector2(1.0, height)), faded)
+
+
+## A luminance multiplier on a colour: over one lightens, under one
+## darkens, and the alpha is left alone.
+static func _lum(c: Color, factor: float) -> Color:
+	return Color(minf(c.r * factor, 1.0), minf(c.g * factor, 1.0), minf(c.b * factor, 1.0), c.a)
+
+
+func _edge(base: Color, factor: float, alpha: float) -> Color:
+	var c := _lum(base, factor)
+	c.a = alpha
+	return c
 
 
 func _draw_texture(ci: CanvasItem, r: Rect2, base: Color) -> void:
@@ -263,14 +398,25 @@ func _draw_texture(ci: CanvasItem, r: Rect2, base: Color) -> void:
 				var p := r.position + Vector2(1.0 + _rand(100 + i) * 21.0, 1.0 + _rand(120 + i) * 13.0)
 				ci.draw_rect(Rect2(p.floor(), Vector2(3.0, 2.0)), pit)
 		Type.BLAST:
-			# Unstable ore around a dark core.
+			# Unstable ore around a dark core, lit from inside as the
+			# ball comes near. It sits on the v2 bevel like everything
+			# else: the core is a hole in the surface, not a sticker.
 			var core := Color("2A0A05")
-			core.a = 0.75 - proximity * 0.5
-			ci.draw_rect(Rect2(r.position + Vector2(8.0, 5.0), Vector2(8.0, 6.0)), core)
+			core.a = 0.8 - proximity * 0.45
+			var middle := r.position + r.size * 0.5
+			ci.draw_rect(Rect2(middle - Vector2(5.0, 3.5), Vector2(10.0, 7.0)), core)
 			if proximity > 0.0:
-				var glow := Color("FFD08A")
-				glow.a = proximity * 0.8
-				ci.draw_rect(Rect2(r.position + Vector2(9.0, 6.0), Vector2(6.0, 4.0)), glow)
+				# Flare, from the inside out: a small hot centre with the
+				# heat bleeding into the ore around it.
+				var heat := Color("FF9F1C")
+				for ring in 3:
+					heat.a = proximity * (0.55 - float(ring) * 0.16)
+					var pad := 1.0 + float(ring) * 2.0
+					ci.draw_rect(Rect2(middle - Vector2(3.0 + pad, 2.0 + pad),
+						Vector2(6.0 + pad * 2.0, 4.0 + pad * 2.0)), heat)
+				var white := Color("FFE7C2")
+				white.a = proximity * 0.85
+				ci.draw_rect(Rect2(middle - Vector2(2.0, 1.5), Vector2(4.0, 3.0)), white)
 		_:
 			for i in 5:
 				var p := r.position + Vector2(2.0 + _rand(140 + i) * 20.0, 2.0 + _rand(160 + i) * 12.0)
@@ -315,6 +461,9 @@ static func _perimeter_point(r: Rect2, d: float) -> Vector2:
 	return r.position + Vector2(0.0, h - d)
 
 
+## Cracks run out through the bevel and off the edge of the brick, so a
+## damaged one looks broken rather than decorated. They are drawn after
+## the bevel for exactly that reason.
 func _draw_cracks(ci: CanvasItem, r: Rect2, stage: int) -> void:
 	var dark := Color("07070C")
 	dark.a = 0.85
@@ -353,3 +502,5 @@ func update(delta: float) -> void:
 		flash = maxf(0.0, flash - delta * 20.0)
 	if shake > 0.0:
 		shake = maxf(0.0, shake - delta * 8.0)
+	if wash > 0.0:
+		wash = maxf(0.0, wash - delta / WASH_TIME)

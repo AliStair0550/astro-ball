@@ -56,6 +56,10 @@ const NEIGHBOUR_SPIRAL := [
 
 var rows := 0
 var blind := false
+## Feel lab mode 4 only: columns left of this are drawn flat, the way
+## version one of the anatomy did it, so the two can be judged side by
+## side on a device. -1 everywhere else, which is every real level.
+var flat_columns := -1
 ## Section: the tail of a level. With three or fewer left, standing
 ## around looking for them is the least interesting thing in the game,
 ## so they say where they are.
@@ -247,15 +251,19 @@ func _destroy(brick: Brick, by_chain: bool) -> void:
 	_check_cleared()
 
 
-## The blast brick takes its 8 neighbours, one at a time.
+## The blast brick takes its 8 neighbours, one at a time. Each of them
+## remembers where the blast was, so its shards leave in the direction
+## the wave was travelling rather than spraying evenly.
 func _queue_chain(brick: Brick) -> void:
+	var origin := brick.rect.get_center()
 	var step := 0
 	for offset in NEIGHBOUR_SPIRAL:
 		var neighbour := brick_at(brick.col + offset.x, brick.row + offset.y)
 		step += 1
 		if neighbour == null or not neighbour.alive or not neighbour.is_breakable():
 			continue
-		_pending.append({"brick": neighbour, "delay": CHAIN_DELAY * float(step)})
+		neighbour.chain_from = origin
+		_pending.append({"brick": neighbour, "delay": CHAIN_DELAY * float(step), "from": origin})
 
 
 ## Zap breaks the bricks beside the one that was hit. Returns the ones it
@@ -345,6 +353,12 @@ func _process(delta: float) -> void:
 	while i >= 0:
 		var entry := _pending[i]
 		entry["delay"] = float(entry["delay"]) - delta
+		# The wave arrives before the brick goes: sixty milliseconds of
+		# heat, so the cascade reads as pressure eating through the wall.
+		if float(entry["delay"]) <= Brick.WASH_TIME and not entry.get("pop", false):
+			var coming: Brick = entry["brick"]
+			if coming != null and coming.alive:
+				coming.wash = 1.0
 		if entry["delay"] <= 0.0:
 			var brick: Brick = entry["brick"]
 			_pending.remove_at(i)
@@ -397,4 +411,4 @@ func _draw() -> void:
 				draw_rect(brick.rect.grow(pad), halo)
 	for brick in _bricks:
 		if brick != null:
-			brick.draw_into(self, _time, blind)
+			brick.draw_into(self, _time, blind, flat_columns >= 0 and brick.col < flat_columns)

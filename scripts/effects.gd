@@ -65,7 +65,7 @@ func pool_size() -> int:
 ## 5 to 8 shards in the brick's colour, 40 to 90 px/s, spinning, pulled
 ## down by gravity, gone after 350 ms.
 func brick_smashed(rect: Rect2, color: Color, count: int, glass := false,
-		impact := Vector2.INF) -> void:
+		impact := Vector2.INF, speed_scale := 1.0) -> void:
 	var center := rect.get_center()
 	# Shards fly away from where the ball actually hit. Without that they
 	# spray evenly and the hit loses its direction.
@@ -81,12 +81,15 @@ func brick_smashed(rect: Rect2, color: Color, count: int, glass := false,
 		var angle := randf() * TAU
 		var dir := Vector2(cos(angle), sin(angle))
 		if away != Vector2.ZERO:
-			dir = (dir * 0.55 + away).normalized()
-		var speed := randf_range(40.0, 90.0)
+			# The stronger the push, the less of the random spray is
+			# left in it: a chain throws its shards, a ball scatters them.
+			var spray := 0.55 / speed_scale
+			dir = (dir * spray + away).normalized()
+		var speed := randf_range(40.0, 90.0) * speed_scale
 		var size := Vector2(randf_range(2.0, 5.0), randf_range(2.0, 3.0))
 		if glass:
 			# Ice in vacuum: lighter, drifts longer, almost no gravity.
-			speed = randf_range(30.0, 70.0)
+			speed = randf_range(30.0, 70.0) * speed_scale
 			size = Vector2(randf_range(1.0, 2.0), randf_range(3.0, 7.0))
 		_bits.append(_fill(_take_bit(), {
 			"kind": "splinter",

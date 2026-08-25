@@ -126,10 +126,54 @@ static func validate(data: Dictionary) -> PackedStringArray:
 		errors.append("gridAnchor %.0f puts the lowest row at y %.0f, past the wall line at %.0f"
 			% [anchor, bottom, BrickGrid.wall_line_y()])
 
+	errors.append_array(mosaic_errors(grid))
+
 	var forced: Variant = data.get("forcedFirstPowerup", null)
 	if forced != null and not Powerup.CATALOG.has(str(forced)):
 		errors.append("forcedFirstPowerup '%s' does not exist" % str(forced))
 
+	return errors
+
+
+## Section 20's mosaic rule. A wall has to be read at a glance, and a
+## field of one colour is a field with nothing to read.
+##
+##   At least three of the four one-hit colours.
+##   No more than two rows in a row made of a single colour.
+##
+## Pulse's placement is a design rule rather than a validation one: it is
+## worth double, so it belongs in from the edge, and that is checked in
+## the tests where the intent can be written down.
+const MOSAIC_COLOURS := ["V", "I", "P", "F"]
+const MOSAIC_MIN_COLOURS := 3
+const MOSAIC_MAX_SAME_ROWS := 2
+
+
+static func mosaic_errors(grid: Array) -> PackedStringArray:
+	var errors := PackedStringArray()
+	var seen := {}
+	var run := 0
+	var last := ""
+	for i in grid.size():
+		var row: String = str(grid[i])
+		var colours := {}
+		for c in row:
+			if c in MOSAIC_COLOURS:
+				colours[c] = true
+				seen[c] = true
+		if colours.size() == 1:
+			var only: String = colours.keys()[0]
+			run = run + 1 if only == last else 1
+			last = only
+			if run > MOSAIC_MAX_SAME_ROWS:
+				errors.append("rows %d to %d are all '%s': at most %d in a row"
+					% [i + 2 - run, i + 1, only, MOSAIC_MAX_SAME_ROWS])
+		else:
+			run = 0
+			last = ""
+	if not grid.is_empty() and seen.size() < MOSAIC_MIN_COLOURS:
+		errors.append("the wall uses %d of the one-hit colours, the minimum is %d"
+			% [seen.size(), MOSAIC_MIN_COLOURS])
 	return errors
 
 

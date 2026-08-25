@@ -39,6 +39,9 @@ const SAVE_COOLDOWN_MS := 3000.0
 const COMBO_TRAIL_AT := 10
 const COMBO_FIELD_AT := 20
 
+## A chain throws its shards half again as fast as a ball does.
+const CHAIN_SHARD_SPEED := 1.6
+
 const SHAKE_WALL := Vector2(2.0, 0.06)
 const SHAKE_BLAST := Vector2(6.0, 0.12)
 
@@ -728,8 +731,16 @@ func _on_brick_destroyed(brick: Brick, by_chain: bool) -> void:
 	var points := run.on_brick_destroyed(brick.score_value())
 	_apply_ball_speed()
 
+	# A brick the chain took throws its pieces away from the blast at
+	# half again the speed. One the ball took scatters them from the
+	# point of contact.
+	var push := _last_impact
+	var throw := 1.0
+	if by_chain and brick.chain_from != Vector2.INF:
+		push = brick.chain_from
+		throw = CHAIN_SHARD_SPEED
 	effects.brick_smashed(brick.rect, brick.color(), brick.shard_count(),
-		brick.type == Brick.Type.GLASS, _last_impact)
+		brick.type == Brick.Type.GLASS, push, throw)
 	effects.score_popup(brick.rect.get_center(), points)
 	background.flash_near(brick.rect.get_center(), randi_range(5, 8), brick.color())
 

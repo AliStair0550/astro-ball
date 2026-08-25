@@ -205,6 +205,12 @@ func _teardown() -> void:
 	# waits a sixth of what it appears to.
 	Engine.time_scale = 1.0
 	if is_instance_valid(game):
+		# Nothing may start a sound during the wait below. The run ends
+		# the moment the twelfth level clears, and the ceremony's own
+		# note is still eighty milliseconds away at that point: stopping
+		# the audio and then letting the game run into it left the level
+		# clear stream playing when the process exited.
+		game.process_mode = Node.PROCESS_MODE_DISABLED
 		# Sound still running holds playback objects when the engine
 		# closes. Stop it first, then clean up.
 		game.audio.stop_all()
