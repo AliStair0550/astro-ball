@@ -38,6 +38,15 @@ window/stretch/mode="canvas_items"
 window/handheld/orientation=1
 window/vsync/vsync_mode=1
 
+[input_devices]
+
+; One tap is one press. With this on, a touch also produces a mouse
+; press at the same point, and a screen that relays itself out between
+; the two hands the second press to whatever button has moved under the
+; finger. Touch and mouse are both handled explicitly; neither needs the
+; engine to invent the other.
+pointing/emulate_mouse_from_touch=false
+
 [physics]
 
 ; Fixed timestep, interpolated for display. A 120 Hz phone renders twice

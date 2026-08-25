@@ -129,6 +129,25 @@ func _test_screen_presses() -> void:
 	eq(game.state, Game.State.UNIVERSES,
 		"and START GAME is still START GAME after a trip through settings")
 
+	# One finger is one press. iOS sends the touch and Godot's mouse
+	# emulation used to send a second press at the same point; the first
+	# acted, the screen relaid itself out, and the second landed on
+	# whatever button had moved under the finger. MAIN MENU went to the
+	# title and straight into settings, and BACK bounced back into it.
+	game._set_state(Game.State.PAUSED)
+	var menu_at := Vector2.ZERO
+	for button in game.screens._buttons:
+		if str(button["id"]) == "menu":
+			menu_at = Rect2(button["rect"]).get_center()
+	ok(menu_at != Vector2.ZERO, "the held level offers a way to the menu")
+	game.screens._last_press_ms = -1000.0
+	_press_raw(menu_at)
+	eq(game.state, Game.State.TITLE, "one press leaves the level")
+	# The same point again, in the same breath: on the title that lands
+	# on SETTINGS, and it must not be taken.
+	_press_raw(menu_at)
+	eq(game.state, Game.State.TITLE, "and the second half of that press is not a decision")
+
 	# A press on nothing is a press on nothing, whatever was last hovered.
 	game._set_state(Game.State.TITLE)
 	_press_at(Vector2(20.0, 800.0))
@@ -151,7 +170,15 @@ func _press_button(id: String) -> bool:
 	return false
 
 
+## A deliberate press. The debounce that stops one finger from being
+## read as two is cleared first, because these are separate decisions
+## made faster than a hand could make them.
 func _press_at(point: Vector2) -> void:
+	game.screens._last_press_ms = -1000.0
+	_press_raw(point)
+
+
+func _press_raw(point: Vector2) -> void:
 	var press := InputEventScreenTouch.new()
 	press.pressed = true
 	press.position = point

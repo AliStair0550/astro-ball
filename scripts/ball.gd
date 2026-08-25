@@ -51,6 +51,13 @@ const MIN_ANGLE_DEG := 20.0
 const EDGE_ANGLE_DEG := 25.0
 const CENTER_ANGLE_DEG := 80.0
 const SWEET_ANGLE_DEG := 88.0
+## A catch made while the shield is moving carries. Where the ball lands
+## on the shield still decides the angle; this is the aim on top of it,
+## and it is what makes a swipe into a shot rather than a save. Divided
+## by the reference speed and clamped, so a flick cannot flatten the
+## return past the minimum angle.
+const CARRY_REFERENCE := 1600.0
+const CARRY_MAX := 0.42
 const LAUNCH_ANGLE_DEG := 80.0
 const LAUNCH_SPREAD_DEG := 4.0
 
@@ -419,8 +426,10 @@ func _bounce_off_paddle() -> void:
 		_bonus_left = SWEET_BONUS_TIME
 
 	var a := deg_to_rad(angle_deg)
-	velocity = Vector2(cos(a) * dir_x, -sin(a)) * current_speed()
-	last_exit_angle = angle_deg
+	var out := Vector2(cos(a) * dir_x, -sin(a))
+	out.x += clampf(paddle.velocity_x() / CARRY_REFERENCE, -CARRY_MAX, CARRY_MAX)
+	velocity = _enforce_min_angle(out.normalized() * current_speed())
+	last_exit_angle = rad_to_deg(atan2(-velocity.y, velocity.x))
 
 	paddle.on_ball_hit(global_position.x)
 	paddle_hit.emit(global_position, angle_deg, sweet)

@@ -62,6 +62,8 @@ var _reset_armed := false
 ## keeps up for us, and following it lights up buttons nobody is over.
 var _touch_seen := false
 var _par_note := ""
+const PRESS_DEBOUNCE_MS := 150.0
+var _last_press_ms := -1000.0
 
 var _buttons: Array[Dictionary] = []
 var _hover := -1
@@ -254,8 +256,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 
+	# Two presses inside 150 ms are one finger, not two decisions. A
+	# screen that relays itself out on the first would otherwise hand the
+	# second to whatever button moved under the finger.
+	var now := float(Time.get_ticks_msec())
+	if now - _last_press_ms < PRESS_DEBOUNCE_MS:
+		get_viewport().set_input_as_handled()
+		return
+
 	var index := button_at(point)
 	if index >= 0:
+		_last_press_ms = now
 		_hover = index
 		var id := str(_buttons[index]["id"])
 		if id == "reset_progress" and not _reset_armed:

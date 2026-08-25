@@ -143,6 +143,12 @@ func sweet_offsets() -> Array[float]:
 			return [0.0]
 
 
+## How fast the shield is travelling sideways, px/s. The ball asks, so a
+## catch made while moving carries in the direction of the move.
+func velocity_x() -> float:
+	return _velocity_x
+
+
 func is_sweet(dx: float) -> bool:
 	for offset in sweet_offsets():
 		if absf(dx - offset) <= SWEET_HALF:

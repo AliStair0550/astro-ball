@@ -1153,3 +1153,43 @@ Og en note til, som kostede tid to gange på én dag:
 `Godot --headless --check-only --script res://fil.gd` finder syntaksfejl
 på sekunder. Uden den er symptomet på en parse-fejl, at test-scenen
 hænger uden output.
+
+---
+
+## Ét tryk er ét tryk
+
+MAIN MENU fra en holdt bane gik til titlen og videre ind i
+indstillingerne, og BACK derfra sprang tilbage i dem igen. Årsagen var
+ikke knapperne: iOS sender berøringen, og Godots musemulering sender et
+*andet* tryk samme sted. Det første tryk handlede, skærmen lagde sig om,
+og det andet landede på den knap, der nu var flyttet ind under fingeren.
+På titlen er det SETTINGS.
+
+`pointing/emulate_mouse_from_touch=false`. Berøring og mus håndteres
+begge eksplicit; ingen af dem har brug for, at motoren opfinder den
+anden. Og som ekstra værn: to tryk inden for 150 ms er én finger, ikke to
+beslutninger.
+
+## Afbøjningen, målt
+
+Klagen var, at bolden går den forkerte vej. Modellen blev målt over hele
+paddlens bredde i stedet for læst: 152 grader yderst til venstre, 88 i
+midten, 27 yderst til højre, og fortegnet følger altid den side, man
+rammer. Den var rigtig.
+
+Det, der manglede, var **paddlens egen bevægelse**. Griber man mens man
+fører skjoldet, bæres bolden nu med i den retning: op til 0,42 lagt til
+retningens x-komposant, klampet så et flik aldrig kan flade returen ud
+under mindstevinklen. Hvor man rammer bestemmer stadig vinklen; farten
+bestemmer resten af sigtet. Det er forskellen på at redde bolden og at
+skyde med den.
+
+## Kortet
+
+Rammen med hjørnemærker er væk. En ramme om en himmel er en vinduesramme,
+og den sad et par pixels forkert i forhold til alt andet. Gitteret alene
+siger "kort" godt nok.
+
+START HERE har fået jord under sig: et mærke med kant, en pil der falder
+ned mod stjernen og tilbage, og to ringe der ånder i forskellig takt. Det
+er nu det højeste på skærmen, hvilket det skal være.

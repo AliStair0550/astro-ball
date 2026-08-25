@@ -310,20 +310,9 @@ func _draw_chart_paper() -> void:
 	while y < CHART.end.y:
 		draw_line(Vector2(CHART.position.x, y), Vector2(CHART.end.x, y), Color(ink, 0.10 * _fade), 1.0)
 		y += step
-	draw_rect(CHART, Color(ink, 0.55 * _fade), false, 1.0)
-	# Corner ticks, like an instrument rather than a dialogue box.
-	var mark := PULSE
-	mark.a = 0.55 * _fade
-	var m := 12.0
-	for corner in [
-			[CHART.position, Vector2(1.0, 1.0)],
-			[Vector2(CHART.end.x, CHART.position.y), Vector2(-1.0, 1.0)],
-			[Vector2(CHART.position.x, CHART.end.y), Vector2(1.0, -1.0)],
-			[CHART.end, Vector2(-1.0, -1.0)]]:
-		var at: Vector2 = corner[0]
-		var dir: Vector2 = corner[1]
-		draw_line(at, at + Vector2(m * dir.x, 0.0), mark, 1.0)
-		draw_line(at, at + Vector2(0.0, m * dir.y), mark, 1.0)
+	# No border and no corner ticks. A frame around a sky is a window
+	# frame, and it was sitting a few pixels off whatever it was supposed
+	# to line up with. The grid alone says "chart" well enough.
 
 
 ## The route, drawn as it is flown. A line appears between two levels
@@ -444,14 +433,34 @@ func _draw_node(index: int) -> void:
 		_text(FONT_UI, str(entry.get("name", "")).to_upper(), at + Vector2(0.0, -26.0), 8, ring, true)
 
 	# The one to press. A chart with nothing marked on it is a chart you
-	# have to work out before you can play.
+	# have to work out before you can play, so this is the loudest thing
+	# on it: a ring that breathes, a tag with ground under it, and a
+	# pointer coming down onto the star.
 	if index == next_index and not cleared:
 		var beat := 0.5 + 0.5 * sin(_time * 3.0)
 		var ring := VOLT
-		ring.a = 0.35 + 0.45 * beat
-		_diamond_outline(at, 18.0 + 3.0 * beat, ring)
-		ring.a = 0.8
-		_text(FONT_UI, Strings.text("MAP_START_HERE"), at + Vector2(0.0, -24.0), 8, ring, true)
+		ring.a = 0.22 + 0.28 * beat
+		_diamond_outline(at, 22.0 + 4.0 * beat, ring)
+		ring.a = 0.5 + 0.4 * beat
+		_diamond_outline(at, 15.0, ring)
+
+		var text := Strings.text("MAP_START_HERE")
+		var width := FONT_UI.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 8).x + 14.0
+		var tag := Rect2(at.x - width * 0.5, at.y - 48.0, width, 16.0)
+		var back := VOID
+		back.a = 0.85
+		draw_rect(tag, back)
+		var edge := VOLT
+		edge.a = 0.7
+		draw_rect(Rect2(tag.position, Vector2(tag.size.x, 1.0)), edge)
+		draw_rect(Rect2(Vector2(tag.position.x, tag.end.y - 1.0), Vector2(tag.size.x, 1.0)), edge)
+		_text(FONT_UI, text, Vector2(at.x, tag.position.y + 11.0), 8, VOLT, true)
+		# The pointer, dropping onto the star and back.
+		var drop := 2.0 * beat
+		draw_colored_polygon(PackedVector2Array([
+			at + Vector2(-5.0, -30.0 + drop), at + Vector2(5.0, -30.0 + drop),
+			at + Vector2(0.0, -21.0 + drop),
+		]), Color(VOLT, 0.55 + 0.45 * beat))
 
 
 func _draw_caption() -> void:

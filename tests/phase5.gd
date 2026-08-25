@@ -24,6 +24,7 @@ func _ready() -> void:
 	_test_swap()
 	_test_spark_table()
 	_test_tail_marking()
+	_test_deflection()
 	_test_capsule_behaviour()
 	_test_recording_mode()
 	_test_no_frame_allocation()
@@ -400,6 +401,65 @@ func _test_tail_marking() -> void:
 	grid.build([".............", ".SSSSSSSSSSS.", "............."], 0.0)
 	ok(grid.in_the_tail(), "unbreakable bricks leave nothing to look for")
 	eq(grid.remaining_breakable(), 0, "and nothing to clear")
+
+
+# --- The one thing the whole game is made of ----------------------------
+
+## Where the ball lands on the shield decides where it goes. It is the
+## strategic element of a brick breaker, and it is measured here across
+## the whole width rather than trusted.
+func _test_deflection() -> void:
+	var arena := Arena.new()
+	add_child(arena)
+	var paddle := Paddle.new()
+	add_child(paddle)
+	paddle.position = Vector2(195.0, 700.0)
+	paddle.set_bounds(6.0, 384.0)
+	var ball := Ball.new()
+	ball.arena = arena
+	ball.paddle = paddle
+	add_child(ball)
+	ball.stuck = false
+
+	for width in [Paddle.WIDTH_NORMAL, Paddle.WIDTH_WIDE, Paddle.WIDTH_NARROW]:
+		paddle.set_width(width)
+		var half := paddle.half_width()
+		var previous := 999.0
+		for step in 9:
+			var dx := lerpf(-half + 2.0, half - 2.0, float(step) / 8.0)
+			ball.global_position = Vector2(paddle.position.x + dx, paddle.top_y() - ball.radius - 0.5)
+			ball.velocity = Vector2(0.0, 320.0)
+			ball._bounce_off_paddle()
+			ok(ball.velocity.y < 0.0, "a catch at %+.0f sends the ball up" % dx)
+			if absf(dx) > 6.0 and not paddle.is_sweet(dx):
+				ok(signf(ball.velocity.x) == signf(dx),
+					"and a catch left of centre goes left (%+.0f -> %+.0f)" % [dx, ball.velocity.x])
+			var angle := rad_to_deg(atan2(-ball.velocity.y, ball.velocity.x))
+			ok(angle >= Ball.MIN_ANGLE_DEG - 0.5 and angle <= 180.0 - Ball.MIN_ANGLE_DEG + 0.5,
+				"and never flatter than the minimum (%.0f degrees)" % angle)
+			previous = angle
+
+	# And the shield's own motion carries: a catch made while sweeping
+	# left leans left, which is what makes a swipe a shot.
+	paddle.set_width(Paddle.WIDTH_NORMAL)
+	ball.global_position = Vector2(paddle.position.x, paddle.top_y() - ball.radius - 0.5)
+	ball.velocity = Vector2(0.0, 320.0)
+	paddle._velocity_x = 0.0
+	ball._bounce_off_paddle()
+	var still := ball.velocity.x
+	ball.global_position = Vector2(paddle.position.x, paddle.top_y() - ball.radius - 0.5)
+	ball.velocity = Vector2(0.0, 320.0)
+	paddle._velocity_x = -1600.0
+	ball._bounce_off_paddle()
+	ok(ball.velocity.x < still - 40.0,
+		"a shield sweeping left carries the ball left (%+.0f against %+.0f)" % [ball.velocity.x, still])
+	ok(rad_to_deg(atan2(-ball.velocity.y, absf(ball.velocity.x))) >= Ball.MIN_ANGLE_DEG - 0.5,
+		"and the carry cannot flatten it past the minimum")
+	paddle._velocity_x = 0.0
+
+	ball.queue_free()
+	paddle.queue_free()
+	arena.queue_free()
 
 
 # --- What the capsules do, not just what they are -----------------------
