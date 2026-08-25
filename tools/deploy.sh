@@ -122,17 +122,23 @@ fi
 # configuration, and the project is signed automatically for development.
 # Xcode calls that a conflict and refuses before it compiles anything.
 #
-# A release build on this machine is a check that the code compiles and
-# packs in release configuration, not a submission: it is signed with the
-# development certificate. A real App Store build needs a distribution
-# certificate, which is an account matter, not a code one.
+# So: if there is a distribution certificate on this machine, the release
+# configuration is left alone and the build is a real one. If there is
+# not, it falls back to the development certificate and says so. That
+# build proves the code compiles and packs with optimisation on; it is
+# not something that can be uploaded.
 # Expanded below as ${SIGN_ARGS[@]+"${SIGN_ARGS[@]}"}, which is the only
 # way to pass a possibly-empty array under set -u in the bash macOS
 # ships. "${SIGN_ARGS[@]}" on its own is an unbound variable there, and
 # it took the debug build down with it.
 SIGN_ARGS=()
 if [ "$CONFIG" = "Release" ]; then
-  SIGN_ARGS=(CODE_SIGN_IDENTITY="Apple Development" CODE_SIGN_STYLE=Automatic)
+  if security find-identity -v -p codesigning 2>/dev/null | grep -q "Apple Distribution"; then
+    printf '    signing with the distribution certificate\n'
+  else
+    printf '\033[33m    No Apple Distribution certificate here, so this build is signed for\n    development: it checks the code, it cannot be uploaded. Make one with\n    Xcode > Settings > Accounts > Manage Certificates > + > Apple Distribution\033[0m\n'
+    SIGN_ARGS=(CODE_SIGN_IDENTITY="Apple Development" CODE_SIGN_STYLE=Automatic)
+  fi
 fi
 
 xcodebuild \
