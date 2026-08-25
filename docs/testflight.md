@@ -66,6 +66,23 @@ the app has a record in App Store Connect, so that comes first:
 Processing on Apple's side takes ten minutes to an hour. The build shows
 up under TestFlight in App Store Connect when it is done.
 
+## Export compliance
+
+The build answers it itself. `application/additional_plist_content` in
+the export preset carries
+
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+
+which is true of this game: it uses no encryption beyond what Apple
+provides. Without it every upload sits in App Store Connect as "Missing
+Compliance" and cannot be given to a tester until somebody clicks through
+a dialogue, once per build, forever.
+
+Build 1 was uploaded before this was added, so that one has to be
+answered by hand: TestFlight > the build > Manage next to Missing
+Compliance > No. Every build after it is clear on arrival.
+
 ## Do not delete the simulator runtimes
 
 They look like free disk space when the game is only ever deployed to a

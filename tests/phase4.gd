@@ -359,6 +359,14 @@ func _test_launch() -> void:
 	# Read as bytes rather than through the resource loader: loading a
 	# PNG as an image file warns that it will not work on export, and it
 	# is not being loaded for the game, only inspected.
+	# Export compliance, answered once in the build rather than by hand on
+	# every upload. Without it App Store Connect holds each build as
+	# "Missing Compliance" and it cannot be given to a tester.
+	var plist := str(cfg.get_value("preset.0.options", "application/additional_plist_content", ""))
+	ok(plist.contains("ITSAppUsesNonExemptEncryption"),
+		"the build answers the encryption question itself")
+	ok(plist.contains("<false/>"), "and the answer is no")
+
 	var blank := Image.new()
 	var bytes := FileAccess.get_file_as_bytes("res://assets/icons/launch_blank.png")
 	ok(blank.load_png_from_buffer(bytes) == OK, "the blank loads")
