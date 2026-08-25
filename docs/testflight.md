@@ -17,7 +17,34 @@ How to get a build to testers, and what to ask them.
    certificate, which is enough to prove the code and the export are
    sound.
 
-## The archive
+## The archive, in one command
+
+    MIN_FREE_GB=3 ./tools/deploy.sh --archive
+
+It exports the project, archives it, re-signs it for distribution and
+leaves an ipa in `build/ios/export/`. Twenty minutes, most of it the
+engine compiling with optimisation on.
+
+Then either drag the ipa into **Transporter** (free, Mac App Store), or
+`open build/ios/AstroBall.xcarchive` and use Xcode's Organizer:
+Distribute App > App Store Connect > Upload.
+
+Three things that stopped this the first time, all now handled by the
+script:
+
+- Godot writes `CODE_SIGN_IDENTITY = "Apple Distribution"` into the
+  release configuration and leaves `CODE_SIGN_STYLE` on Automatic. Those
+  cannot both be true, and Xcode refuses before compiling anything. The
+  script removes the line after each export, because Godot writes the
+  Xcode project fresh every time and a hand-edit would not survive.
+- The archive comes out signed for *development*. That is fine: the
+  export re-signs it, and that is where the distribution certificate is
+  used. Checking the archive and concluding something is wrong wastes an
+  afternoon.
+- A release *build* is not an archive. `--release --build` signs for
+  development on purpose and only proves the code compiles.
+
+## The manual route, if the script is not available
 
 A TestFlight build is a *distribution* build, which needs a distribution
 certificate and an App Store provisioning profile. Neither exists until

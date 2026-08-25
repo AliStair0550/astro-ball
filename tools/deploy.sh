@@ -26,11 +26,13 @@ SCHEME="AstroBall"
 CONFIG="Debug"
 EXPORT_MODE="--export-debug"
 INSTALL=1
+ARCHIVE=0
 MIN_FREE_GB="${MIN_FREE_GB:-4}"
 
 for arg in "$@"; do
   case "$arg" in
     --release) CONFIG="Release"; EXPORT_MODE="--export-release" ;;
+    --archive) CONFIG="Release"; EXPORT_MODE="--export-release"; ARCHIVE=1; INSTALL=0 ;;
     --build) INSTALL=0 ;;
     -h|--help) sed -n '2,20p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown option: $arg"; exit 2 ;;
@@ -138,23 +140,92 @@ fi
 # configuration, and the project is signed automatically for development.
 # Xcode calls that a conflict and refuses before it compiles anything.
 #
-# So: if there is a distribution certificate on this machine, the release
-# configuration is left alone and the build is a real one. If there is
-# not, it falls back to the development certificate and says so. That
-# build proves the code compiles and packs with optimisation on; it is
-# not something that can be uploaded.
+# The certificate is not what decides this: the signing style is. A plain
+# build with automatic signing always signs for development, and Godot
+# has written "Apple Distribution" into the release configuration by
+# hand, which Xcode calls a conflict and refuses.
+#
+# So a release *build* is signed for development on purpose. It is a
+# check that the code compiles and packs with optimisation on, nothing
+# more. Distribution signing belongs to `archive`, which is the thing
+# TestFlight actually wants, and that is --archive below.
 # Expanded below as ${SIGN_ARGS[@]+"${SIGN_ARGS[@]}"}, which is the only
 # way to pass a possibly-empty array under set -u in the bash macOS
 # ships. "${SIGN_ARGS[@]}" on its own is an unbound variable there, and
 # it took the debug build down with it.
 SIGN_ARGS=()
-if [ "$CONFIG" = "Release" ]; then
-  if security find-identity -v -p codesigning 2>/dev/null | grep -q "Apple Distribution"; then
-    printf '    signing with the distribution certificate\n'
-  else
-    printf '\033[33m    No Apple Distribution certificate here, so this build is signed for\n    development: it checks the code, it cannot be uploaded. Make one with\n    Xcode > Settings > Accounts > Manage Certificates > + > Apple Distribution\033[0m\n'
-    SIGN_ARGS=(CODE_SIGN_IDENTITY="Apple Development" CODE_SIGN_STYLE=Automatic)
-  fi
+if [ "$CONFIG" = "Release" ] && [ "$ARCHIVE" = "0" ]; then
+  SIGN_ARGS=(CODE_SIGN_IDENTITY="Apple Development" CODE_SIGN_STYLE=Automatic)
+fi
+
+if [ "$ARCHIVE" = "1" ]; then
+  security find-identity -v -p codesigning 2>/dev/null | grep -q "Apple Distribution" \
+    || fail "No Apple Distribution certificate on this machine, and an archive cannot
+be signed without one. Make it with
+
+  Xcode > Settings > Accounts > Manage Certificates > + > Apple Distribution"
+
+  # Godot writes CODE_SIGN_IDENTITY = "Apple Distribution" into the
+  # release configuration and leaves CODE_SIGN_STYLE on Automatic. Those
+  # two cannot both be true: with automatic signing Xcode picks the
+  # identity itself, and a manual one beside it is the conflict it
+  # refuses on. Taking the line out lets it choose — and for an archive
+  # what it chooses is the distribution certificate, which is the whole
+  # point of being here.
+  step "Archiving for the App Store"
+  sed -i '' '/CODE_SIGN_IDENTITY = "Apple Distribution";/d' \
+    "$BUILD/$SCHEME.xcodeproj/project.pbxproj"
+  rm -rf "$BUILD/$SCHEME.xcarchive"
+  xcodebuild archive \
+    -project "$BUILD/$SCHEME.xcodeproj" \
+    -scheme "$SCHEME" \
+    -configuration Release \
+    -destination "generic/platform=iOS" \
+    -archivePath "$BUILD/$SCHEME.xcarchive" \
+    -derivedDataPath "$DERIVED" \
+    -allowProvisioningUpdates 2>&1 | tail -25
+  [ "${PIPESTATUS[0]}" -eq 0 ] || fail "The archive failed. The lines above are Xcode's, not ours."
+  printf '\n\033[1m==> Archived: %s\033[0m\n' "$BUILD/$SCHEME.xcarchive"
+
+  # The archive itself comes out signed for development, because that is
+  # what the project's automatic signing is registered for. That is not a
+  # problem and not worth fighting: exporting re-signs it, and this is
+  # where the distribution certificate is finally used.
+  step "Exporting for App Store Connect"
+  cat > "$BUILD/ExportOptions.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>teamID</key>
+	<string>KSB76PZZ3D</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>uploadSymbols</key>
+	<true/>
+	<key>destination</key>
+	<string>export</string>
+</dict>
+</plist>
+PLIST
+  rm -rf "$BUILD/export"
+  xcodebuild -exportArchive \
+    -archivePath "$BUILD/$SCHEME.xcarchive" \
+    -exportOptionsPlist "$BUILD/ExportOptions.plist" \
+    -exportPath "$BUILD/export" \
+    -allowProvisioningUpdates 2>&1 | tail -12
+  [ "${PIPESTATUS[0]}" -eq 0 ] || fail "The export failed. The lines above are Xcode's, not ours."
+
+  IPA="$BUILD/export/$SCHEME.ipa"
+  [ -f "$IPA" ] || fail "The export claimed to work and there is no ipa at $IPA."
+  SIGNER=$(codesign -dv --verbose=2 "$BUILD/$SCHEME.xcarchive/Products/Applications/$SCHEME.app" 2>&1 \
+    | grep -m1 "Authority=Apple" | sed 's/Authority=//')
+  printf '\n\033[1m==> Ready to upload: %s\033[0m\n' "$IPA"
+  printf '    %s MB, signed for distribution\n' "$(( $(stat -f%z "$IPA") / 1048576 ))"
+  printf '\033[32m    Drag it into Transporter, or open the archive in Xcode:\n    open "%s"\033[0m\n' "$BUILD/$SCHEME.xcarchive"
+  exit 0
 fi
 
 xcodebuild \
