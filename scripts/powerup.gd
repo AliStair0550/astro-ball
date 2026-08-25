@@ -131,6 +131,16 @@ var _lane_x := 0.0
 
 var _angle := 0.0
 var _time := 0.0
+## The snap. Within twelve pixels the capsule is caught rather than
+## collided with: it is pulled into the paddle over forty milliseconds,
+## which is the difference between a pickup and a hit test.
+const SNAP_REACH := 12.0
+const SNAP_TIME := 0.04
+
+var _snap_from := Vector2.ZERO
+var _snap_to := Vector2.ZERO
+var _snap_t := -1.0
+
 ## Set by the manager on pickup: the capsule implodes into the paddle.
 var _implode := 0.0
 var _implode_target := Vector2.ZERO
@@ -166,6 +176,27 @@ func rect() -> Rect2:
 	return Rect2(position - SIZE * 0.5, SIZE)
 
 
+## True once the capsule is being pulled in, so nothing else acts on it.
+func is_snapping() -> bool:
+	return _snap_t >= 0.0
+
+
+## Begins the pull. Returns false if it was already being pulled, so a
+## capsule cannot be caught twice.
+func snap_to(target: Vector2) -> bool:
+	if _snap_t >= 0.0:
+		return false
+	_snap_from = position
+	_snap_to = target
+	_snap_t = 0.0
+	return true
+
+
+## True when the pull has arrived.
+func snap_done() -> bool:
+	return _snap_t >= SNAP_TIME
+
+
 ## The capsule implodes into the paddle instead of simply vanishing.
 func implode_to(target: Vector2) -> void:
 	_implode_target = target
@@ -181,6 +212,11 @@ func _process(delta: float) -> void:
 		if _implode >= 1.0:
 			queue_free()
 	else:
+		if _snap_t >= 0.0:
+			_snap_t += delta
+			position = _snap_from.lerp(_snap_to, ease(clampf(_snap_t / SNAP_TIME, 0.0, 1.0), 0.4))
+			queue_redraw()
+			return
 		position.y += FALL_SPEED * delta
 		if is_bad(id):
 			# Kept inside the field: a capsule that swings off the edge

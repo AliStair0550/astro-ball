@@ -156,6 +156,16 @@ func spawn(at: Vector2, from_spark := false) -> void:
 	_first_spawned = true
 
 
+## Close enough to be caught: overlapping the shield, or within the snap
+## reach of it and on the way down onto it.
+func _within_reach(capsule: Powerup) -> bool:
+	var deck := paddle.world_rect()
+	if capsule.rect().intersects(deck):
+		return true
+	return capsule.rect().grow(Powerup.SNAP_REACH).intersects(deck) \
+		and capsule.position.y <= deck.get_center().y
+
+
 func _pick_id() -> String:
 	if table.is_empty():
 		return ""
@@ -211,11 +221,17 @@ func _process(delta: float) -> void:
 		var capsule := _capsules[i]
 		if not is_instance_valid(capsule):
 			_capsules.remove_at(i)
-		elif paddle and capsule.rect().intersects(paddle.world_rect()):
-			var id := capsule.id
-			capsule.implode_to(paddle.global_position)
-			_capsules.remove_at(i)
-			_apply(id)
+		elif capsule.is_snapping():
+			# Already caught. It is being pulled in, and the effect fires
+			# when it arrives, once.
+			if capsule.snap_done():
+				var caught := capsule.id
+				capsule.implode_to(paddle.global_position)
+				_capsules.remove_at(i)
+				_apply(caught)
+		elif paddle and _within_reach(capsule):
+			# The last twelve pixels are a catch rather than a collision.
+			capsule.snap_to(paddle.global_position - Vector2(0.0, Paddle.HEIGHT))
 		i -= 1
 
 	if not _rolling.is_empty():

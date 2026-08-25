@@ -175,6 +175,46 @@ func remaining_breakable() -> int:
 	return n
 
 
+## The wall as a list of hits left, one entry per cell, -1 where there
+## never was a brick and 0 where one has been broken. Enough to put the
+## field back exactly, and small enough to write on every pause.
+func snapshot() -> Array:
+	var out: Array = []
+	for brick in _bricks:
+		if brick == null:
+			out.append(-1)
+		elif not brick.alive:
+			out.append(0)
+		else:
+			out.append(brick.hits_left)
+	return out
+
+
+## Puts a snapshot back onto a grid already built from the same level.
+## Returns false if the shape does not match, in which case the field is
+## left as it was built.
+func restore(state: Array) -> bool:
+	if state.size() != _bricks.size():
+		return false
+	for i in _bricks.size():
+		var brick: Brick = _bricks[i]
+		var hits := int(state[i])
+		if brick == null:
+			continue
+		if hits <= 0:
+			brick.alive = false
+			continue
+		brick.alive = true
+		brick.hits_left = mini(hits, brick.hits_left)
+		# A brick that has been chipped shows it, and a hidden one that
+		# was revealed stays revealed.
+		if brick.hits_left < Brick.DATA[brick.type]["hits"]:
+			brick.revealed = true
+	_clear_emitted = false
+	queue_redraw()
+	return true
+
+
 func live_bricks() -> Array[Brick]:
 	var out: Array[Brick] = []
 	for brick in _bricks:

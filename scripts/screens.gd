@@ -60,6 +60,8 @@ var universes: Array[Dictionary] = []
 var _reset_armed := false
 ## Once a finger has touched the screen, the mouse is a fiction Godot
 ## keeps up for us, and following it lights up buttons nobody is over.
+## Set by the game on the first run of a test build.
+var show_test_notice := false
 var _touch_seen := false
 var _par_note := ""
 const PRESS_DEBOUNCE_MS := 150.0
@@ -380,6 +382,15 @@ func _draw_title() -> void:
 	var hint := SLATE
 	hint.a = blink * 0.8
 	_centered(FONT_UI, Strings.text("HINT_TITLE"), cx, 760.0, 9, hint, 1.8, false)
+
+	# The one line a test build says about itself. Once per install, and
+	# only where OS.is_debug_build() is true, so it cannot reach a
+	# release build even if the flag that remembers it is lost.
+	if show_test_notice:
+		var notice := EMBER
+		notice.a = 0.35 + 0.35 * sin(_time * 2.2)
+		draw_rect(Rect2(0.0, 700.0, screen_size.x, 26.0), Color(VOID, 0.75))
+		_centered(FONT_UI, Strings.text("TEST_BUILD_NOTICE"), cx, 717.0, 9, notice, 1.6, false)
 
 
 func _draw_universes() -> void:

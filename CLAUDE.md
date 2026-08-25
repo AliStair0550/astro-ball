@@ -1219,3 +1219,61 @@ regel som ceremonien: der findes ingen tilstand mellem "kør den ud" og
 Har man sprunget en bane over og klarer level 12 alligevel, er der ingen
 konstellation at tegne, og man lander på kortet som før. Billedet er
 universet, der er færdigt, ikke level 12, der er færdigt.
+
+---
+
+## Fase 9: juice, Game Center, session, TestFlight
+
+**Den sidste klods hænger.** 80 ms i fjerdedels fart, i spillerens egen
+tid og ikke i urets, og præcis én gang pr. bane. Den hænger på gridets
+`cleared`-signal, som udsendes én gang uanset om en bold tog den sidste
+klods eller en kæde gjorde. Derfor virker kæde-tilfældet af sig selv:
+signalet kommer på kædens sidste klods, ikke på den, der blev ramt.
+
+**Redningen.** Et greb inden for 30 px af Ember-linjen strækker tiden til
+0,6 i 120 ms, sender ti gnister op fra skjoldets kant og har sin egen
+lyd. Højst én gang hvert tredje sekund: en bold, der rasler langs bunden,
+ville ellers sætte hele spillet i slowmotion.
+
+**Kombo-milepæle.** Ved 10 vokser halen fire led, og en anden stemme
+kommer ind under dronen. Ved 20 ånder containment-feltet i takt med den.
+Ingen screen shake. Alt går tilbage i ét trin, når komboen brydes — og
+testen kræver symmetri, for det er sådan et spil ender med en permanent
+lang hale efter én god tur.
+
+**Kapslerne fanges.** De sidste tolv pixels er et greb, ikke en kollision:
+kapslen trækkes ind i skjoldet over 40 ms. Effekten udløses, når den
+lander, én gang, uanset hvor mange frames turen tager.
+
+**Dronen har en tabel.** `Audio.DRONE_TUNING`, ét blok pr. univers, med
+pitch, filterbånd og den anden stemmes stemning og styrke. The Drift står
+højt og tyndt med filteret godt åbent, og dens lag ligger en kvint over i
+stedet for en oktav under — det er dét, der gør den metallisk frem for
+vejragtig. Universerne 2 til 5 kan lyde som sig selv uden at røre andet
+end den tabel.
+
+**Session.** `scripts/session.gd` skriver banen ned, når appen går i
+baggrunden: bane, mur, score, liv. Kommer man tilbage — også efter appen
+er blevet dræbt — ligger banen som den var, med bolden klæbet til
+paddlen. Kapsler i luften kastes væk. En kapsel, der har hængt i to dage
+og så falder ned over en spiller, der har glemt banen, er ikke en
+venlighed. En bane, der slutter, tager sin session med sig, uanset
+hvordan den slutter.
+
+**Game Center er en søm, ikke en integration.** Godot 4 har ingen Game
+Center — 3.x-modulet kom ikke med over — og den rigtige kræver et
+iOS-plugin, der ikke kan bygges, før appen har en post i App Store
+Connect. `scripts/game_center.gd` er hele fladen, spillet kalder, med
+platformen bagved valgfri: uden plugin er hvert kald en no-op, der
+returnerer false. Ti achievements og fjorten leaderboards ligger i
+`docs/gamecenter.md` med de id'er, der skal tastes ind.
+
+**TestFlight.** Version 1.0, build 1. `docs/testflight.md` har hele vejen
+fra arkiv til ekstern gruppe, og fem spørgsmål, der er værd at stille en
+tester — "any feedback?" giver ingenting brugbart tilbage.
+
+En fejl værd at huske: `pulse_pattern` brugte `create_timer` til de
+forsinkede knok. En timer, der stadig venter, når træet lukker, er et
+objekt, der bliver efterladt, og autopiloten rydder tolv baner pr.
+kørsel. Køen ligger i `_process` nu, og hukommelsen hen over zonen faldt
+fra 4,8 til 1,4 MB.

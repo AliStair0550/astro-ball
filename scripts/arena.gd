@@ -70,6 +70,9 @@ var _danger := 0.0
 ## Section 5: the Shield is a Volt line across the bottom of the field,
 ## good for one save. It is drawn over the Ember line, because it is
 ## standing between you and it.
+## Combo 20: the containment field breathes in time with the drone. Soft
+## on purpose — this is the one milestone with no shake behind it.
+var combo_pulse := false
 var shield_armed := false
 var _shield_flash := 0.0
 var _celebrate := 0.0
@@ -243,6 +246,10 @@ func _draw_frame() -> void:
 
 func _draw_energy_line() -> void:
 	var pulse := 0.46 + 0.14 * sin(TAU * _time / PULSE_PERIOD)
+	if combo_pulse:
+		# Same period as the drone's own breath, so the field and the
+		# room agree rather than arguing.
+		pulse += 0.30 * (0.5 + 0.5 * sin(TAU * _time / 2.4))
 	var c := ENERGY
 	c.a = pulse
 	var top := HUD_HEIGHT + WALL

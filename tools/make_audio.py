@@ -299,6 +299,17 @@ def make_star_tick():
         write("star_%d" % (i + 1), buf)
 
 
+def make_save():
+    """Redningen. En opadgaaende kvint med luft i, saa den kan hoeres
+    gennem slowmotion uden at lyde som en power-up."""
+    buf = silence(0.7)
+    add(buf, 0.0, hit(0.26, note_hz(-5), 0.09, "tri"), 0.5)
+    add(buf, 0.05, hit(0.36, note_hz(7), 0.14, "sine"), 0.45)
+    add(buf, 0.05, hit(0.30, note_hz(19), 0.10, "sine"), 0.22)
+    add(buf, 0.10, hit(0.46, note_hz(12), 0.20, "tri"), 0.28)
+    write("save", buf)
+
+
 def make_combo():
     """Kombo 5, 10, 20. En kvint der glimter."""
     buf = silence(0.7)
@@ -368,6 +379,7 @@ def main():
     make_combo()
     make_powerup_neutral()
     make_star_tick()
+    make_save()
     make_ui()
     make_launch(rng)
     make_drone()

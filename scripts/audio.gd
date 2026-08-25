@@ -25,6 +25,7 @@ const BANK := {
 	"star_1": "res://assets/audio/star_1.wav",
 	"star_2": "res://assets/audio/star_2.wav",
 	"star_3": "res://assets/audio/star_3.wav",
+	"save": "res://assets/audio/save.wav",
 	"laser": "res://assets/audio/laser.wav",
 	"life_lost": "res://assets/audio/life_lost.wav",
 	"level_clear": "res://assets/audio/level_clear.wav",
@@ -37,6 +38,26 @@ const BANK := {
 }
 
 const DRONE_PATH := "res://assets/audio/drone.wav"
+
+## The drone, per universe. One block, so universes 2 to 5 can sound
+## like themselves without touching anything but this table.
+##
+##   pitch      the drone's own pitch. Below 1 is deeper.
+##   cutoff     the filter at rest, and where it opens to at full combo.
+##   layer      the second voice that arrives at combo 10: its pitch
+##              against the first, and how loud it sits under it.
+##
+## The Drift is cold and metallic: the drone sits high and thin with the
+## filter well open, and its layer is a fifth above rather than an
+## octave below, which is what makes it read as metal rather than as
+## weather.
+const DRONE_TUNING := {
+	"baeltet": {"pitch": 1.06, "cutoff": [300.0, 640.0], "layer_pitch": 1.5, "layer_gain": 0.42},
+	"isringen": {"pitch": 1.18, "cutoff": [420.0, 900.0], "layer_pitch": 2.0, "layer_gain": 0.34},
+	"solvinden": {"pitch": 0.82, "cutoff": [180.0, 460.0], "layer_pitch": 1.25, "layer_gain": 0.5},
+	"taagen": {"pitch": 0.9, "cutoff": [150.0, 380.0], "layer_pitch": 0.75, "layer_gain": 0.46},
+	"hullet": {"pitch": 0.62, "cutoff": [110.0, 300.0], "layer_pitch": 0.5, "layer_gain": 0.55},
+}
 const VOICES := 14
 ## The brick click rises with the combo, one octave at most.
 const MAX_COMBO_SEMITONES := 12.0
@@ -50,6 +71,11 @@ var _drone_level := 0.0
 ## A lost ball pulls the floor out from under the drone and lets it come
 ## back. Cutting it dead made the field feel switched off.
 var _drone_dip := 0.0
+## The second voice. Silent until a combo of ten asks for it.
+var _drone_layer: AudioStreamPlayer
+var _layer_level := 0.0
+var _layer_on := false
+var _tuning: Dictionary = DRONE_TUNING["baeltet"]
 var _sfx_bus := 1
 var _drone_bus := 2
 var _drone_filter: AudioEffectLowPassFilter
@@ -74,6 +100,11 @@ func _ready() -> void:
 	drone_stream.loop_end = drone_stream.data.size() / 2
 	_drone.stream = drone_stream
 	add_child(_drone)
+
+	_drone_layer = AudioStreamPlayer.new()
+	_drone_layer.bus = "Drone"
+	_drone_layer.stream = drone_stream
+	add_child(_drone_layer)
 
 	if has_node("/root/GameSettings"):
 		get_node("/root/GameSettings").changed.connect(_apply_settings)
@@ -176,11 +207,29 @@ func stop_all() -> void:
 		# Dropping the stream releases the playback the audio server is
 		# still holding. Stopping alone does not.
 		voice.stream = null
+	if _drone_layer:
+		_drone_layer.stop()
+		_drone_layer.stream = null
 	if _drone:
 		_drone.stop()
 		_drone.stream = null
 	_drone_level = 0.0
 	_drone_target = 0.0
+
+
+## Section 12: the drone belongs to the universe it is played in.
+func set_universe(slug: String) -> void:
+	_tuning = DRONE_TUNING.get(slug, DRONE_TUNING["baeltet"])
+	_drone.pitch_scale = float(_tuning["pitch"])
+	_drone_layer.pitch_scale = float(_tuning["pitch"]) * float(_tuning["layer_pitch"])
+
+
+## Combo 10 brings a second voice in under the first, and losing the
+## combo takes it away again.
+func set_drone_layer(on: bool) -> void:
+	_layer_on = on
+	if on and not _drone_layer.playing:
+		_drone_layer.play()
 
 
 func start_drone() -> void:
@@ -191,6 +240,7 @@ func start_drone() -> void:
 
 func stop_drone() -> void:
 	_drone_target = 0.0
+	_layer_on = false
 
 
 ## The drone rises a little with the combo. A little, no more.
@@ -216,4 +266,15 @@ func _process(delta: float) -> void:
 	if not _drone.playing and _drone_target > 0.0:
 		_drone.play()
 	_drone.volume_db = linear_to_db(clampf(dipped * 0.16, 0.0001, 1.0))
-	_drone_filter.cutoff_hz = lerpf(240.0, 520.0, clampf(dipped - 1.0, 0.0, 1.0))
+	var band: Array = _tuning["cutoff"]
+	_drone_filter.cutoff_hz = lerpf(float(band[0]), float(band[1]), clampf(dipped - 1.0, 0.0, 1.0))
+
+	_layer_level = move_toward(_layer_level, 1.0 if _layer_on else 0.0, delta * 1.6)
+	if _layer_level <= 0.001:
+		if _drone_layer.playing:
+			_drone_layer.stop()
+	else:
+		if not _drone_layer.playing:
+			_drone_layer.play()
+		_drone_layer.volume_db = linear_to_db(
+			clampf(dipped * 0.16 * float(_tuning["layer_gain"]) * _layer_level, 0.0001, 1.0))

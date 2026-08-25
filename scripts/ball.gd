@@ -66,6 +66,9 @@ const SWEET_BONUS := 0.10
 const SWEET_BONUS_TIME := 2.0
 
 const TRAIL_LENGTH := 12
+## Combo 10 adds four. The tail is the one thing on the ball a player
+## watches, so it is where a milestone belongs.
+const TRAIL_BONUS := 4
 const SKIN := 0.01
 const MAX_SUBSTEPS := 16
 
@@ -136,6 +139,8 @@ var _paddle_faces: Array = [
 	[Vector2.ZERO, Vector2.ZERO, "paddle_side"],
 ]
 var _spark_drip := 0.0
+## Set by the game at a combo milestone, and cleared when it breaks.
+var long_trail := false
 
 
 func _ready() -> void:
@@ -191,9 +196,13 @@ func _stick_position() -> Vector2:
 	return anchor
 
 
+func trail_length() -> int:
+	return TRAIL_LENGTH + (TRAIL_BONUS if long_trail else 0)
+
+
 func _fill_trail() -> void:
 	_trail.clear()
-	for i in TRAIL_LENGTH:
+	for i in trail_length():
 		_trail.append(global_position)
 
 
@@ -280,8 +289,8 @@ func _physics_process(delta: float) -> void:
 	_resolve_paddle_overlap()
 
 	_trail.push_front(global_position)
-	if _trail.size() > TRAIL_LENGTH:
-		_trail.resize(TRAIL_LENGTH)
+	if _trail.size() > trail_length():
+		_trail.resize(trail_length())
 
 	if arena and global_position.y - radius > arena.death_y:
 		lost.emit(self)

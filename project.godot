@@ -12,6 +12,7 @@ config_version=5
 
 config/name="Astro Ball"
 config/description="Break through the asteroid fields of The Drift."
+config/version="1.0"
 run/main_scene="res://scenes/game.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://assets/icons/icon_1024.png"
@@ -29,6 +30,8 @@ boot_splash/minimum_display_time=0
 
 GameSettings="*res://scripts/settings.gd"
 GameProgress="*res://scripts/progress.gd"
+GameSession="*res://scripts/session.gd"
+GameCenterLink="*res://scripts/game_center.gd"
 
 [display]
 

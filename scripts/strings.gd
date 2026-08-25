@@ -33,6 +33,9 @@ const TABLE := {
 	"BRAND_LINE_2": "BALL",
 	"TAGLINE": "BREAK THROUGH THE DRIFT",
 	"HINT_TITLE": "CLICK TO AIM · MOVE TO STEER",
+	# Phase 9. Shown once per install, in a test build only, and it
+	# links nowhere: feedback goes through TestFlight's own button.
+	"TEST_BUILD_NOTICE": "TEST BUILD. BREAK THINGS. REPORT.",
 	"BEST": "BEST",
 	"BEST_VALUE": "BEST  %s",
 

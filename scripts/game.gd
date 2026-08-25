@@ -22,6 +22,23 @@ const HITSTOP_BRICK := 0.016
 const HITSTOP_HARDENED := 0.012
 const HITSTOP_BLAST := 0.06
 
+## The last brick of a level, in slow motion. Eighty milliseconds of the
+## player's own time, not of the clock's, and exactly once per level: it
+## hangs off the grid's cleared signal, which fires on the last brick to
+## die whether a ball hit it or a chain took it.
+const LAST_BRICK_SCALE := 0.25
+const LAST_BRICK_TIME := 0.08
+
+## The save: a catch inside thirty pixels of the line.
+const SAVE_REACH := 30.0
+const SAVE_SCALE := 0.6
+const SAVE_TIME := 0.12
+const SAVE_COOLDOWN_MS := 3000.0
+
+## What a combo is worth beyond points.
+const COMBO_TRAIL_AT := 10
+const COMBO_FIELD_AT := 20
+
 const SHAKE_WALL := Vector2(2.0, 0.06)
 const SHAKE_BLAST := Vector2(6.0, 0.12)
 
@@ -81,6 +98,11 @@ var _meta_cache: Array[Dictionary] = []
 var recording := false
 ## How much of the finale has already been heard, so the notes are not
 ## played twice when it is run to the end by a press.
+var _last_save_ms := -10000.0
+## The ceremony waits for the slow motion to finish.
+var _clear_pending := false
+## How many bricks the chain running right now has taken.
+var _chain_run := 0
 var _finale_stars := 0
 var _finale_lines := 0
 
@@ -141,8 +163,20 @@ func _ready() -> void:
 		push_error("No levels in res://levels")
 		return
 
-	_load_level(0)
-	_set_state(State.TITLE)
+	# A level left in flight comes back held rather than running: the
+	# player decides when it starts again, which is the whole point of
+	# it having been interrupted.
+	# A test build says so once, and then never again.
+	if OS.is_debug_build() and not GameSettings.seen_test_notice:
+		screens.show_test_notice = true
+		GameSettings.seen_test_notice = true
+		GameSettings.save_settings()
+
+	if _restore_session():
+		_set_state(State.PAUSED)
+	else:
+		_load_level(0)
+		_set_state(State.TITLE)
 	_debug_label.visible = false
 
 
@@ -151,6 +185,9 @@ func _ready() -> void:
 func _set_state(new_state: State) -> void:
 	state = new_state
 	_state_timer = 0.0
+	# No screen is ever entered in slow motion.
+	if new_state != State.PLAYING:
+		game_feel.end_slow_motion()
 
 	var overlay := Screens.Screen.NONE
 	match state:
@@ -267,6 +304,7 @@ func _on_screen_action(name: String) -> void:
 		"restart":
 			# The field from the start, three lives, level score cleared.
 			audio.play("ui_select")
+			GameSession.clear()
 			run.restart_level()
 			_load_level(level_index)
 			_set_state(State.LEVEL_INTRO)
@@ -285,7 +323,11 @@ func _on_screen_action(name: String) -> void:
 			audio.play("ui_select")
 			_set_state(State.PLAYING)
 		"menu":
+			# Leaving on purpose gives the level up. Coming back to the
+			# title with a level still saved would mean two truths about
+			# where the player is.
 			audio.play("ui_back")
+			GameSession.clear()
 			_set_state(State.TITLE)
 		"back":
 			audio.play("ui_back")
@@ -350,6 +392,7 @@ func _on_continue_denied() -> void:
 ## PLAY on a fresh save is level 1. On a save with progress it is the
 ## first field still standing, because that is what the player means.
 func _start_new_game() -> void:
+	GameSession.clear()
 	run.start_run()
 	_load_level(_first_unfinished())
 	_set_state(State.LEVEL_INTRO)
@@ -430,6 +473,7 @@ func _open_chart(celebrate: bool) -> void:
 
 func _on_field_chosen(index: int) -> void:
 	audio.play("ui_select")
+	GameSession.clear()
 	run.start_run()
 	_load_level(index)
 	_set_state(State.LEVEL_INTRO)
@@ -479,6 +523,7 @@ func _load_level(index: int) -> void:
 	# good drops get more generous. Nothing says so on screen.
 	powerups.set_good_bonus(GameProgress.helper_points(int(level_data.get("id", 1))))
 	background.set_level_mood(int(level_data.get("id", 1)))
+	audio.set_universe(str(level_data.get("zone", "baeltet")))
 
 	paddle.set_width(Paddle.WIDTH_NORMAL)
 	paddle.laser = false
@@ -609,10 +654,45 @@ func _on_paddle_hit(pos: Vector2, _angle: float, sweet: bool) -> void:
 	# up behind the wall worth chasing.
 	run.on_paddle_hit()
 	audio.set_drone_intensity(0)
+	_apply_combo_milestones()
 	effects.sparks(pos, Vector2.UP, 2, Paddle.VOLT if sweet else Paddle.BONE)
 	audio.play("paddle", 1.12 if sweet else randf_range(0.97, 1.03), -2.0)
 	game_feel.pulse(GameFeel.HAPTIC_PADDLE)
+	_try_the_save(pos)
 	_refresh_hud()
+
+
+## The save. A catch made in the last thirty pixels before the line is
+## the best thing that happens in a run of this game, and it used to
+## sound and look exactly like every other catch.
+##
+## Rate limited to once every three seconds of real time: a ball rattling
+## along the bottom would otherwise put the whole game in slow motion.
+func _try_the_save(pos: Vector2) -> bool:
+	if arena.ember_line_y() - pos.y > SAVE_REACH:
+		return false
+	var now := float(Time.get_ticks_msec())
+	if now - _last_save_ms < SAVE_COOLDOWN_MS:
+		return false
+	_last_save_ms = now
+	game_feel.slow_motion(SAVE_SCALE, SAVE_TIME)
+	effects.sparks(Vector2(pos.x, paddle.top_y()), Vector2.UP, 10, Powerup.VOLT)
+	effects.shockwave(Vector2(pos.x, paddle.top_y()), 46.0, Powerup.VOLT)
+	audio.play("save", 1.0, -1.0)
+	game_feel.pulse(GameFeel.HAPTIC_POWERUP)
+	return true
+
+
+## Section: what a combo is worth beyond points. Ten lengthens the tail
+## and brings a second voice in under the drone; twenty sets the
+## containment field breathing in time with it. Both revert together,
+## and neither shakes the screen.
+func _apply_combo_milestones() -> void:
+	var long_tail := combo >= COMBO_TRAIL_AT
+	for ball in _balls:
+		ball.long_trail = long_tail
+	audio.set_drone_layer(long_tail)
+	arena.combo_pulse = combo >= COMBO_FIELD_AT
 
 
 func _on_brick_hit(brick: Brick, damage: int, pos: Vector2, _passed: bool, ball: Ball) -> void:
@@ -635,6 +715,16 @@ func _on_brick_damaged(brick: Brick) -> void:
 
 
 func _on_brick_destroyed(brick: Brick, by_chain: bool) -> void:
+	# A chain is a run of bricks taken without the ball touching one. Two
+	# achievements hang off how long it gets.
+	if by_chain:
+		_chain_run += 1
+		if _chain_run >= 5:
+			GameCenterLink.report("chain_of_five")
+		if _chain_run >= 30:
+			GameCenterLink.report("one_hit")
+	else:
+		_chain_run = 0
 	var points := run.on_brick_destroyed(brick.score_value())
 	_apply_ball_speed()
 
@@ -667,6 +757,7 @@ func _on_brick_destroyed(brick: Brick, by_chain: bool) -> void:
 			if not by_chain:
 				game_feel.hitstop(HITSTOP_BRICK)
 
+	_apply_combo_milestones()
 	if combo == 5 or combo == 10 or combo == 20:
 		effects.combo(combo)
 		audio.play("combo", 1.0 + float(combo) * 0.01, -4.0)
@@ -690,9 +781,22 @@ func _on_stone_popped(brick: Brick) -> void:
 	audio.play("brick", randf_range(0.7, 0.85), -4.0)
 
 
+## The grid says the field is empty. That signal fires once, on whatever
+## brick happened to be last — a ball's hit or the tail of a chain — so
+## the slow motion lands on the right frame either way.
 func _on_level_cleared() -> void:
+	if state != State.PLAYING or _clear_pending:
+		return
+	_clear_pending = true
+	game_feel.slow_motion(LAST_BRICK_SCALE, LAST_BRICK_TIME)
+
+
+## The ceremony, once the last brick has finished hanging in the air.
+func _begin_clear_ceremony() -> void:
+	_clear_pending = false
 	if state != State.PLAYING:
 		return
+	GameSession.clear()
 	# Section 15: cleared, cleared under par, cleared without losing the
 	# ball. Independent, and merged with what earlier attempts earned.
 	var level_id := int(level_data.get("id", 1))
@@ -708,6 +812,7 @@ func _on_level_cleared() -> void:
 	screens.level_time = run.level_time
 	screens.par_time = par
 	_star_sounds = screens.stars_earned
+	_report_clear(level_id, earned)
 	arena.celebrate()
 	background.blitz()
 	audio.play("level_clear")
@@ -715,6 +820,33 @@ func _on_level_cleared() -> void:
 	game_feel.pulse_pattern([[GameFeel.HAPTIC_LEVEL_CLEAR, 110.0],
 		[GameFeel.HAPTIC_LEVEL_CLEAR, 0.0]])
 	_set_state(State.LEVEL_CLEAR)
+
+
+## What a cleared level is worth outside the game. Every one of these is
+## a no-op unless a plugin and a signed-in player are both there.
+func _report_clear(level_id: int, earned: int) -> void:
+	GameCenterLink.submit_level_score(level_id, score)
+	var stars := 0
+	for entry in _level_meta():
+		stars += GameProgress.star_count(int(entry["id"]))
+	GameCenterLink.submit_total_stars(stars)
+
+	if level_id == 1:
+		GameCenterLink.report("first_breach")
+	if level_id == 6:
+		GameCenterLink.report("patience")
+	if level_id == level_paths.size():
+		GameCenterLink.report("the_drift_cleared")
+	if earned & GameProgress.STAR_NO_LOSS:
+		GameCenterLink.report("clean_sweep")
+	if earned & GameProgress.STAR_UNDER_PAR:
+		GameCenterLink.report("ahead_of_schedule")
+	if GameProgress.stars_for(level_id) == GameProgress.ALL_STARS:
+		GameCenterLink.report("three_of_three")
+	if _universe_complete():
+		GameCenterLink.report("constellation_charted")
+	if stars >= _level_meta().size() * 3:
+		GameCenterLink.report("full_chart")
 
 
 ## The Magnet held it. Same note as a paddle hit, a fifth lower, so the
@@ -768,6 +900,7 @@ func _on_ball_lost(ball: Ball) -> void:
 	powerups.guarantee_good()
 
 	if final:
+		GameSession.clear()
 		GameProgress.record_fail(int(level_data.get("id", 1)))
 		screens.high_score = GameProgress.high_score
 		screens.new_record = GameProgress.submit_score(run.score)
@@ -940,6 +1073,10 @@ func _process(delta: float) -> void:
 		positions.append(ball.global_position)
 	grid.update_proximity(positions)
 
+	# The hang on the last brick is over: the ceremony can start.
+	if _clear_pending and not game_feel.is_slow():
+		_begin_clear_ceremony()
+
 	if state == State.FINALE:
 		_run_finale()
 
@@ -1062,6 +1199,55 @@ func _notification(what: int) -> void:
 		NOTIFICATION_APPLICATION_PAUSED:
 			if state == State.PLAYING:
 				_set_state(State.PAUSED)
+			_store_session()
+		NOTIFICATION_WM_CLOSE_REQUEST:
+			_store_session()
+
+
+## The level in flight, written down. Phase 9, section 7: the app can be
+## closed in the middle of a level and the level comes back.
+func _store_session() -> void:
+	var playable := state == State.PLAYING or state == State.PAUSED \
+		or state == State.BALL_LOST
+	if not playable or level_data.is_empty():
+		return
+	GameSession.store(level_index, int(level_data.get("id", 1)), score, lives,
+		grid.snapshot(), run.run_time, run.run_bricks, run.best_combo)
+
+
+## Puts a stored level back. Returns false if there was nothing to put
+## back, or the wall did not fit the level it claims to belong to.
+func _restore_session() -> bool:
+	if not GameSession.has_session():
+		return false
+	var saved := GameSession.data()
+	var index := int(saved.get("level_index", 0))
+	if index < 0 or index >= level_paths.size():
+		GameSession.clear()
+		return false
+	run.start_run()
+	_load_level(index)
+	if int(level_data.get("id", -1)) != int(saved.get("level_id", -2)):
+		GameSession.clear()
+		return false
+	if not grid.restore(saved.get("bricks", [])):
+		GameSession.clear()
+		return false
+	# Every brick still standing counts, and a field with none left is
+	# not a session worth restoring.
+	if grid.remaining_breakable() <= 0:
+		GameSession.clear()
+		return false
+	score = int(saved.get("score", 0))
+	run.lives = int(saved.get("lives", START_LIVES))
+	run.run_time = float(saved.get("run_time", 0.0))
+	run.run_bricks = int(saved.get("run_bricks", 0))
+	run.best_combo = int(saved.get("best_combo", 0))
+	combo = 0
+	_clear_balls()
+	_spawn_ball(true)
+	_refresh_hud()
+	return true
 
 
 ## Section 18: the recording mode. Never visible to a player, and never

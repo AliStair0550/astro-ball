@@ -431,6 +431,14 @@ func _test_level_clear_freeze() -> void:
 	game._balls[0].launch()
 	var speed_before := game._balls[0].velocity.length()
 	game._on_level_cleared()
+	# Phase 9: the last brick hangs in the air first. Eighty milliseconds
+	# of the player's own time, and the ceremony is behind it.
+	ok(game.game_feel.is_slow(), "the last brick hangs")
+	eq(game.state, Game.State.PLAYING, "and the level is still running while it does")
+	game._on_level_cleared()
+	ok(game.game_feel.is_slow(), "and a second call cannot start it twice")
+	game.game_feel.end_slow_motion()
+	game._process(0.016)
 	eq(game.state, Game.State.LEVEL_CLEAR, "the state is LEVEL_CLEAR")
 	ok(game._balls[0].frozen, "the ball freezes on field cleared")
 	about(game._balls[0].velocity.length(), speed_before, 0.01, "speed is preserved through the freeze")

@@ -34,9 +34,21 @@ var _shake_duration := 0.0
 var _shake_left := 0.0
 
 var _hitstop_left := 0.0
+## Slow motion. Counted in real seconds, not scaled ones: 80 ms of
+## slowmo means 80 ms of the player's time, whatever the clock is doing.
+## The scale it returns to is whatever it was, so the autopilot's own
+## six times speed survives a slowmo passing through it.
+var _slowmo_until_ms := 0.0
+var _slowmo_base := 1.0
+var _slowmo_active := false
+## Queued knocks from pulse_pattern: {"left": seconds, "ms": int}.
+var _pending_pulses: Array[Dictionary] = []
 
 
 func _ready() -> void:
+	# Slow motion has to keep counting while the tree is slowed, and the
+	# real clock does not care about time_scale.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_camera = get_node_or_null(camera_path) as Camera2D
 	# Run after everything else, so the offset is fresh in the same frame.
 	process_priority = 100
@@ -61,6 +73,7 @@ func pulse(milliseconds: int) -> bool:
 ## the whole thing respects the Haptics setting, because the first pulse
 ## is the one that asks.
 func pulse_pattern(pattern: Array) -> void:
+	_pending_pulses.clear()
 	var when := 0.0
 	for i in pattern.size():
 		var step: Array = pattern[i]
@@ -69,9 +82,37 @@ func pulse_pattern(pattern: Array) -> void:
 		if when <= 0.0:
 			pulse(ms)
 		else:
-			var timer := get_tree().create_timer(when, false)
-			timer.timeout.connect(pulse.bind(ms), CONNECT_ONE_SHOT)
+			# Kept here rather than on a SceneTree timer: a timer still
+			# waiting when the tree goes down is an object left behind,
+			# and the autopilot clears twelve levels a run.
+			_pending_pulses.append({"left": when, "ms": ms})
 		when += gap
+
+
+## Slows the world to `factor` of its current speed for `seconds` of real
+## time. A second call while one is running extends it rather than
+## stacking, so nothing can leave the clock somewhere it cannot get back
+## from.
+func slow_motion(factor: float, seconds: float) -> void:
+	if not _slowmo_active:
+		_slowmo_base = Engine.time_scale
+		_slowmo_active = true
+	Engine.time_scale = _slowmo_base * factor
+	_slowmo_until_ms = maxf(_slowmo_until_ms, float(Time.get_ticks_msec()) + seconds * 1000.0)
+
+
+func is_slow() -> bool:
+	return _slowmo_active
+
+
+## Puts the clock back. Called when the slowmo runs out, and by anything
+## that changes state underneath it.
+func end_slow_motion() -> void:
+	if not _slowmo_active:
+		return
+	Engine.time_scale = _slowmo_base
+	_slowmo_active = false
+	_slowmo_until_ms = 0.0
 
 
 ## True while the game is frozen. The ball and paddle skip their update
@@ -99,6 +140,17 @@ func shake(amplitude: float, seconds: float) -> void:
 
 
 func _process(delta: float) -> void:
+	if _slowmo_active and float(Time.get_ticks_msec()) >= _slowmo_until_ms:
+		end_slow_motion()
+
+	var i := _pending_pulses.size() - 1
+	while i >= 0:
+		_pending_pulses[i]["left"] = float(_pending_pulses[i]["left"]) - delta
+		if float(_pending_pulses[i]["left"]) <= 0.0:
+			pulse(int(_pending_pulses[i]["ms"]))
+			_pending_pulses.remove_at(i)
+		i -= 1
+
 	if _hitstop_left > 0.0:
 		_hitstop_left = maxf(0.0, _hitstop_left - delta)
 
