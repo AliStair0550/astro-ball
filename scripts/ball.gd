@@ -58,6 +58,8 @@ const SWEET_ANGLE_DEG := 88.0
 ## return past the minimum angle.
 const CARRY_REFERENCE := 1600.0
 const CARRY_MAX := 0.42
+## Wobble's reach, in degrees either way.
+const WOBBLE_DEG := 12.0
 const LAUNCH_ANGLE_DEG := 80.0
 const LAUNCH_SPREAD_DEG := 4.0
 
@@ -141,6 +143,17 @@ var _paddle_faces: Array = [
 var _spark_drip := 0.0
 ## Set by the game at a combo milestone, and cleared when it breaks.
 var long_trail := false
+## Bomb: the next brick this ball touches goes off like a blast brick.
+var bomb := false
+## Shrink: a smaller ball, harder to catch and harder to aim.
+var shrunk := false:
+	set(value):
+		if value == shrunk:
+			return
+		shrunk = value
+		radius = BASE_RADIUS * (0.6 if value else 1.0) * (2.0 if giant else 1.0)
+## Wobble: the exit angle is off by up to twelve degrees, every time.
+var wobble := false
 
 
 func _ready() -> void:
@@ -435,7 +448,12 @@ func _exit_velocity(dx: float) -> Vector2:
 	if dir_x == 0.0:
 		dir_x = 1.0 if randf() < 0.5 else -1.0
 	var a := deg_to_rad(angle_deg)
-	var out := Vector2(cos(a) * dir_x, -sin(a))
+	if wobble:
+		# Not faster, not blind: unreliable. The shield answers a little
+		# differently every time, and no amount of aim fixes it.
+		angle_deg += randf_range(-WOBBLE_DEG, WOBBLE_DEG)
+	var out := Vector2(cos(a if not wobble else deg_to_rad(angle_deg)) * dir_x,
+		-sin(a if not wobble else deg_to_rad(angle_deg)))
 	out.x += clampf(paddle.velocity_x() / CARRY_REFERENCE, -CARRY_MAX, CARRY_MAX)
 	return _enforce_min_angle(out.normalized() * current_speed())
 

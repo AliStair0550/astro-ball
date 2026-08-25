@@ -149,6 +149,10 @@ const TABLE := {
 	"PU_DEATH": "DEATH",
 	"PU_SWAP": "SWAP",
 	"PU_LOTTERY": "LOTTERY",
+	"PU_BOMB": "BOMB",
+	"PU_BONUS": "BONUS",
+	"PU_SHRINK": "SHRINK",
+	"PU_WOBBLE": "WOBBLE",
 }
 
 

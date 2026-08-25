@@ -277,6 +277,15 @@ func _queue_chain(brick: Brick) -> void:
 		_pending.append({"brick": neighbour, "delay": CHAIN_DELAY * float(step), "from": origin})
 
 
+## Sets a brick off as though it were a blast brick: the eight around it
+## go, one at a time, and any blast brick among them starts its own. The
+## Bomb power-up is this, aimed by hand.
+func blast_at(brick: Brick) -> void:
+	if brick == null or not brick.alive:
+		return
+	_queue_chain(brick)
+
+
 ## Zap breaks the bricks beside the one that was hit. Returns the ones it
 ## took, so the bolt can be drawn to each of them.
 func zap_neighbours(brick: Brick) -> Array[Brick]:

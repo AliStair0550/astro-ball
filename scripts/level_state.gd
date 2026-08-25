@@ -102,6 +102,13 @@ func on_re_entry() -> void:
 	lives = 1
 
 
+## Points that did not come from a brick. The Bonus capsule is the only
+## thing that does this, and it does not touch the combo: catching a
+## capsule is not a hit.
+func add_score(points: int) -> void:
+	score += maxi(points, 0)
+
+
 func add_life() -> void:
 	lives += 1
 

@@ -15,16 +15,18 @@
   "ballSpeed": 380,
   "gridAnchor": 0,
   "powerups": {
-    "multi": 16,
-    "fireball": 16,
-    "giant": 14,
-    "laser": 12,
-    "zap": 10,
-    "wide": 7,
+    "multi": 14,
+    "fireball": 14,
+    "giant": 12,
+    "laser": 10,
+    "zap": 8,
+    "wide": 6,
     "narrow": 8,
     "fast": 6,
     "blind": 6,
-    "invert": 5
+    "invert": 5,
+    "bonus": 5,
+    "bomb": 6
   },
   "forcedFirstPowerup": null,
   "parTime": 85

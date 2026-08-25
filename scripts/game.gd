@@ -42,6 +42,10 @@ const COMBO_FIELD_AT := 20
 ## A chain throws its shards half again as fast as a ball does.
 const CHAIN_SHARD_SPEED := 1.6
 
+## What the Bonus capsule is worth. Two and a half thousand is about a
+## good level's score: enough to be worth crossing the field for.
+const BONUS_POINTS := 2500
+
 const SHAKE_WALL := Vector2(2.0, 0.06)
 const SHAKE_BLAST := Vector2(6.0, 0.12)
 
@@ -701,6 +705,15 @@ func _on_brick_hit(brick: Brick, damage: int, pos: Vector2, _passed: bool, ball:
 	if brick == null or not brick.alive:
 		return
 	_last_impact = pos
+	if ball.bomb and brick.is_breakable():
+		# The Bomb goes off where the player put it, once.
+		ball.bomb = false
+		for neighbour in grid.zap_neighbours(brick):
+			effects.lightning(brick.rect.get_center(), neighbour.rect.get_center(), Powerup.EMBER)
+		grid.blast_at(brick)
+		effects.shockwave(brick.rect.get_center(), 80.0, Powerup.EMBER)
+		game_feel.shake(SHAKE_BLAST.x, SHAKE_BLAST.y)
+		audio.play("blast", 0.9, 0.0)
 	if ball.zap and brick.is_breakable():
 		# Section 5: a small bolt to each brick it takes with it.
 		for neighbour in grid.zap_neighbours(brick):
@@ -959,6 +972,14 @@ func _on_powerup_collected(id: String) -> void:
 			_swap_bricks()
 		"death":
 			_death()
+		"bomb":
+			# Armed on every ball in play: with three of them the player
+			# gets one explosion, not three, and whichever lands first.
+			for ball in _balls:
+				ball.bomb = true
+		"bonus":
+			run.add_score(BONUS_POINTS)
+			effects.score_popup(paddle.global_position - Vector2(0.0, 40.0), BONUS_POINTS)
 	_sync_powerup_state()
 	_refresh_hud()
 
@@ -997,6 +1018,8 @@ func _sync_powerup_state() -> void:
 		ball.fireball = active.has("fireball")
 		ball.giant = active.has("giant")
 		ball.zap = active.has("zap")
+		ball.shrunk = active.has("shrink")
+		ball.wobble = active.has("wobble")
 
 
 ## A Lottery has been caught and is being drawn. The paddle keeps its

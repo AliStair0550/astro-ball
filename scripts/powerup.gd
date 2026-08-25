@@ -122,6 +122,33 @@ const CATALOG := {
 		"name": "Lottery", "color": FLARE, "kind": Kind.NEUTRAL,
 		"duration": 0.0, "icon": "question",
 	},
+	# The next brick the ball touches goes off like a blast brick. One
+	# shot, aimed by hand, and the only power-up in the game that lets a
+	# player put an explosion where they want one.
+	# Flare, not Ember: the pulsing red glow belongs to the punishments
+	# now, and a gift wearing the alarm colour undoes the whole signal.
+	"bomb": {
+		"name": "Bomb", "color": FLARE, "kind": Kind.GOOD,
+		"duration": 0.0, "icon": "bomb",
+	},
+	# Points, straight up. Not everything has to change how the game
+	# plays; some things are just worth catching.
+	"bonus": {
+		"name": "Bonus", "color": BONE, "kind": Kind.GOOD,
+		"duration": 0.0, "icon": "coin",
+	},
+	# A smaller ball is a smaller target for the shield and a smaller
+	# hammer for the wall.
+	"shrink": {
+		"name": "Shrink", "color": SLATE, "kind": Kind.BAD,
+		"duration": 15.0, "icon": "small_circle",
+	},
+	# The ball leaves the shield within twelve degrees of where it
+	# should. Not fast, not blind: unreliable.
+	"wobble": {
+		"name": "Wobble", "color": SLATE, "kind": Kind.BAD,
+		"duration": 12.0, "icon": "wave",
+	},
 }
 
 var id := "wide"
@@ -231,22 +258,50 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var data := info(id)
 	var color: Color = data["color"]
-	var good: bool = data["kind"] == Kind.GOOD
+	var kind: Kind = data["kind"]
+	var good: bool = kind == Kind.GOOD
 	var scale_factor := 1.0 - _implode * 0.7
 	var half := SIZE * 0.5 * scale_factor
 
-	# A glow, wider than before because the capsule is.
+	# A glow, wider than before because the capsule is. A punishment's is
+	# warm and beats: a light that flashes at you is a light that means
+	# something is wrong, in every language.
 	var glow := color
-	glow.a = 0.16 * (1.0 - _implode)
+	var beat := 1.0
+	if kind == Kind.BAD:
+		glow = EMBER
+		beat = 0.55 + 0.45 * sin(_time * 7.0)
+	glow.a = 0.16 * (1.0 - _implode) * beat
 	draw_rect(Rect2(-half - Vector2(8.0, 8.0), (half + Vector2(8.0, 8.0)) * 2.0), glow)
-	glow.a = 0.26 * (1.0 - _implode)
+	glow.a = 0.26 * (1.0 - _implode) * beat
 	draw_rect(Rect2(-half - Vector2(4.0, 4.0), (half + Vector2(4.0, 4.0)) * 2.0), glow)
 
-	# Rounded rectangle: two rects offset by 2 px make the corner.
+	# The shape says which kind it is, before the colour or the icon does.
+	# A gift is a rounded capsule; a punishment is cut off at the corners
+	# like a hazard plate; a coin flip is a hexagon. On a phone, at
+	# speed, silhouette is the only thing that reads in time.
 	var body := color
 	body.a = 1.0 - _implode * 0.5
-	draw_rect(Rect2(-half + Vector2(2.0, 0.0), Vector2(half.x * 2.0 - 4.0, half.y * 2.0)), body)
-	draw_rect(Rect2(-half + Vector2(0.0, 2.0), Vector2(half.x * 2.0, half.y * 2.0 - 4.0)), body)
+	if kind == Kind.BAD:
+		# Corners chamfered hard, and a red cast over the grey so it is
+		# warm rather than neutral: this one is coming for you.
+		var warn := color.lerp(EMBER, 0.42)
+		warn.a = body.a
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(-half.x + 6.0, -half.y), Vector2(half.x - 6.0, -half.y),
+			Vector2(half.x, -half.y + 5.0), Vector2(half.x, half.y - 5.0),
+			Vector2(half.x - 6.0, half.y), Vector2(-half.x + 6.0, half.y),
+			Vector2(-half.x, half.y - 5.0), Vector2(-half.x, -half.y + 5.0),
+		]), warn)
+	elif kind == Kind.NEUTRAL:
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(-half.x + 7.0, -half.y), Vector2(half.x - 7.0, -half.y),
+			Vector2(half.x, 0.0), Vector2(half.x - 7.0, half.y),
+			Vector2(-half.x + 7.0, half.y), Vector2(-half.x, 0.0),
+		]), body)
+	else:
+		draw_rect(Rect2(-half + Vector2(2.0, 0.0), Vector2(half.x * 2.0 - 4.0, half.y * 2.0)), body)
+		draw_rect(Rect2(-half + Vector2(0.0, 2.0), Vector2(half.x * 2.0, half.y * 2.0 - 4.0)), body)
 	# A darker well behind the icon, so a white shape always has contrast
 	# to sit against whatever colour the capsule is.
 	var well := color.darkened(0.55)
@@ -255,7 +310,6 @@ func _draw() -> void:
 
 	# The edge tells you whether you want it. Three answers, not two:
 	# light means yes, dark and jagged means no, grey means find out.
-	var kind: Kind = data["kind"]
 	var edge: Color = color.lightened(0.55)
 	if kind == Kind.BAD:
 		edge = color.darkened(0.6)
@@ -417,6 +471,26 @@ static func _icon_shapes(ci: CanvasItem, icon: String, ink: Color) -> void:
 			ci.draw_line(Vector2(1.4, 0.4), Vector2(0.2, 1.2), ink, 1.8)
 			_bar(ci, Vector2(-0.9, 1.0), Vector2(1.8, 1.8), ink)
 			_bar(ci, Vector2(-0.9, 3.6), Vector2(1.8, 1.8), ink)
+		"bomb":
+			ci.draw_arc(Vector2(0.0, 1.5), 4.2, 0.0, TAU, 20, ink, 2.0, true)
+			_bar(ci, Vector2(-1.0, -5.0), Vector2(2.0, 2.0), ink)
+			ci.draw_line(Vector2(0.0, -5.0), Vector2(3.5, -7.5), ink, 1.4)
+			_bar(ci, Vector2(3.0, -8.5), Vector2(1.6, 1.6), ink)
+		"coin":
+			ci.draw_arc(Vector2.ZERO, 5.0, 0.0, TAU, 22, ink, 2.0, true)
+			_bar(ci, Vector2(-0.8, -3.0), Vector2(1.6, 6.0), ink)
+			_bar(ci, Vector2(-2.6, -1.6), Vector2(5.2, 1.4), ink)
+		"small_circle":
+			# A ring with a much smaller one inside: the same thing, less
+			# of it, which is exactly what it does.
+			ci.draw_arc(Vector2.ZERO, 5.5, 0.0, TAU, 22, ink, 1.2, true)
+			ci.draw_circle(Vector2.ZERO, 2.0, ink)
+		"wave":
+			var points := PackedVector2Array()
+			for i in 13:
+				var t := -5.0 + float(i)
+				points.append(Vector2(t, sin(t * 0.9) * 3.4))
+			ci.draw_polyline(points, ink, 1.8)
 		"bolt":
 			ci.draw_colored_polygon(PackedVector2Array([
 				Vector2(1.0, -5.0), Vector2(-3.0, 1.0), Vector2(0.0, 1.0),

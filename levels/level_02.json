@@ -4,25 +4,28 @@
   "zone": "baeltet",
   "grid": [
     ".S.........S.",
-    ".VVVVVPPVVVV.",
-    ".VVFFEEEFFVV.",
-    ".VV.......VV.",
-    ".VV.IIPII.VV.",
-    ".VV.IIIII.VV.",
-    ".VV.IIIII.VV.",
-    ".VVEEEEEEEVV."
+    ".IIIIIIIIIII.",
+    ".IVVVVVVVVVI.",
+    ".IV.......VI.",
+    ".IV.FFFFF.VI.",
+    ".IV.EEEEE.VI.",
+    ".IV.FFFFF.VI.",
+    ".IV.......VI.",
+    ".IVVVVVVVVVI.",
+    ".IIEEEEEEEII."
   ],
   "ballSpeed": 360,
   "gridAnchor": 0,
   "powerups": {
-    "multi": 20,
-    "fireball": 18,
-    "laser": 16,
-    "wide": 12,
-    "giant": 10,
+    "multi": 19,
+    "fireball": 17,
+    "laser": 15,
+    "wide": 11,
+    "giant": 9,
     "narrow": 10,
     "heavy": 8,
-    "fast": 6
+    "fast": 6,
+    "bonus": 5
   },
   "forcedFirstPowerup": null,
   "parTime": 95

@@ -33,6 +33,16 @@ GameProgress="*res://scripts/progress.gd"
 GameSession="*res://scripts/session.gd"
 GameCenterLink="*res://scripts/game_center.gd"
 
+[debug]
+
+; Every error the engine prints goes to a file on the device as well as
+; to a console nobody is watching. A crash on a phone in somebody else's
+; hand leaves no evidence otherwise, and the first one cost an afternoon
+; of guessing.
+file_logging/enable_file_logging=true
+file_logging/enable_file_logging.pc=true
+file_logging/max_log_files=8
+
 [display]
 
 window/size/viewport_width=390

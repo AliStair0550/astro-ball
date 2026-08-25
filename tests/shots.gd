@@ -146,9 +146,11 @@ func _process(_delta: float) -> void:
 				child.queue_free()
 			game.powerups._capsules.clear()
 			var falling := [
-				["magnet", Vector2(70.0, 470.0)], ["shield", Vector2(160.0, 540.0)],
-				["splinter", Vector2(250.0, 470.0)], ["death", Vector2(330.0, 545.0)],
-				["swap", Vector2(115.0, 630.0)], ["lottery", Vector2(290.0, 630.0)],
+				["bomb", Vector2(70.0, 440.0)], ["bonus", Vector2(180.0, 440.0)],
+				["magnet", Vector2(290.0, 440.0)],
+				["shrink", Vector2(70.0, 520.0)], ["wobble", Vector2(180.0, 520.0)],
+				["death", Vector2(290.0, 520.0)],
+				["swap", Vector2(115.0, 600.0)], ["lottery", Vector2(255.0, 600.0)],
 			]
 			for entry in falling:
 				var cap := Powerup.new()

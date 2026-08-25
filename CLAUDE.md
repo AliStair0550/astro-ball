@@ -289,24 +289,29 @@ virker står under dem.
 
 ```
 .............
-.IIIIPPPIIII.
-.FFFEEEEEFFF.
-..FFFFPPFFF..
-...VVVPVVV...
-....XIPIX....
+......V......
+.....VIV.....
+.....VIV.....
+....FVIVF....
+....FVEVF....
+...FFVEVFF...
+...FF.E.FF...
+......F......
 ```
 
 ### Level 2: The Capsule
 
 ```
 .S.........S.
-.VVVVVPPVVVV.
-.VVFFEEEFFVV.
-.VV.......VV.
-.VV.IIPII.VV.
-.VV.IIIII.VV.
-.VV.IIIII.VV.
-.VVEEEEEEEVV.
+.IIIIIIIIIII.
+.IVVVVVVVVVI.
+.IV.......VI.
+.IV.FFFFF.VI.
+.IV.EEEEE.VI.
+.IV.FFFFF.VI.
+.IV.......VI.
+.IVVVVVVVVVI.
+.IIEEEEEEEII.
 ```
 
 ### Level 3: The Chain
@@ -425,26 +430,26 @@ virker står under dem.
 
 ```
 .............
-.....FFF.....
-...IFVVFFI...
-..IFVVIVFFI..
-.IFVVEEEVFFI.
-..IFVVIVFFI..
-...IFVVFFI...
-.....FFF.....
+....VVVVV....
+..VVIIIIIVV..
+.VIIFFFFFIIV.
+.VIFFEEEFFIV.
+.VIIFFFFFIIV.
+..VVIIIIIVV..
+....VVVVV....
 ```
 
 ### Level 12: The Core
 
 ```
-SVVVPPPPPVVVS
-VHHVVPPPVVHHV
-VVIIIPEPIIIVV
-.VHIIPEPVIHV.
-.VVIFPEPVIVV.
-.VVIIEGEIIVV.
-.VVIFFEFIIVV.
-.VHIIIEIIIHV.
+SVVVVVVVVVVVS
+VHHVVVVVVVHHV
+VVIIIIEIIIIVV
+.VHIPPEPPIHV.
+.VVIPFEFPIVV.
+.VVIPEGEPIVV.
+.VVIPFEFPIVV.
+.VHIPPEPPIHV.
 .VVIIIEIIIVV.
 .VHHVVVVVHHV.
 .VVVVVVVVVVV.
@@ -1491,3 +1496,48 @@ Sammen med de fire fra sidste pas — Karlsvognen, lynet, spiralen og
 vinduet — er syv af tolv baner nu former frem for mønstre. De fem
 resterende (pilespidsen, kapslen, ringen, diamanten og kernen) var det
 allerede.
+
+---
+
+## Kapslerne skal kendes fra hinanden på en meter
+
+Gode og dårlige havde samme form og adskilte sig på kantens farve. Det er
+for lidt på en telefon i bevægelse. Nu er der tre former:
+
+- **Gave:** afrundet kapsel, lys kant, sin egen farve.
+- **Straf:** hjørnerne skåret af som en fareplade, mørk kant med zigzag,
+  og et rødt skær, der *banker*. Bevægelse er det, der læses hurtigst.
+- **Møntkast:** sekskant med grå kant.
+
+Bomb skiftede fra Ember til Flare undervejs: en gave i alarmfarven
+ophæver hele signalet.
+
+Fire nye, så der er treogtyve i alt. Hver af dem tager sin egen ting:
+
+| Navn | | |
+|---|---|---|
+| **Bomb** | god | Den næste klods, bolden rører, springer som en sprængklods. Ét skud, sigtet i hånden — det eneste sted i spillet, hvor spilleren selv placerer en eksplosion |
+| **Bonus** | god | 2500 point. Ikke alt skal ændre spillet; noget må bare være værd at fange |
+| **Shrink** | dårlig | Bolden er 60 procent. Et mindre mål for skjoldet og en mindre hammer mod muren |
+| **Wobble** | dårlig | Udgangsvinklen er op til tolv grader ved siden af. Ikke hurtigere, ikke blind: upålidelig |
+
+Straffenes andel pr. bane er **uændret** — kun hvilke straffe der findes.
+
+## Fire vægge mere, tegnet med farven
+
+Mosaik-passet gav banerne mønstre. Det her giver dem billeder, hvor
+farven *er* tegningen og ikke et bånd hen over den:
+
+- **Liftoff** er en raket: Volt-næse, is-vindue, orange finner,
+  sprængklodser som motor og en flamme under.
+- **The Capsule** er en pille med skal, kappe og en ladning i bunden.
+- **Blackout** er et øje — banen, hvor man intet kan se, tegnet som det
+  eneste organ, der ser.
+- **The Core** har fået sin lodrette lunte tilbage gennem alle ringene.
+
+## Og evnen til at se en fejl på en telefon
+
+`debug/file_logging` er slået til, og appens mappe er tilgængelig fra
+Filer. Et crash i en andens hånd efterlod før ingen spor overhovedet;
+nu ligger loggen i `user://logs/` og kan hentes fra maskinen. Det burde
+have været gjort, første gang spillet forlod min skærm.

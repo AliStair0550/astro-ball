@@ -49,7 +49,7 @@ func _test_level_validation() -> void:
 		var result := LevelLoader.load_level(path)
 		ok(result["ok"], "%s validates: %s" % [path, ", ".join(result["errors"])])
 	var one: Dictionary = LevelLoader.load_level("res://levels/level_01.json")["data"]
-	eq(LevelLoader.breakable_count(one["grid"]), 43, "level 1 has 43 bricks")
+	eq(LevelLoader.breakable_count(one["grid"]), 30, "level 1 has 30 bricks")
 	eq(str(one["forcedFirstPowerup"]), "wide", "level 1 forces Wide first")
 	# Slow belongs where it gets hard, not in the opening fields. At 400
 	# px/s in the last two it is a rescue; at 360 in level 1 it is a
@@ -209,8 +209,8 @@ func _pump(g: BrickGrid, seconds: float) -> void:
 func _test_grid_counts() -> void:
 	var data: Dictionary = LevelLoader.load_level("res://levels/level_02.json")["data"]
 	var g := _make_grid(data["grid"])
-	eq(g.rows, 8, "level 2 has 8 rows")
-	eq(g.remaining_breakable(), 64, "level 2 has 64 breakable bricks")
+	eq(g.rows, 10, "level 2 has 10 rows")
+	eq(g.remaining_breakable(), 79, "level 2 has 79 breakable bricks")
 	ok(g.brick_at(1, 0) != null and g.brick_at(1, 0).type == Brick.Type.STONE, "Stone in the corner")
 	ok(not g.brick_at(1, 0).counts_toward_clear(), "Stone does not count toward clearing")
 	g.queue_free()

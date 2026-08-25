@@ -157,8 +157,8 @@ func _test_loader_fixtures() -> void:
 	eq(str(one["name"]), "Liftoff", "level 1 is Liftoff")
 	eq(str(one["zone"]), "baeltet", "the zone slug in the data stays baeltet")
 	eq(str(one["forcedFirstPowerup"]), "wide", "level 1 forces Wide first")
-	eq(int(one["parTime"]), 55, "level 1 par time is 55")
-	eq(LevelLoader.breakable_count(one["grid"]), 43, "level 1 has 43 bricks")
+	eq(int(one["parTime"]), 60, "level 1 par time is 60")
+	eq(LevelLoader.breakable_count(one["grid"]), 30, "level 1 has 30 bricks")
 	# The first fields teach the chain before they teach patience: blast
 	# bricks in all three, and no Hardened until level 6, which is the
 	# one built out of it.
@@ -221,8 +221,11 @@ func _test_loader_fixtures() -> void:
 		var d: Dictionary = LevelLoader.load_level(path)["data"]
 		for id in d.get("powerups", {}):
 			seen[str(id)] = true
-	for id in ["narrow", "fast", "heavy", "blind", "invert", "death"]:
+	for id in ["narrow", "fast", "heavy", "blind", "invert", "death",
+			"shrink", "wobble"]:
 		ok(seen.has(id), "the punishment '%s' is reachable" % id)
+	for id in ["bomb", "bonus"]:
+		ok(seen.has(id), "and the gift '%s' is too" % id)
 	# Death is reachable, but not before it is allowed to be.
 	for i in PowerupManager.HARSH_SAFE_LEVELS:
 		var d: Dictionary = LevelLoader.load_level(LevelLoader.level_paths()[i])["data"]

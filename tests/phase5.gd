@@ -65,7 +65,11 @@ func _test_catalog() -> void:
 	]
 	for id in section_7:
 		ok(Powerup.CATALOG.has(id), "section 7's '%s' exists" % id)
-	eq(Powerup.CATALOG.size(), section_7.size() + 1, "eighteen, plus Giant")
+	# Section 7's eighteen, Giant from section 20, and four added after
+	# playing it: Bomb, Bonus, Shrink and Wobble.
+	for id in ["giant", "bomb", "bonus", "shrink", "wobble"]:
+		ok(Powerup.CATALOG.has(id), "'%s' was added after the document" % id)
+	eq(Powerup.CATALOG.size(), section_7.size() + 5, "twenty-three in all")
 
 	# The three kinds partition the catalog: exactly one is true of each.
 	for id in Powerup.CATALOG:
@@ -82,6 +86,22 @@ func _test_catalog() -> void:
 		# than from the fallback that shouts the id back.
 		ok(Strings.has("PU_%s" % name.to_upper()), "'%s' has a written name" % name)
 		ok(not str(Powerup.info(name)["icon"]).is_empty(), "'%s' has an icon" % name)
+
+	# A punishment has to be readable before it is caught, and not from
+	# one thing: the shape, the fall and the colour all say it.
+	for id in Powerup.CATALOG:
+		var name := str(id)
+		if not Powerup.is_bad(name):
+			continue
+		var info := Powerup.info(name)
+		ok(Color(info["color"]).is_equal_approx(Powerup.SLATE) or Color(info["color"]).is_equal_approx(Powerup.EMBER),
+			"'%s' wears a punishment's colour" % name)
+	# And no gift wears the alarm colour, which would undo the signal.
+	for id in Powerup.CATALOG:
+		var name2 := str(id)
+		if Powerup.is_good(name2):
+			ok(not Color(Powerup.info(name2)["color"]).is_equal_approx(Powerup.SLATE),
+				"the gift '%s' is not grey" % name2)
 
 	eq(Powerup.CATALOG["swap"]["kind"], Powerup.Kind.NEUTRAL, "Swap is a coin flip")
 	eq(Powerup.CATALOG["lottery"]["kind"], Powerup.Kind.NEUTRAL, "so is Lottery")
