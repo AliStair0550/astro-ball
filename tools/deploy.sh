@@ -102,6 +102,18 @@ fi
 
 # --- 1. Export --------------------------------------------------------
 
+# Apple refuses an upload whose build number it has seen before, and the
+# rejection arrives after the twenty minutes of compiling, not before.
+# So the number goes up here, on the way in, for archives only: a build
+# that goes to the phone is not a build anybody is counting.
+if [ "$ARCHIVE" = "1" ]; then
+  PRESET="$ROOT/export_presets.cfg"
+  CURRENT=$(grep -m1 '^application/version=' "$PRESET" | sed 's/.*="\(.*\)"/\1/')
+  NEXT=$(( ${CURRENT:-0} + 1 ))
+  sed -i '' "s|^application/version=\".*\"|application/version=\"$NEXT\"|" "$PRESET"
+  step "Build $NEXT (was $CURRENT)"
+fi
+
 step "Exporting from Godot ($CONFIG)"
 rm -rf "$BUILD"
 mkdir -p "$BUILD"

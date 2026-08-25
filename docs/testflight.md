@@ -17,9 +17,33 @@ How to get a build to testers, and what to ask them.
    certificate, which is enough to prove the code and the export are
    sound.
 
+## The two loops
+
+They are different jobs and it is worth keeping them apart.
+
+**The phone, for working.** `./tools/deploy.sh` puts the current code on
+the device in about two minutes. No version bump, no upload, no waiting
+on Apple, no build number. This is where development happens, and it can
+run twenty times a day.
+
+**TestFlight, for showing.** `./tools/deploy.sh --archive` then an
+upload. Twenty minutes of compiling, ten to sixty of Apple processing,
+and only then does it reach a tester. Worth doing when there is something
+worth showing, not after every change.
+
+Nothing uploads itself. Every TestFlight build is a deliberate act.
+
+Both install over each other: same bundle id, so whichever went on last
+is the one on the phone, and swapping between them wipes the save. That
+is only test progress, but it is worth knowing before it happens.
+
 ## The archive, in one command
 
     MIN_FREE_GB=3 ./tools/deploy.sh --archive
+
+The build number goes up by itself, on the way in. Apple refuses an
+upload whose number it has seen before, and it refuses it *after* the
+twenty minutes of compiling rather than before.
 
 It exports the project, archives it, re-signs it for distribution and
 leaves an ipa in `build/ios/export/`. Twenty minutes, most of it the
